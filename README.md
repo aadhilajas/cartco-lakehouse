@@ -1,6 +1,6 @@
 # CartCo Unified Commerce Lakehouse
 
-A medallion-style data platform for a multi-channel retail business, built with MinIO, Apache Iceberg, PySpark, Airflow, Great Expectations, and OpenLineage/Marquez.
+A medallion-style data platform for a multi-channel retail business, built with MinIO, Apache Iceberg, PySpark, Airflow, Great Expectations, and OpenLineage/Marquez. 
 
 ## Project Overview
 

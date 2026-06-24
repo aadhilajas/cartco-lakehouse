@@ -101,33 +101,3 @@ python src/main.py
 ```bash
 pytest
 ```
-
-## Milestones
-
-- **Week 1:** Repo, design doc, architecture, and working bronze layer.
-- **Week 2:** Silver layer, gold marts, first ADR, end-to-end flow.
-- **Week 3:** Tests, CI, data quality, lineage, and documentation.
-- **Week 4:** Deployment, Loom walkthrough, thinking artifact, resume bullets.
-
-## Deliverables
-
-- Public GitHub repository
-- Weekly GitHub Issue submissions
-- Milestone 1 release: `v1.0-milestone-1`
-- Milestone 2 release: `v1.0-final`
-- Final showcase release: `v1.0-showcase`
-- Design document, architecture diagrams, ADRs, test report, and data documentation
-
-## Known Limitations
-
-- This is a scoped internship build, not a production enterprise platform.
-- Some components are simplified to fit the timeline.
-- Streaming and advanced cloud deployment are optional stretch goals.
-
-## What This Shows
-
-If you are a recruiter or interviewer, this project demonstrates that I can design and build a realistic data platform, reason about architecture trade-offs, write clearly, and ship something that is reproducible and explainable.
-
-## License
-
-This project is released under the MIT License.

@@ -1,0 +1,4 @@
+# CartCo lakehouse local stack — MinIO, Airflow, Spark, Marquez
+# Full service definitions to be added during infrastructure setup.
+
+services: {}

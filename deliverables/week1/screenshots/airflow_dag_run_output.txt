@@ -1,0 +1,60 @@
+CartCo Lakehouse — Week 1 Proof
+Airflow DAG orchestration — real terminal output
+DAG: shopify_bronze_ingestion
+Captured: 2026-07-02
+
+============================================================
+1. DAG detected by Airflow
+   docker exec cartco-airflow-scheduler airflow dags list
+============================================================
+
+dag_id                   | fileloc                                 | owners | is_paused
+=========================+=========================================+========+==========
+shopify_bronze_ingestion | /opt/airflow/dags/shopify_bronze_dag.py | cartco | False
+
+============================================================
+2. DAG run history
+   docker exec cartco-airflow-scheduler airflow dags list-runs \
+       -d shopify_bronze_ingestion --no-backfill
+============================================================
+
+dag_id                   | run_id                            | state   | execution_date            | start_date                       | end_date
+=========================+===================================+=========+===========================+==================================+=================================
+shopify_bronze_ingestion | manual__2026-07-02T06:07:10+00:00 | success | 2026-07-02T06:07:10+00:00 | 2026-07-02T06:07:10.798559+00:00 | 2026-07-02T06:07:18.822796+00:00
+shopify_bronze_ingestion | manual__2026-07-02T05:58:12+00:00 | success | 2026-07-02T05:58:12+00:00 | 2026-07-02T05:58:12.697421+00:00 | 2026-07-02T05:58:20.832463+00:00
+shopify_bronze_ingestion | manual__2026-07-02T05:50:36+00:00 | failed  | 2026-07-02T05:50:36+00:00 | 2026-07-02T05:50:37.014991+00:00 | 2026-07-02T05:55:46.220124+00:00
+
+NOTE: The 05:50:36 run failed with FileNotFoundError because BashOperator tasks
+default to a temp working directory, so generate_data's relative output path
+was not visible to ingest_to_bronze. Fixed by setting cwd="/opt/airflow" on
+both tasks in dags/shopify_bronze_dag.py (no ingestion script logic changed).
+All runs since the fix have succeeded.
+
+============================================================
+3. Task states for the successful run (manual__2026-07-02T06:07:10+00:00)
+============================================================
+
+dag_id                   | execution_date            | task_id          | state   | start_date                       | end_date
+=========================+===========================+==================+=========+==================================+=================================
+shopify_bronze_ingestion | 2026-07-02T06:07:10+00:00 | generate_data    | success | 2026-07-02T06:07:11.388240+00:00 | 2026-07-02T06:07:14.634400+00:00
+shopify_bronze_ingestion | 2026-07-02T06:07:10+00:00 | ingest_to_bronze | success | 2026-07-02T06:07:15.205680+00:00 | 2026-07-02T06:07:18.258651+00:00
+
+============================================================
+4. Task log — generate_data (key lines)
+============================================================
+
+[2026-07-02T06:07:14.444+0000] Generated 50,000 synthetic Shopify orders -> data/raw/shopify_orders.csv
+[2026-07-02T06:07:14.586+0000] Command exited with return code 0
+[2026-07-02T06:07:14.634+0000] Marking task as SUCCESS. dag_id=shopify_bronze_ingestion, task_id=generate_data
+
+============================================================
+5. Task log — ingest_to_bronze (key lines)
+============================================================
+
+[2026-07-02T06:07:16.901+0000] === Shopify Bronze ingestion START at 2026-07-02T06:07:16.901380+00:00 ===
+[2026-07-02T06:07:17.219+0000] Rows read from source: 50000
+[2026-07-02T06:07:17.506+0000] Loaded existing table 'bronze.shopify_orders'
+[2026-07-02T06:07:17.921+0000] Rows written to bronze.shopify_orders (ingestion_date=2026-07-02): 50000
+[2026-07-02T06:07:17.922+0000] === Shopify Bronze ingestion END at 2026-07-02T06:07:17.921114+00:00 (1.0s) ===
+[2026-07-02T06:07:18.224+0000] Command exited with return code 0
+[2026-07-02T06:07:18.258+0000] Marking task as SUCCESS. dag_id=shopify_bronze_ingestion, task_id=ingest_to_bronze

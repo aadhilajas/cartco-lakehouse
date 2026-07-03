@@ -1,0 +1,64 @@
+CartCo Lakehouse — Week 1 Proof
+Shopify Bronze Ingestion — real terminal output
+Captured: 2026-07-02
+
+============================================================
+1. Synthetic data generation
+   docker exec cartco-airflow-scheduler python \
+       /opt/airflow/ingestion/generate_synthetic_shopify_data.py
+============================================================
+
+Generated 50,000 synthetic Shopify orders -> data/raw/shopify_orders.csv
+Date range: 2024-07-02 00:00:54 .. 2026-07-01 23:41:35
+Status distribution:
+status
+delivered    40999
+cancelled     4918
+returned      4083
+
+============================================================
+2. Bronze ingestion into Iceberg (first run — table creation)
+   docker exec cartco-airflow-scheduler python \
+       /opt/airflow/ingestion/shopify_bronze.py
+============================================================
+
+2026-07-02 05:41:21,110 [INFO] shopify_bronze: === Shopify Bronze ingestion START at 2026-07-02T05:41:21.110127+00:00 ===
+2026-07-02 05:41:21,110 [INFO] shopify_bronze: Source CSV: data/raw/shopify_orders.csv
+2026-07-02 05:41:21,110 [INFO] shopify_bronze: Iceberg REST catalog: http://iceberg-rest:8181 | S3 endpoint: http://minio:9000
+2026-07-02 05:41:21,370 [INFO] shopify_bronze: Rows read from source: 50000
+2026-07-02 05:41:21,978 [INFO] shopify_bronze: Created namespace 'bronze'
+2026-07-02 05:41:23,492 [INFO] shopify_bronze: Created table 'bronze.shopify_orders' partitioned by ingestion_date
+2026-07-02 05:41:23,996 [INFO] shopify_bronze: Rows written to bronze.shopify_orders (ingestion_date=2026-07-02): 50000
+2026-07-02 05:41:23,997 [INFO] shopify_bronze: === Shopify Bronze ingestion END at 2026-07-02T05:41:23.997105+00:00 (2.9s) ===
+
+============================================================
+3. Idempotency proof (second run, same day — no duplication)
+============================================================
+
+2026-07-02 05:42:04,242 [INFO] shopify_bronze: Iceberg REST catalog: http://iceberg-rest:8181 | S3 endpoint: http://minio:9000
+2026-07-02 05:42:04,476 [INFO] shopify_bronze: Rows read from source: 50000
+2026-07-02 05:42:04,713 [INFO] shopify_bronze: Loaded existing table 'bronze.shopify_orders'
+2026-07-02 05:42:05,156 [INFO] shopify_bronze: Rows written to bronze.shopify_orders (ingestion_date=2026-07-02): 50000
+2026-07-02 05:42:05,156 [INFO] shopify_bronze: === Shopify Bronze ingestion END at 2026-07-02T05:42:05.156757+00:00 (0.9s) ===
+
+============================================================
+4. Read-back verification (pyiceberg scan of bronze.shopify_orders)
+============================================================
+
+TABLE: bronze.shopify_orders
+TOTAL_ROW_COUNT: 50000
+
+--- rows per ingestion_date partition ---
+ingestion_date
+2026-07-02    50000
+
+--- 5 sample rows ---
+                            order_id                          customer_id channel          order_date product_id product_category  quantity  unit_price    status ingestion_date
+77e4a384-3bed-4991-8d0c-ebef9f1f9445 d907ba3f-1949-4b8a-9754-81a3d6ccc7cd shopify 2026-04-04 16:27:27 SHOP-00480      Electronics         2    15542.36 delivered     2026-07-02
+117f197d-2a2b-4621-a3d4-5528930c301e 39590149-077f-4e36-9a4d-67db9e33bdbc shopify 2025-06-15 13:54:10 SHOP-00583          Apparel         4     1694.29 delivered     2026-07-02
+35f55b9e-eb9a-4873-a263-d59881478b2e 0b961346-6498-4a39-97c8-f02c2ea5312a shopify 2026-06-20 21:06:38 SHOP-00458     Toys & Games         1     1596.13 cancelled     2026-07-02
+da08193c-67b6-4355-b247-f3d1847f5320 58c1aad6-f3f8-4ea4-bf14-eafa29f0ef7c shopify 2026-01-08 20:17:54 SHOP-00044          Apparel         4     1231.94 delivered     2026-07-02
+e81fec71-1960-43bf-9c45-ad3dee38975f bab8ad70-8d57-4064-abf0-a4f1f14cd6f2 shopify 2025-10-20 03:28:34 SHOP-01029      Electronics         1    11124.45 delivered     2026-07-02
+
+Result: 2 manual runs on the same day produced 50,000 rows total (not 100,000),
+confirming the partition-level overwrite is idempotent.

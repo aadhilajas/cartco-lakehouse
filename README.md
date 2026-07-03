@@ -1,164 +1,185 @@
 # CartCo Unified Commerce Lakehouse
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
-[![Build Status](https://img.shields.io/badge/build-pending-lightgrey)](https://github.com/aadhilajas/cartco-lakehouse)
+**One trusted source of truth for revenue across CartCo's sales channels.**
 
-**One source of truth for revenue across 5 sales channels.**
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+[![Week 1](https://img.shields.io/badge/status-Week%201%20(Bronze)-orange)](deliverables/week1/status_one_pager.md)
+
+A medallion (Bronze → Silver → Gold) lakehouse that ingests CartCo's multi-channel sales data and publishes reconciled, analytics-ready marts.
+
+- **Problem code:** B1 — Unified Commerce Lakehouse
+- **Segment:** Data Platform & Pipeline Engineering
+- **Author:** Aadhil A Kareem
+- **Target roles:** Data Engineer · Data Platform Engineer · Analytics Engineer
 
 ---
 
 ## Demo
 
-> **Video:** [LOOM_LINK_PENDING] — end-to-end pipeline walkthrough to be recorded after Docker Compose stack is running.
-
-### Local deployment (once stack is configured)
-
-```bash
-git clone https://github.com/aadhilajas/cartco-lakehouse.git
-cd cartco-lakehouse
-docker compose up -d
-```
-
-- **Airflow UI:** `http://localhost:8080` (credentials TBD in docker-compose.yml)
-- **MinIO Console:** `http://localhost:9001`
-- **Marquez UI:** `http://localhost:3000`
+> **Loom walkthrough:** `[LOOM_LINK_PENDING]` — will show the Docker stack coming up, the `shopify_bronze_ingestion` DAG running to success in Airflow, and a read-back of `bronze.shopify_orders` from the Iceberg table on MinIO.
 
 ---
 
 ## Problem Statement
 
-CartCo is a multi-channel retailer doing approximately **₹4,000 Cr GMV** across five disconnected sales channels — its own D2C website (Shopify), Amazon marketplace, physical stores (POS/Kafka), distributor SFTP feeds, and internal ERP inventory exports. Each system reports revenue differently, on different schedules, with inconsistent schemas. Finance cannot trust any single number for board reporting, marketing cannot attribute channel performance accurately, and operations lacks a unified inventory view. This project builds a medallion lakehouse that ingests raw data from all five sources, enforces quality and schema contracts in a Silver layer, and publishes trusted Gold marts — giving CartCo one reconciled revenue figure and channel-level insights.
+CartCo is a multi-channel retailer selling through several disconnected systems — its own Shopify D2C website, the Amazon marketplace, physical stores (POS), and distributor SFTP feeds. Each system reports orders and revenue on its own schedule with its own schema, so finance cannot trust a single revenue number, marketing cannot attribute channel performance, and operations has no unified view. This project builds a medallion lakehouse that lands raw data from each channel unchanged in a **Bronze** layer, will conform and quality-check it in a **Silver** layer, and will publish business-facing **Gold** marts — giving CartCo one reconciled revenue figure and channel-level insight. Week 1 delivers the platform foundation and the first end-to-end Bronze ingestion for the Shopify channel.
 
 ---
 
 ## Architecture
 
-![C4 Context Diagram](docs/architecture/c4_context.png)
+```mermaid
+flowchart LR
+    subgraph SRC["Sources"]
+        SHOP["Shopify orders<br/>(synthetic CSV)"]
+    end
 
-Data flows through three medallion layers on MinIO object storage, managed as Apache Iceberg tables. **Bronze** lands raw source data partitioned by `ingestion_date` with no business logic. **Silver** applies schema enforcement, deduplication, and null handling to produce canonical entity tables validated by Great Expectations. **Gold** exposes business-facing marts — revenue, channel performance, inventory turnover, and customer 360 — consumed by analysts and downstream tools. Apache Airflow orchestrates the pipeline; OpenLineage emits lineage events to Marquez.
+    subgraph ORCH["Apache Airflow (LocalExecutor)"]
+        GEN["generate_data"]
+        ING["ingest_to_bronze"]
+        GEN --> ING
+    end
 
-![C4 Container Diagram](docs/architecture/c4_container.png)
+    subgraph LAKE["Lakehouse on MinIO (S3)"]
+        REST["Iceberg REST catalog"]
+        BRONZE[("bronze.shopify_orders<br/>Iceberg · partitioned by ingestion_date")]
+    end
+
+    SHOP --> GEN
+    ING -->|PyArrow → PyIceberg| REST
+    REST --> BRONZE
+
+    BRONZE -.->|planned Week 2+| SILVER[("Silver<br/>conformed + quality-checked")]
+    SILVER -.->|planned| GOLD[("Gold<br/>revenue / channel marts")]
+
+    style BRONZE fill:#cd7f32,color:#fff
+    style SILVER fill:#c0c0c0,color:#000,stroke-dasharray: 4 4
+    style GOLD fill:#ffd700,color:#000,stroke-dasharray: 4 4
+```
+
+Airflow orchestrates a two-task DAG: `generate_data` produces a synthetic Shopify orders CSV, then `ingest_to_bronze` writes it as an Apache Iceberg table on MinIO through the Iceberg REST catalog, partitioned by `ingestion_date` and written idempotently (partition-level overwrite). Silver and Gold layers are stubbed and planned for later weeks. A fuller C4-style diagram is available at [`deliverables/week1/architecture_diagram/cartco_architecture.pdf`](deliverables/week1/architecture_diagram/cartco_architecture.pdf).
 
 ---
 
 ## Tech Stack
 
+Only tools actually used in the current (Week 1) codebase are listed.
+
 | Component | Choice | Why |
 |-----------|--------|-----|
-| Storage | MinIO (S3-compatible) | Local-first object storage; identical API to production S3 |
-| Table format | **Apache Iceberg** | ACID writes, time travel, schema evolution, open governance |
-| Compute | PySpark | Single engine for ingestion and transforms; native Iceberg support |
-| Orchestrator | **Apache Airflow** (LocalExecutor) | Industry-standard DAG orchestration; runs on a single machine for local dev |
-| Data quality | Great Expectations | Checkpoint-based validation before every Silver write |
-| Lineage | OpenLineage + Marquez | End-to-end column-level lineage across all pipeline stages |
-| Catalog | Hive Metastore | Lightweight local catalog compatible with Iceberg and Docker Compose |
+| Ingestion | Python + Faker + pandas | Deterministic, seeded synthetic Shopify order generation (`ingestion/generate_synthetic_shopify_data.py`) |
+| Storage | MinIO (S3-compatible) | Local object store for the lakehouse; same S3 API as production |
+| Table format | Apache Iceberg (via PyIceberg) | ACID writes and partition-level overwrite enable idempotent, `ingestion_date`-partitioned Bronze loads |
+| Catalog | Iceberg REST catalog (`tabulario/iceberg-rest`) | Serves Iceberg metadata over REST; backs the `bronze` namespace against MinIO |
+| Compute | PyArrow + PyIceberg | CSV → Arrow → Iceberg write path used by the Bronze load today (PySpark is installed in the image but not yet used — reserved for Silver/Gold) |
+| Orchestration | Apache Airflow (LocalExecutor) | Runs the two-task Bronze DAG on a single machine; no Celery/Redis to operate |
+| Metadata DB | PostgreSQL 14 | Airflow metadata backend |
+| Observability | Airflow run history + task logs | The only observability wired in Week 1; OpenLineage + Marquez are deferred to Week 2 |
 
 ---
 
 ## Quickstart
 
-Follow these steps to get the project running locally. Target: **under 15 minutes** once the Docker stack is fully configured.
-
 ### Prerequisites
 
+- **Docker Desktop** 4.x with **Docker Compose v2**
 - **Git** 2.30+
-- **Docker Desktop** 4.x with Docker Compose v2
-- **Python** 3.11+ (for running ingestion scripts and tests outside containers)
-- **8 GB RAM** minimum (Spark + Airflow containers)
+- **~8 GB RAM** available for the containers (Airflow + MinIO + Postgres + Iceberg REST)
 
 ### Install
 
 ```bash
-# 1. Clone the repository
 git clone https://github.com/aadhilajas/cartco-lakehouse.git
 cd cartco-lakehouse
 
-# 2. Create a Python virtual environment (for local script execution)
-python -m venv .venv
-
-# Windows
-.venv\Scripts\activate
-
-# macOS / Linux
-source .venv/bin/activate
-
-# 3. Install Python dependencies (requirements.txt to be added)
-pip install -r requirements.txt
+# Build the custom Airflow image (adds PyIceberg, PyArrow, PySpark, Great Expectations, Faker)
+docker compose build
 ```
+
+> There is no `requirements.txt` yet — all runtime dependencies are baked into the Airflow image via `Dockerfile.airflow`.
 
 ### Run
 
 ```bash
-# Start the full local stack (MinIO, Airflow, Spark, Marquez)
+# Start the full local stack
 docker compose up -d
 
-# Verify services are healthy
+# Confirm services are up
 docker compose ps
 
-# Trigger a Bronze ingestion DAG (once implemented)
-# docker compose exec airflow airflow dags trigger bronze_shopify
+# Trigger the Bronze ingestion DAG
+docker exec cartco-airflow-scheduler airflow dags trigger shopify_bronze_ingestion
 ```
+
+Once running:
+
+| Service | URL | Credentials |
+|---------|-----|-------------|
+| Airflow UI | http://localhost:8080 | `airflow` / `airflow` |
+| MinIO Console | http://localhost:9001 | `minioadmin` / `minioadmin` |
+| MinIO S3 API | http://localhost:9000 | `minioadmin` / `minioadmin` |
+| Iceberg REST catalog | http://localhost:8181 | — |
 
 ### Test
 
-```bash
-# Run unit and integration tests (once implemented)
-pytest tests/
+There is **no automated test suite yet** (unit/integration tests are planned for Week 3). Current verification is manual and reproducible:
 
-# Run Great Expectations checkpoints (once configured)
-# great_expectations checkpoint run silver_orders_checkpoint
+```bash
+# Re-run the ingestion — it is idempotent, so the row count stays the same
+docker exec cartco-airflow-scheduler python /opt/airflow/ingestion/shopify_bronze.py
 ```
+
+The script logs start time, rows read, rows written, and end time, and reads the partition back to confirm the count. Captured proof lives in [`deliverables/week1/screenshots/`](deliverables/week1/screenshots/).
 
 ---
 
 ## Data
 
-See [docs/data.md](docs/data.md) for source schemas and synthetic dataset documentation.
+All data is **synthetically generated** — no real PII or production credentials.
 
-All data used in this project is **synthetically generated** — representing Shopify orders, Amazon settlements, in-store POS transactions, distributor shipments, and ERP inventory exports with no real PII.
+- **Source (Week 1):** `ingestion/generate_synthetic_shopify_data.py` produces **50,000** Shopify order rows to `data/raw/shopify_orders.csv` (seeded for reproducibility). The `data/` folder is git-ignored.
+- **Columns:** `order_id` (uuid), `customer_id`, `channel` (always `shopify`), `order_date` (spread over ~2 years), `product_id`, `product_category`, `quantity`, `unit_price`, `status` (delivered / cancelled / returned, weighted).
+- **Bronze table:** `bronze.shopify_orders`, an Iceberg table on MinIO with an added `ingestion_date` column and partitioned by `ingestion_date=YYYY-MM-DD` (load date, distinct from the business `order_date`).
+
+Planned sources (not yet implemented) and schema notes are documented in [`docs/data.md`](docs/data.md).
 
 ---
 
 ## Architecture Decision Records
 
-Full ADRs live in [docs/adr/](docs/adr/).
-
 | ADR | Summary |
 |-----|---------|
-| [ADR-001](docs/adr/ADR-001-table-format-choice.md) | Apache Iceberg chosen for ACID writes, time travel, and multi-engine support |
+| [ADR-001](docs/adr/ADR-001-table-format-choice.md) | Apache Iceberg for ACID writes, partition evolution, and multi-engine support |
 | [ADR-002](docs/adr/ADR-002-orchestrator-choice.md) | Apache Airflow (LocalExecutor) for batch DAG orchestration |
 | [ADR-003](docs/adr/ADR-003-partition-strategy.md) | `ingestion_date=YYYY-MM-DD` partitioning across Bronze and downstream layers |
-| [ADR-004](docs/adr/ADR-004-ingestion-tool-choice.md) | Per-source PySpark ingestion scripts orchestrated by Airflow |
-| [ADR-005](docs/adr/ADR-005-schema-evolution-policy.md) | Bronze accepts all columns; Silver enforces canonical schema with staged extensions |
+| [ADR-004](docs/adr/ADR-004-ingestion-tool-choice.md) | Per-source ingestion scripts orchestrated by Airflow |
+| [ADR-005](docs/adr/ADR-005-schema-evolution-policy.md) | Bronze accepts source columns; Silver enforces the canonical schema |
 
 ---
 
 ## Known Limitations
 
-- **Kafka streaming source** not yet implemented — in-store POS ingestion is stubbed.
-- **Single-node Spark only** — no cluster mode or dynamic allocation configured.
-- **Docker Compose stack** is a skeleton — service definitions pending in `docker-compose.yml`.
-- **Architecture diagrams** are placeholders — full C4 diagrams to be exported in Week 1 deliverables.
-- **No cloud deployment** — MinIO and Hive Metastore are local-only; no Glue or production S3 integration yet.
-- **Great Expectations** checkpoints not yet wired to Silver transforms.
+- **Only the Shopify source is implemented.** `ingestion/amazon_bronze.py`, `kafka_instore_bronze.py`, and `sftp_distributor_bronze.py` are stubs with no logic yet.
+- **Bronze uses PyIceberg + PyArrow, not Spark.** PySpark is installed in the Airflow image but is not yet used in any script — it is reserved for the heavier Silver/Gold transforms. Compute currently runs in-process inside the Airflow container, not on a separate Spark cluster.
+- **No Silver or Gold layers yet**, and therefore **no Great Expectations checkpoints** are wired (Bronze intentionally has no validation, per the layer rules).
+- **Lineage (OpenLineage + Marquez) is not wired up** — deferred to Week 2.
+- **Stack is local-only and not production-hardened** — default credentials, no TLS, no secrets management, no cloud deployment.
+- **No automated tests yet** — verification is currently manual (DAG run + read-back).
 
 ---
 
 ## Roadmap
 
-With two additional weeks beyond the current internship timeline, the next priorities would be:
-
-1. **Kafka Structured Streaming** — real-time Bronze ingestion for in-store POS with micro-batch fallback.
-2. **Data contracts** — formal schema contracts between Silver entities and Gold marts with breaking-change alerts.
-3. **Terraform IaC** — reproducible cloud deployment (S3 + EMR Serverless + MWAA) mirroring the local stack.
-4. **Feast feature store** — serve Gold customer-360 features for ML-driven personalization models.
+- **Week 2 — Skinny end-to-end slice:** add the Amazon Bronze connector; build the first Silver transform (`silver.shopify_orders`: schema enforcement + dedup) with a Great Expectations checkpoint gating the write; wire OpenLineage → Marquez for lineage.
+- **Week 3 — Hardening:** unit + integration tests for the ingestion/transform code; a first Gold revenue mart; error-handling and logging audit.
+- **Week 4 — Production polish:** remaining channel connectors, customer-360 Gold mart, and infrastructure/deployment configs (IaC + hardened Docker).
 
 ---
 
 ## License
 
-This project is licensed under the [MIT License](LICENSE).
+Licensed under the [MIT License](LICENSE).
 
 ## Acknowledgements
 
-Built as part of the **Futurense Data Platform & Pipeline Engineering Internship** (Problem Code B1). Thanks to the Futurense program for the structured learning path and CartCo business scenario.
+Built as part of a Data Platform & Pipeline Engineering internship (Problem Code B1) using the CartCo business scenario.

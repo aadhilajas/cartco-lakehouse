@@ -16,7 +16,7 @@ A medallion (Bronze → Silver → Gold) lakehouse that ingests CartCo's multi-c
 
 ## Demo
 
-> **Loom walkthrough:** `[LOOM_LINK_PENDING]` — will show the Docker stack coming up, the `shopify_bronze_ingestion` DAG running to success in Airflow, and a read-back of `bronze.shopify_orders` from the Iceberg table on MinIO.
+> **Loom walkthrough:** `https://canva.link/9vqcf3kxbfiat0n` — will show the Docker stack coming up, the `shopify_bronze_ingestion` DAG running to success in Airflow, and a read-back of `bronze.shopify_orders` from the Iceberg table on MinIO.
 
 ---
 

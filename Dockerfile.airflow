@@ -1,0 +1,31 @@
+# Custom Airflow image for the CartCo lakehouse.
+# Extends the official Airflow image with PySpark (local mode), PyIceberg,
+# Great Expectations, and Faker for synthetic data generation.
+FROM apache/airflow:2.9.0
+
+# Java is required for PySpark to run in local mode inside this container.
+# build-essential provides gcc/g++ so C-extension deps (e.g. mmhash3, pulled in
+# by pyiceberg) can compile their wheels.
+USER root
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends default-jdk-headless build-essential \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
+
+# JAVA_HOME is resolved from the default-jdk symlink so PySpark can find the JVM.
+ENV JAVA_HOME=/usr/lib/jvm/default-java
+
+USER airflow
+RUN pip install --no-cache-dir \
+    "pyspark==3.5.1" \
+    "pyiceberg[s3fs,pyarrow]==0.6.1" \
+    "great-expectations==0.18.19" \
+    "faker==25.9.1"
+
+# pyiceberg 0.6.x raises "Cannot write to partitioned tables"; 0.7.x adds
+# partitioned writes plus partial overwrite/delete, which the Bronze loads need
+# for idempotent, ingestion_date-partitioned writes. pyarrow is pinned to keep
+# the resolved version stable.
+RUN pip install --no-cache-dir --upgrade \
+    "pyiceberg[s3fs,pyarrow]==0.7.1" \
+    "pyarrow==15.0.2"

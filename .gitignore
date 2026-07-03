@@ -224,6 +224,5 @@ data/
 compose-build.log
 compose-up.log
 
-# Airflow runtime logs (task/scheduler/dag-processor logs from local runs)
-airflow/logs/*
-!airflow/logs/.gitkeep
+# Airflow runtime logs (recreated automatically by docker compose volume mount)
+airflow/logs/

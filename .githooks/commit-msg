@@ -1,0 +1,13 @@
+#!/bin/sh
+# Strip auto-injected AI co-author trailers (Cursor, Copilot, etc.) from commit
+# messages so they never enter project history or the GitHub contributors list.
+#
+# Activate with:  git config core.hooksPath .githooks
+msg_file="$1"
+[ -f "$msg_file" ] || exit 0
+
+# Delete any Co-authored-by line referencing an AI tool (case-insensitive),
+# and any line referencing the Cursor agent email.
+sed -i -E '/^Co-authored-by:.*(cursor|copilot)/Id; /cursoragent@cursor\.com/Id' "$msg_file"
+
+exit 0

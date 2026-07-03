@@ -216,3 +216,14 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# CartCo lakehouse — generated synthetic data (not source-controlled)
+data/
+
+# Local docker-compose build/run logs
+compose-build.log
+compose-up.log
+
+# Airflow runtime logs (task/scheduler/dag-processor logs from local runs)
+airflow/logs/*
+!airflow/logs/.gitkeep

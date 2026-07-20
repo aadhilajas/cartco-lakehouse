@@ -1,0 +1,9 @@
+# Dependencies needed to run tests/unit against transforms/. Versions are
+# pinned to match Dockerfile.airflow so CI exercises the same library
+# behavior as the live Airflow container.
+pytest==8.3.3
+pandas
+pyarrow==15.0.2
+great-expectations==0.18.19
+pyiceberg[pyarrow]==0.7.1
+openlineage-python==1.11.3

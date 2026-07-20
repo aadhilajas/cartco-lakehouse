@@ -1,0 +1,9 @@
+#!/bin/sh
+# Strips auto-injected AI co-author trailers (e.g. "Co-authored-by: Cursor
+# <cursoragent@cursor.com>") from commit messages before they are recorded.
+# Activate with: git config core.hooksPath .githooks
+
+MSG_FILE="$1"
+
+grep -v -i '^Co-authored-by:.*cursor' "$MSG_FILE" > "$MSG_FILE.tmp"
+mv "$MSG_FILE.tmp" "$MSG_FILE"

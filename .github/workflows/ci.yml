@@ -1,0 +1,75 @@
+name: CI
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+    branches: ["**"]
+  workflow_dispatch:
+    inputs:
+      run_integration:
+        description: "Also run integration tests against a fresh Docker stack"
+        type: boolean
+        default: false
+
+jobs:
+  unit-tests:
+    name: Unit tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install test dependencies
+        run: pip install -r tests/requirements-test.txt
+
+      - name: Run unit tests
+        run: pytest -m "not integration" tests/unit -v
+
+  integration-tests:
+    name: Integration tests (manual trigger only)
+    runs-on: ubuntu-latest
+    needs: unit-tests
+    # Never runs on push/pull_request -- only when someone manually runs this
+    # workflow from the Actions tab with "run_integration" checked. Unlike
+    # unit tests, this job builds the real Airflow image and brings up the
+    # full Docker Compose stack (MinIO, Iceberg REST, Postgres, Airflow),
+    # which is too slow/heavy to run on every push.
+    if: github.event_name == 'workflow_dispatch' && inputs.run_integration
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build and start the local stack
+        run: docker compose up -d --build
+
+      - name: Wait for the Airflow scheduler to be healthy
+        run: |
+          for i in $(seq 1 30); do
+            status=$(docker inspect -f '{{.State.Health.Status}}' cartco-airflow-scheduler 2>/dev/null || echo "starting")
+            if [ "$status" = "healthy" ]; then
+              echo "Scheduler is healthy"
+              exit 0
+            fi
+            echo "Waiting for scheduler (attempt $i): $status"
+            sleep 10
+          done
+          echo "Scheduler never became healthy" >&2
+          exit 1
+
+      - name: Seed Bronze data (generate + ingest) so integration tests have data to read
+        run: |
+          docker exec cartco-airflow-scheduler python /opt/airflow/ingestion/generate_synthetic_shopify_data.py
+          docker exec cartco-airflow-scheduler python /opt/airflow/ingestion/shopify_bronze.py
+
+      - name: Run integration tests inside the Airflow container
+        run: |
+          docker exec -e RUN_INTEGRATION_TESTS=1 cartco-airflow-scheduler \
+            pytest -m integration tests/integration -v
+
+      - name: Tear down the stack
+        if: always()
+        run: docker compose down -v

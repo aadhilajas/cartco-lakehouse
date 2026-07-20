@@ -1,0 +1,107 @@
+CartCo lakehouse — OpenLineage/Marquez lineage verification
+Captured live, 2026-07-14, against the local Docker stack (docker compose up -d).
+Not a screenshot; this is a direct transcript of the commands run and their
+real output (see docs/lineage.md for what these prove and what they don't).
+
+------------------------------------------------------------------------------
+1. Marquez service status (docker ps)
+------------------------------------------------------------------------------
+cartco-marquez-web:        Up (started clean after fixing missing WEB_PORT env var)
+cartco-marquez-api:        Up
+cartco-marquez-db:         Up (healthy)
+cartco-airflow-scheduler:  Up (healthy)
+cartco-airflow-webserver:  Up (healthy)
+
+------------------------------------------------------------------------------
+2. Marquez API health check
+------------------------------------------------------------------------------
+$ docker exec cartco-airflow-scheduler python -c "..."  (GET http://marquez-api:5001/healthcheck)
+200 {"deadlocks":{"healthy":true,"duration":0,"timestamp":"2026-07-14T02:39:06.476Z"},
+     "postgresql":{"healthy":true,"duration":4,"timestamp":"2026-07-14T02:39:06.475Z"}}
+
+------------------------------------------------------------------------------
+3. DAG run used for this verification
+------------------------------------------------------------------------------
+$ docker exec cartco-airflow-scheduler airflow dags trigger shopify_bronze_ingestion
+  -> dag_run_id: manual__2026-07-14T02:43:41+00:00
+
+$ docker exec cartco-airflow-scheduler airflow tasks states-for-dag-run \
+    shopify_bronze_ingestion "manual__2026-07-14T02:43:41+00:00"
+
+dag_id                   | task_id             | state
+-------------------------+---------------------+--------
+shopify_bronze_ingestion | generate_data       | success
+shopify_bronze_ingestion | ingest_to_bronze    | success
+shopify_bronze_ingestion | run_ge_checkpoint   | success
+shopify_bronze_ingestion | transform_to_silver | success
+
+(This run was taken AFTER setting AIRFLOW__OPENLINEAGE__DISABLED=true, i.e.
+apache-airflow-providers-openlineage's own automatic listener was off, so
+every event below came only from lineage/emitter.py's manual instrumentation
+-- see docs/lineage.md for why that provider was disabled.)
+
+------------------------------------------------------------------------------
+4. Task log lines confirming lineage emission (grep 'OpenLineage' over the
+   task logs for this dag_run_id)
+------------------------------------------------------------------------------
+task_id=ingest_to_bronze/attempt=1.log:
+  Emitted OpenLineage START for job=shopify_bronze_ingestion.ingest_to_bronze run_id=4847abfe-17d9-4a31-91f9-c02029a71ffe
+  Emitted OpenLineage COMPLETE for job=shopify_bronze_ingestion.ingest_to_bronze run_id=4847abfe-17d9-4a31-91f9-c02029a71ffe
+
+task_id=run_ge_checkpoint/attempt=1.log:
+  Emitted OpenLineage START for job=shopify_bronze_ingestion.run_ge_checkpoint run_id=98038442-d15c-40de-b6d5-19651bb4fae7
+  Emitted OpenLineage COMPLETE for job=shopify_bronze_ingestion.run_ge_checkpoint run_id=98038442-d15c-40de-b6d5-19651bb4fae7
+
+task_id=transform_to_silver/attempt=1.log:
+  Emitted OpenLineage START for job=shopify_bronze_ingestion.transform_to_silver run_id=dffd79f4-0b46-46ed-908f-58f2c955a532
+  Emitted OpenLineage COMPLETE for job=shopify_bronze_ingestion.transform_to_silver run_id=dffd79f4-0b46-46ed-908f-58f2c955a532
+
+------------------------------------------------------------------------------
+5. Independent confirmation via the Marquez HTTP API (not just our own logs)
+------------------------------------------------------------------------------
+GET /api/v1/namespaces/cartco-lakehouse/jobs/<job>/runs -- latest run per job:
+
+shopify_bronze_ingestion.ingest_to_bronze:
+  state=COMPLETED
+  inputs=[]
+  outputs=['bronze.shopify_orders']
+  run_id=4847abfe-17d9-4a31-91f9-c02029a71ffe
+
+shopify_bronze_ingestion.run_ge_checkpoint:
+  state=COMPLETED
+  inputs=['bronze.shopify_orders']
+  outputs=[]
+  run_id=98038442-d15c-40de-b6d5-19651bb4fae7
+
+shopify_bronze_ingestion.transform_to_silver:
+  state=COMPLETED
+  inputs=['bronze.shopify_orders']
+  outputs=['silver.shopify_orders']
+  run_id=dffd79f4-0b46-46ed-908f-58f2c955a532
+
+GET /api/v1/namespaces/iceberg%3A%2F%2Fcartco-lakehouse/datasets:
+  iceberg://cartco-lakehouse | bronze.shopify_orders
+  iceberg://cartco-lakehouse | silver.shopify_orders
+
+Job namespace: cartco-lakehouse
+Dataset namespace: iceberg://cartco-lakehouse
+
+The run_ids in sections 4 and 5 match exactly -- the events this codebase
+emitted are the same events Marquez stored and served back over its API.
+
+------------------------------------------------------------------------------
+6. Test suite re-run against the lineage-instrumented code
+------------------------------------------------------------------------------
+$ docker exec cartco-airflow-scheduler pytest -m "not integration" tests/unit -v
+  14 passed
+
+$ docker exec -e RUN_INTEGRATION_TESTS=1 cartco-airflow-scheduler pytest -m integration tests/integration -v
+  2 passed
+
+------------------------------------------------------------------------------
+7. A note on what was NOT included as fabricated
+------------------------------------------------------------------------------
+No Marquez UI screenshots are included here -- the UI (localhost:3000) was
+not captured as an image in this session. Everything above is a direct
+transcript of real commands and their real output; see docs/lineage.md for
+the full, honest coverage statement.

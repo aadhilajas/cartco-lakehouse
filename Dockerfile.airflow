@@ -29,3 +29,20 @@ RUN pip install --no-cache-dir \
 RUN pip install --no-cache-dir --upgrade \
     "pyiceberg[s3fs,pyarrow]==0.7.1" \
     "pyarrow==15.0.2"
+
+# Test runner for tests/ (unit tests run against these same installed
+# versions; see tests/README or pytest.ini for markers).
+RUN pip install --no-cache-dir "pytest==8.3.3"
+
+# apache/airflow:2.9.0 already ships apache-airflow-providers-openlineage,
+# which pulls in openlineage-python==1.11.3 as a transitive dependency.
+# lineage/emitter.py uses that same client directly for manual lineage
+# emission (see its module docstring for why manual emission, not the
+# provider's automatic extraction). Pinned here explicitly -- rather than
+# left as an implicit transitive dependency -- so the version this code was
+# written and verified against is documented, and so a future provider
+# upgrade doesn't silently change client behavior underneath it. Do NOT
+# bump this without re-verifying lineage/emitter.py's API calls against the
+# new version live (its openlineage.client.run vs. event_v2 module choice is
+# itself version-specific -- see that file's docstring).
+RUN pip install --no-cache-dir "openlineage-python==1.11.3"

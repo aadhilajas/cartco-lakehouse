@@ -10,6 +10,12 @@ Idempotency: the table is partitioned by ``ingestion_date`` and each run does a
 partition-level overwrite of *today's* partition, so re-running the same day
 replaces (never duplicates) that day's rows while leaving prior days intact.
 
+Lineage: emits START/COMPLETE/FAIL OpenLineage events for this write via
+``lineage/emitter.py`` (job ``shopify_bronze_ingestion.ingest_to_bronze``,
+output dataset ``bronze.shopify_orders``). No-op if ``OPENLINEAGE_URL`` is
+unset or Marquez is unreachable -- lineage emission never affects ingestion
+itself. See ``docs/lineage.md``.
+
 Endpoints default to the in-cluster Docker service names. From the host these
 same services are reachable at localhost:8181 (Iceberg REST) and
 localhost:9000 (MinIO S3); override via env vars when running outside the
@@ -24,6 +30,7 @@ from __future__ import annotations
 
 import logging
 import os
+import sys
 from datetime import date, datetime, timezone
 
 import pandas as pd
@@ -44,6 +51,17 @@ from pyiceberg.types import (
     StringType,
     TimestampType,
 )
+
+# repo root is volume-mounted at /opt/airflow but isn't guaranteed to be on
+# sys.path for every process that runs this script directly (see the same
+# pattern in dags/shopify_bronze_dag.py).
+REPO_ROOT = "/opt/airflow"
+if REPO_ROOT not in sys.path:
+    sys.path.insert(0, REPO_ROOT)
+
+from lineage import emitter as lineage  # noqa: E402
+
+LINEAGE_JOB_NAME = "shopify_bronze_ingestion.ingest_to_bronze"
 
 logging.basicConfig(
     level=logging.INFO,
@@ -167,26 +185,36 @@ def run() -> None:
     logger.info("Source CSV: %s", CSV_PATH)
     logger.info("Iceberg REST catalog: %s | S3 endpoint: %s", ICEBERG_CATALOG_URI, S3_ENDPOINT)
 
-    df, arrow_table = read_source_csv(CSV_PATH, ingestion_day)
-    rows_read = arrow_table.num_rows
-    logger.info("Rows read from source: %d", rows_read)
+    output_dataset = lineage.table_dataset(TABLE_IDENTIFIER)
+    run_id = lineage.new_run_id()
+    lineage.emit_start(LINEAGE_JOB_NAME, run_id, outputs=[output_dataset])
 
-    catalog = get_catalog()
-    table = ensure_table(catalog)
+    try:
+        df, arrow_table = read_source_csv(CSV_PATH, ingestion_day)
+        rows_read = arrow_table.num_rows
+        logger.info("Rows read from source: %d", rows_read)
 
-    # Idempotent, partition-level write: replace only today's ingestion_date
-    # partition. On first load the filter matches nothing and this is an append.
-    table.overwrite(
-        df=arrow_table,
-        overwrite_filter=EqualTo("ingestion_date", ingestion_day.isoformat()),
-    )
+        catalog = get_catalog()
+        table = ensure_table(catalog)
 
-    # Confirm what landed in today's partition by reading it back.
-    written = table.scan(
-        row_filter=EqualTo("ingestion_date", ingestion_day.isoformat())
-    ).to_arrow()
-    rows_written = written.num_rows
-    logger.info("Rows written to %s (ingestion_date=%s): %d", TABLE_IDENTIFIER, ingestion_day, rows_written)
+        # Idempotent, partition-level write: replace only today's ingestion_date
+        # partition. On first load the filter matches nothing and this is an append.
+        table.overwrite(
+            df=arrow_table,
+            overwrite_filter=EqualTo("ingestion_date", ingestion_day.isoformat()),
+        )
+
+        # Confirm what landed in today's partition by reading it back.
+        written = table.scan(
+            row_filter=EqualTo("ingestion_date", ingestion_day.isoformat())
+        ).to_arrow()
+        rows_written = written.num_rows
+        logger.info("Rows written to %s (ingestion_date=%s): %d", TABLE_IDENTIFIER, ingestion_day, rows_written)
+    except Exception:
+        lineage.emit_fail(LINEAGE_JOB_NAME, run_id, outputs=[output_dataset])
+        raise
+
+    lineage.emit_complete(LINEAGE_JOB_NAME, run_id, outputs=[output_dataset])
 
     end_time = datetime.now(timezone.utc)
     duration = (end_time - start_time).total_seconds()

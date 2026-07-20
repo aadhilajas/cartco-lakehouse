@@ -3,10 +3,12 @@
 # Scope note (deliberate, deadline-driven):
 #   * PySpark runs in LOCAL mode inside the Airflow image (see Dockerfile.airflow)
 #     rather than a separate Spark cluster — fewer moving parts / less failure surface.
-#   * Lineage (OpenLineage + Marquez) is DEFERRED to Week 2.
+#   * Lineage (OpenLineage + Marquez) covers only the working Shopify Bronze/GE/Silver
+#     path (see lineage/emitter.py and docs/lineage.md) — not a general lineage platform.
 #
 # Services: minio, mc (bucket init), iceberg-rest, postgres, airflow-init,
-#           airflow-webserver, airflow-scheduler (LocalExecutor, no Celery/Redis).
+#           airflow-webserver, airflow-scheduler (LocalExecutor, no Celery/Redis),
+#           marquez-db, marquez-api, marquez-web (local-only lineage backend/UI).
 
 x-airflow-common: &airflow-common
   build:
@@ -27,10 +29,29 @@ x-airflow-common: &airflow-common
     AWS_SECRET_ACCESS_KEY: minioadmin
     AWS_REGION: us-east-1
     AWS_ENDPOINT_URL: http://minio:9000
+    # OpenLineage emission target (lineage/emitter.py). Left unset, or
+    # pointed at an unreachable host, the emitter logs and no-ops instead of
+    # failing the task -- see lineage/emitter.py's module docstring.
+    OPENLINEAGE_URL: http://marquez-api:5000
+    OPENLINEAGE_NAMESPACE: cartco-lakehouse
+    # apache/airflow:2.9.0 bundles apache-airflow-providers-openlineage,
+    # which auto-emits its own (dataset-less) run events for every task via
+    # an Airflow listener. Verified live: it produced empty
+    # inputDatasetVersions/outputDatasetVersions for these BashOperator/
+    # PythonOperator tasks (it has no generic extractor for arbitrary
+    # scripts), duplicating the job/run rows this project's manual
+    # lineage/emitter.py already emits with real dataset lineage attached.
+    # Disabled here so cartco-lakehouse has exactly one lineage source of
+    # truth instead of two overlapping, differently-populated ones.
+    AIRFLOW__OPENLINEAGE__DISABLED: "true"
   volumes:
     - ./dags:/opt/airflow/dags
     - ./ingestion:/opt/airflow/ingestion
     - ./transforms:/opt/airflow/transforms
+    - ./lineage:/opt/airflow/lineage
+    - ./tests:/opt/airflow/tests
+    - ./pytest.ini:/opt/airflow/pytest.ini
+    - ./conftest.py:/opt/airflow/conftest.py
     - ./data:/opt/airflow/data
     - ./airflow/logs:/opt/airflow/logs
   user: "${AIRFLOW_UID:-50000}:0"
@@ -156,6 +177,64 @@ services:
       airflow-init:
         condition: service_completed_successfully
 
+  # Marquez's own metadata store. Deliberately separate from the Airflow
+  # `postgres` service above -- Marquez manages its own schema/migrations
+  # and reusing Airflow's metadata DB would couple two unrelated schemas.
+  # Not exposed to the host: only marquez-api talks to it.
+  marquez-db:
+    image: postgres:14
+    container_name: cartco-marquez-db
+    environment:
+      POSTGRES_USER: marquez
+      POSTGRES_PASSWORD: marquez
+      POSTGRES_DB: marquez
+    volumes:
+      - marquez-db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "marquez"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  # Local-only OpenLineage backend: receives the events emitted by
+  # lineage/emitter.py and stores the job/dataset/run graph.
+  marquez-api:
+    image: marquezproject/marquez:0.51.1
+    container_name: cartco-marquez-api
+    environment:
+      MARQUEZ_PORT: "5000"
+      MARQUEZ_ADMIN_PORT: "5001"
+      POSTGRES_HOST: marquez-db
+      POSTGRES_PORT: "5432"
+      POSTGRES_DB: marquez
+      POSTGRES_USER: marquez
+      POSTGRES_PASSWORD: marquez
+    ports:
+      - "5000:5000"
+      - "5001:5001"
+    depends_on:
+      marquez-db:
+        condition: service_healthy
+    # Marquez runs its Postgres migrations on startup; if it starts racing
+    # marquez-db's readiness this lets Compose bring it back up rather than
+    # leaving it dead.
+    restart: on-failure
+
+  # Web UI for browsing the lineage graph at http://localhost:3000.
+  marquez-web:
+    image: marquezproject/marquez-web:0.51.1
+    container_name: cartco-marquez-web
+    environment:
+      MARQUEZ_HOST: marquez-api
+      MARQUEZ_PORT: "5000"
+      WEB_PORT: "3000"
+    ports:
+      - "3000:3000"
+    depends_on:
+      - marquez-api
+
 volumes:
   minio-data:
   postgres-data:
+  marquez-db-data:

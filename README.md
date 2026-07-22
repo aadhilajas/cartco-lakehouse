@@ -3,7 +3,7 @@
 **One trusted source of truth for revenue across CartCo's sales channels.**
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
-[![Week 3](https://img.shields.io/badge/status-Week%203%20(Testing%2BLineage)-blue)](deliverables/week3/status_one_pager.md)
+[![Week 4](https://img.shields.io/badge/status-Week%204%20(Multi--source%2BGold)-blue)](deliverables/week3/status_one_pager.md)
 
 A medallion (Bronze → Silver → Gold) lakehouse that ingests CartCo's multi-channel sales data and publishes reconciled, analytics-ready marts.
 
@@ -16,7 +16,12 @@ A medallion (Bronze → Silver → Gold) lakehouse that ingests CartCo's multi-c
 
 ## Demo
 
-> **Week 1 Loom walkthrough:** `https://canva.link/9vqcf3kxbfiat0n` — shows the Docker stack starting up, the `shopify_bronze_ingestion` DAG running to success in Airflow, and a read-back of `bronze.shopify_orders` from the Iceberg table on MinIO.
+> **Latest Loom walkthrough:** [LOOM_URL]
+>
+> **Live deployment:** [LIVE_URL] *(not yet deployed — the stack runs locally via Docker Compose; see [Quickstart](#quickstart))*
+
+**Previous demos:**
+- **Week 1:** `https://canva.link/9vqcf3kxbfiat0n` — Docker stack startup, `shopify_bronze_ingestion` DAG green, `bronze.shopify_orders` read-back.
 
 **Jump to:** [Quickstart](#quickstart) · [Testing](docs/test_report.md) · [Lineage](docs/lineage.md) · [ADRs](#architecture-decision-records) · [Known Limitations](#known-limitations) · [Week 2 proof](deliverables/week2/) · [Week 3 proof](deliverables/week3/)
 
@@ -234,8 +239,27 @@ Planned sources (not yet implemented) and schema notes are documented in [`docs/
 
 ## Roadmap
 
-- **Week 3 — Hardening (done):** unit + integration tests for the ingestion/transform code, wired into CI; OpenLineage → Marquez lineage for the Shopify Bronze/GE/Silver path; test report and logging/error-handling audit (`docs/test_report.md`).
-- **Week 4 — Expansion:** Amazon Bronze connector following the same Bronze/GE/lineage pattern; a first Gold revenue mart; infrastructure/deployment configs (IaC + hardened Docker); closing the test gaps listed in `docs/test_report.md` (Bronze script, DAG wiring, lineage emitter).
+### Completed
+
+| Week | Theme | Highlights |
+|------|-------|------------|
+| 1 | Foundation | Docker Compose stack, synthetic Shopify generator, Bronze ingestion, 2-task DAG, 5 ADRs |
+| 2 | Quality + Silver | GE quality gate (8 expectations), Silver transform (dedup, canonicalise, `order_total`), 4-task DAG, 14 unit + 2 integration tests, CI green |
+| 3 | Hardening + Lineage | OpenLineage → Marquez for 3 Shopify jobs, test report, logging audit, lineage docs |
+
+### In Progress (Week 4)
+
+- Amazon Bronze connector (synthetic generator + Iceberg ingestion + DAG)
+- First Gold revenue mart on `silver.shopify_orders`
+
+### If I Had 2 More Weeks
+
+- **Amazon Silver + GE gate** — quality gate and canonical Silver transform for Amazon, mirroring the Shopify pattern.
+- **In-store Kafka Bronze connector** — consume from a Kafka topic (synthetic producer), land into `bronze.instore_orders`.
+- **Cross-channel Gold marts** — unified revenue mart joining Shopify + Amazon + in-store Silver tables; channel performance dashboard mart.
+- **Column-level lineage** — attach schema and row-count facets to OpenLineage events; extend lineage to Amazon and Gold.
+- **PySpark migration for Silver** — move Silver transforms from PyArrow to PySpark for horizontal scalability.
+- **Cloud deployment** — Terraform for AWS (S3, ECS/EKS, RDS); secrets management; TLS; production-grade Airflow (CeleryExecutor or KubernetesExecutor).
 
 ---
 

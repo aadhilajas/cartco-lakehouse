@@ -16,7 +16,7 @@ A medallion (Bronze → Silver → Gold) lakehouse that ingests CartCo's multi-c
 
 ## Demo
 
-> **Latest Loom walkthrough:** [LOOM_URL]
+> **Latest Loom walkthrough:** https://canva.link/lwgltzauodnuic5
 >
 > **Live deployment:** [LIVE_URL] *(not yet deployed — the stack runs locally via Docker Compose; see [Quickstart](#quickstart))*
 

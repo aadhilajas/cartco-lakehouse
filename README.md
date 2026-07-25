@@ -54,7 +54,7 @@ flowchart LR
     subgraph LAKE["Lakehouse on MinIO (S3)"]
         REST["Iceberg REST catalog"]
         BRONZE[("bronze.shopify_orders<br/>partitioned by ingestion_date")]
-        SILVER[("silver.shopify_orders<br/>partitioned by order_date")]
+        SILVER[("silver.orders<br/>partitioned by order_date")]
     end
 
     subgraph LINEAGE["Lineage (local-only)"]
@@ -81,7 +81,7 @@ flowchart LR
     style SILVER fill:#c0c0c0,color:#000
 ```
 
-Airflow orchestrates a 4-task DAG: `generate_data` produces a synthetic Shopify orders CSV; `ingest_to_bronze` writes it to `bronze.shopify_orders` (Iceberg on MinIO via the Iceberg REST catalog), partitioned by `ingestion_date` and written idempotently (partition-level overwrite); `run_ge_checkpoint` reads Bronze back and runs 8 Great Expectations checks, raising and halting the DAG if any fail; `transform_to_silver` reads Bronze, deduplicates, canonicalizes `status` → `order_status`, and writes `silver.shopify_orders` partitioned by `order_date` with a date-range idempotent overwrite. This chain has been run end-to-end against the live stack with all 4 tasks succeeding. Each of the three data-touching tasks (`ingest_to_bronze`, `run_ge_checkpoint`, `transform_to_silver`) also emits OpenLineage events directly to Marquez via [`lineage/emitter.py`](lineage/emitter.py) — see [`docs/lineage.md`](docs/lineage.md) for exactly what that covers. Gold layer marts are not yet built. The current-state diagram above is kept in sync with [`deliverables/week2/architecture_diagram/current_state_architecture.md`](deliverables/week2/architecture_diagram/current_state_architecture.md), which also documents each component. The original full target-state design (all five channels, Gold, analytics) is in [`docs/B1_Design_Doc.pdf`](docs/B1_Design_Doc.pdf).
+Airflow orchestrates a 4-task DAG: `generate_data` produces a synthetic Shopify orders CSV; `ingest_to_bronze` writes it to `bronze.shopify_orders` (Iceberg on MinIO via the Iceberg REST catalog), partitioned by `ingestion_date` and written idempotently (partition-level overwrite); `run_ge_checkpoint` reads Bronze back and runs 8 Great Expectations checks, raising and halting the DAG if any fail; `transform_to_silver` reads Bronze, deduplicates, canonicalizes `status` → `order_status`, and writes `silver.orders` partitioned by `order_date` with a date-range idempotent overwrite. This chain has been run end-to-end against the live stack with all 4 tasks succeeding. Each of the three data-touching tasks (`ingest_to_bronze`, `run_ge_checkpoint`, `transform_to_silver`) also emits OpenLineage events directly to Marquez via [`lineage/emitter.py`](lineage/emitter.py) — see [`docs/lineage.md`](docs/lineage.md) for exactly what that covers. Gold layer marts are not yet built. The current-state diagram above is kept in sync with [`deliverables/week2/architecture_diagram/current_state_architecture.md`](deliverables/week2/architecture_diagram/current_state_architecture.md), which also documents each component. The original full target-state design (all five channels, Gold, analytics) is in [`docs/B1_Design_Doc.pdf`](docs/B1_Design_Doc.pdf).
 
 ---
 
@@ -181,7 +181,7 @@ docker exec cartco-airflow-scheduler python /opt/airflow/transforms/silver_shopi
 docker exec cartco-airflow-scheduler python -c "
 from transforms.silver_shopify_orders import get_catalog
 catalog = get_catalog()
-print(catalog.load_table('silver.shopify_orders').scan().to_arrow().num_rows)
+print(catalog.load_table('silver.orders').scan().to_arrow().num_rows)
 "
 ```
 
@@ -207,7 +207,7 @@ All data is **synthetically generated** — no real PII or production credential
 - **Columns:** `order_id` (uuid), `customer_id`, `channel` (always `shopify`), `order_date` (spread over ~2 years), `product_id`, `product_category`, `quantity`, `unit_price`, `status` (`delivered` / `cancelled` / `returned`, weighted — this is Bronze's source-faithful vocabulary).
 - **Bronze table:** `bronze.shopify_orders` — an Iceberg table on MinIO with an added `ingestion_date` column, partitioned by `ingestion_date=YYYY-MM-DD` (load date, distinct from the business `order_date`). No filtering, dedup, or business logic applied.
 - **Great Expectations gate:** `transforms/ge_bronze_shopify_checkpoint.py` reads Bronze back and checks: `order_id`/`customer_id` not null, `status` in the Bronze-valid set, `unit_price`/`quantity` in range, `order_id`/`customer_id` columns exist, and row count in a sane bound. Any failure raises and stops the DAG before Silver runs.
-- **Silver table:** `silver.shopify_orders` — deduplicated on `order_id` (latest `order_date` wins), rows with a null `order_id`/`customer_id` dropped, `status` mapped to the canonical `order_status` (`delivered→completed`, `cancelled→cancelled`, `returned→refunded`), `order_total` derived (`quantity × unit_price`), partitioned by `order_date`.
+- **Silver table:** `silver.orders` — deduplicated on `order_id` (latest `order_date` wins), rows with a null `order_id`/`customer_id` dropped, `status` mapped to the canonical `order_status` (`delivered→completed`, `cancelled→cancelled`, `returned→refunded`), `order_total` derived (`quantity × unit_price`), partitioned by `order_date`.
 
 Planned sources (not yet implemented) and schema notes are documented in [`docs/data.md`](docs/data.md).
 
@@ -222,6 +222,7 @@ Planned sources (not yet implemented) and schema notes are documented in [`docs/
 | [ADR-003](docs/adr/ADR-003-partition-strategy.md) | `ingestion_date=YYYY-MM-DD` partitioning across Bronze and downstream layers |
 | [ADR-004](docs/adr/ADR-004-ingestion-tool-choice.md) | Per-source ingestion scripts orchestrated by Airflow |
 | [ADR-005](docs/adr/ADR-005-schema-evolution-policy.md) | Bronze accepts source columns; Silver enforces the canonical schema |
+| [ADR-006](docs/adr/ADR-006-silver-orders-consolidation.md) | Consolidating per-channel Silver tables into a single `silver.orders` table |
 
 ---
 
@@ -250,7 +251,7 @@ Planned sources (not yet implemented) and schema notes are documented in [`docs/
 ### In Progress (Week 4)
 
 - Amazon Bronze connector (synthetic generator + Iceberg ingestion + DAG)
-- First Gold revenue mart on `silver.shopify_orders`
+- First Gold revenue mart on `silver.orders`
 
 ### If I Had 2 More Weeks
 

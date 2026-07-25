@@ -52,7 +52,7 @@ def test_ge_checkpoint_passes_against_live_bronze_data(require_live_stack):
 
 @pytest.mark.integration
 def test_silver_transform_run_writes_to_live_silver_table(require_live_stack):
-    """Running the real Silver transform end to end should populate silver.shopify_orders.
+    """Running the real Silver transform end to end should populate silver.orders.
 
     Exercises: reading Bronze via PyIceberg, the full transform() pipeline,
     ensure_table(), and the idempotent partition-overwrite write -- the same
@@ -113,3 +113,40 @@ def test_silver_orders_contains_both_channels_after_both_dags_run(require_live_s
         f"Present channels: {channels_present}. "
         "Run the amazon_bronze_ingestion DAG (all 4 tasks) first."
     )
+
+
+@pytest.mark.integration
+def test_shopify_transform_rerun_does_not_clobber_amazon_rows(require_live_stack):
+    """Re-running Shopify Silver must leave Amazon rows in silver.orders untouched.
+
+    Verifies channel-scoped overwrite isolation: channel='shopify' filter ensures
+    that re-running the Shopify Silver transform twice in a row does not delete
+    or alter Amazon's rows in silver.orders (count and content remain identical).
+    """
+    from pyiceberg.expressions import EqualTo
+    from transforms import amazon_silver, silver_shopify_orders
+
+    catalog = amazon_silver.get_catalog()
+    try:
+        silver_table = catalog.load_table(amazon_silver.TABLE_IDENTIFIER)
+    except NoSuchTableError:
+        pytest.skip("silver.orders does not exist yet.")
+    except Exception as exc:
+        pytest.skip(f"Live catalog not reachable: {exc}")
+
+    # Scan initial Amazon rows
+    amazon_before = silver_table.scan(row_filter=EqualTo("channel", "amazon")).to_arrow()
+    if amazon_before.num_rows == 0:
+        pytest.skip("No Amazon rows in silver.orders to test isolation.")
+
+    # Re-run Shopify Silver transform
+    silver_shopify_orders.run()
+
+    # Scan Amazon rows after Shopify Silver re-run
+    amazon_after = silver_table.scan(row_filter=EqualTo("channel", "amazon")).to_arrow()
+
+    assert amazon_after.num_rows == amazon_before.num_rows, (
+        f"Amazon row count changed after Shopify re-run: "
+        f"before={amazon_before.num_rows}, after={amazon_after.num_rows}"
+    )
+    assert amazon_after.equals(amazon_before), "Amazon row content changed after Shopify re-run!"

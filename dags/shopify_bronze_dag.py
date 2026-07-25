@@ -10,7 +10,7 @@ Four tasks, in order:
                                  task and halts the DAG before Silver runs.
     4. ``transform_to_silver`` -- read Bronze, apply canonical schema +
                                  dedup + null handling, write
-                                 ``silver.shopify_orders`` partitioned by
+                                 ``silver.orders`` partitioned by
                                  ``order_date``.
 
 Re-runnable: every task is idempotent (Bronze does a partition-level
@@ -104,7 +104,7 @@ with DAG(
         python_callable=silver_shopify_orders.run,
         doc_md=(
             "Reads bronze.shopify_orders, applies canonical schema + dedup + "
-            "null handling, writes silver.shopify_orders partitioned by "
+            "null handling, writes silver.orders partitioned by "
             "order_date."
         ),
     )

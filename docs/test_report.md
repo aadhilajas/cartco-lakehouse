@@ -55,7 +55,7 @@ failed — with a specific reason if either precondition isn't met.
   actually in `bronze.shopify_orders` right now.
 - `test_silver_transform_run_writes_to_live_silver_table` — runs
   `silver_shopify_orders.run()` for real (the same call the
-  `transform_to_silver` task makes) and asserts `silver.shopify_orders`
+  `transform_to_silver` task makes) and asserts `silver.orders`
   ends up non-empty with only canonical status values.
 
 Run inside the container:

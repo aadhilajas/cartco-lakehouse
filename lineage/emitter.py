@@ -5,7 +5,7 @@ to end — see ``docs/lineage.md`` for the full coverage statement):
     - ``bronze.shopify_orders`` write (``ingestion/shopify_bronze.py``)
     - the pre-Silver Great Expectations checkpoint
       (``transforms/ge_bronze_shopify_checkpoint.py``)
-    - ``silver.shopify_orders`` write (``transforms/silver_shopify_orders.py``)
+    - ``silver.orders`` write (``transforms/silver_shopify_orders.py``)
 
 Not covered: any other channel (Amazon, etc.), Gold, or column-level
 lineage. Do not instrument connectors that do not exist yet.

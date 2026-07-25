@@ -51,7 +51,7 @@ and `OPENLINEAGE_NAMESPACE=cartco-lakehouse` automatically (see
    select the `cartco-lakehouse` namespace. You should see three jobs:
    - `shopify_bronze_ingestion.ingest_to_bronze` → writes `bronze.shopify_orders`
    - `shopify_bronze_ingestion.run_ge_checkpoint` → reads `bronze.shopify_orders`
-   - `shopify_bronze_ingestion.transform_to_silver` → reads `bronze.shopify_orders`, writes `silver.shopify_orders`
+   - `shopify_bronze_ingestion.transform_to_silver` → reads `bronze.shopify_orders`, writes `silver.orders`
 3. Or query the HTTP API directly, e.g.:
    ```bash
    curl -s http://localhost:5000/api/v1/namespaces/cartco-lakehouse/jobs | python -m json.tool
@@ -63,7 +63,7 @@ and `OPENLINEAGE_NAMESPACE=cartco-lakehouse` automatically (see
   of the three Shopify pipeline steps: Bronze write, GE checkpoint, Silver
   write.
 - Dataset-level lineage (which job reads/writes which Iceberg table) for
-  `bronze.shopify_orders` and `silver.shopify_orders`.
+  `bronze.shopify_orders` and `silver.orders`.
 - Job namespace `cartco-lakehouse`; dataset namespace `iceberg://cartco-lakehouse`.
 - Verified locally: see `deliverables/week3/lineage_proof.txt` for the actual
   Marquez API responses and job/dataset names from a live run.

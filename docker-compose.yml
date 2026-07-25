@@ -49,6 +49,7 @@ x-airflow-common: &airflow-common
     - ./ingestion:/opt/airflow/ingestion
     - ./transforms:/opt/airflow/transforms
     - ./lineage:/opt/airflow/lineage
+    - ./scripts:/opt/airflow/scripts
     - ./tests:/opt/airflow/tests
     - ./pytest.ini:/opt/airflow/pytest.ini
     - ./conftest.py:/opt/airflow/conftest.py

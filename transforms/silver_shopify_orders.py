@@ -4,8 +4,16 @@ Builds on the Bronze contract established in ``ingestion/shopify_bronze.py``:
 Bronze lands raw, unmodified Shopify orders into ``bronze.shopify_orders``
 partitioned by ``ingestion_date`` (load date). This module reads *today's*
 Bronze partition and conforms it to the canonical Silver entity model,
-writing the result to ``silver.shopify_orders`` as an Apache Iceberg table
-on MinIO, via the same Iceberg REST catalog.
+writing the result to ``silver.orders`` (the shared canonical Silver table)
+as an Apache Iceberg table on MinIO, via the same Iceberg REST catalog.
+
+IMPORTANT — shared ``silver.orders`` table:
+    Both this Shopify Silver transform and the Amazon Silver transform
+    (``transforms/amazon_silver.py``) write to the SAME Iceberg table:
+    ``silver.orders``. The two channels are distinguished by the ``channel``
+    column (``'shopify'`` vs ``'amazon'``). This transform writes only its own
+    channel's rows, scoped by a ``channel='shopify'`` overwrite filter, so
+    Amazon rows in the same ``order_date`` partitions are never touched.
 
 Silver transformations applied, in order:
     1. Schema canonicalisation: ``status`` -> ``order_status``, mapping
@@ -35,7 +43,7 @@ that date range, so re-running against the same Bronze partition replaces
 Lineage: ``run()`` emits START/COMPLETE/FAIL OpenLineage events via
 ``lineage/emitter.py`` (job ``shopify_bronze_ingestion.transform_to_silver``,
 input dataset ``bronze.shopify_orders``, output dataset
-``silver.shopify_orders``). No-op if ``OPENLINEAGE_URL`` is unset or Marquez
+``silver.orders``). No-op if ``OPENLINEAGE_URL`` is unset or Marquez
 is unreachable -- lineage emission never affects the transform itself. See
 ``docs/lineage.md``.
 
@@ -100,7 +108,10 @@ AWS_REGION = os.environ.get("AWS_REGION", "us-east-1")
 BRONZE_TABLE_IDENTIFIER = os.environ.get("SHOPIFY_BRONZE_TABLE", "bronze.shopify_orders")
 
 NAMESPACE = "silver"
-TABLE_NAME = "shopify_orders"
+# Shared canonical Silver table — both Shopify and Amazon channels write here.
+# Channel is preserved in the 'channel' column; each transform scopes its
+# overwrite filter to its own channel so neither ever clobbers the other.
+TABLE_NAME = "orders"
 TABLE_IDENTIFIER = f"{NAMESPACE}.{TABLE_NAME}"
 
 # Canonical Silver schema. Field ids follow this list's order (order_id=1 ..
@@ -443,11 +454,15 @@ def run() -> None:
         max_order_date = pc.max(order_date_col).as_py()
 
         # Idempotent, partition-level write: replace exactly the order_date range
-        # covered by today's transformed batch. Re-running against the same
-        # Bronze partition reproduces the same range and the same rows.
+        # covered by today's transformed Shopify batch, but ONLY for
+        # channel='shopify' rows — this ensures we never overwrite Amazon rows
+        # that share the same order_date partitions in silver.orders.
         overwrite_filter = And(
-            GreaterThanOrEqual("order_date", min_order_date.isoformat()),
-            LessThanOrEqual("order_date", max_order_date.isoformat()),
+            And(
+                GreaterThanOrEqual("order_date", min_order_date.isoformat()),
+                LessThanOrEqual("order_date", max_order_date.isoformat()),
+            ),
+            EqualTo("channel", "shopify"),
         )
         silver_table.overwrite(df=silver_arrow, overwrite_filter=overwrite_filter)
 

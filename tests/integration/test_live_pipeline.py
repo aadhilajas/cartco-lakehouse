@@ -68,3 +68,48 @@ def test_silver_transform_run_writes_to_live_silver_table(require_live_stack):
 
     assert len(silver_df) > 0
     assert set(silver_df["order_status"].unique()) <= {"completed", "cancelled", "refunded", "unknown"}
+
+
+@pytest.mark.integration
+def test_silver_orders_contains_both_channels_after_both_dags_run(require_live_stack):
+    """silver.orders must hold rows from both channel='shopify' and channel='amazon'.
+
+    This verifies the cross-channel UNION contract: both the Shopify and Amazon
+    Silver transforms write to the same ``silver.orders`` Iceberg table, each
+    scoped to its own channel so they never overwrite each other.
+
+    Pre-condition: both amazon_bronze_ingestion and shopify_bronze_ingestion
+    DAGs must have completed at least one successful run before this test is
+    invoked (i.e. both bronze tables must exist and silver.orders must have
+    been populated for both channels).
+    """
+    from transforms import amazon_silver
+
+    catalog = amazon_silver.get_catalog()
+
+    # Skip gracefully if silver.orders doesn't exist yet.
+    try:
+        silver_table = catalog.load_table(amazon_silver.TABLE_IDENTIFIER)
+    except NoSuchTableError:
+        pytest.skip(
+            f"{amazon_silver.TABLE_IDENTIFIER} does not exist yet -- "
+            "run both shopify_bronze_ingestion and amazon_bronze_ingestion DAGs first."
+        )
+    except Exception as exc:
+        pytest.skip(f"Live Iceberg REST catalog not reachable: {exc}")
+
+    silver_df = silver_table.scan().to_arrow().to_pandas()
+    assert len(silver_df) > 0, "silver.orders exists but has 0 rows"
+
+    channels_present = set(silver_df["channel"].unique())
+
+    assert "shopify" in channels_present, (
+        f"silver.orders is missing channel='shopify' rows. "
+        f"Present channels: {channels_present}. "
+        "Run the shopify_bronze_ingestion DAG (all 4 tasks) first."
+    )
+    assert "amazon" in channels_present, (
+        f"silver.orders is missing channel='amazon' rows. "
+        f"Present channels: {channels_present}. "
+        "Run the amazon_bronze_ingestion DAG (all 4 tasks) first."
+    )

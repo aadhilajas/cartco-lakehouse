@@ -61,6 +61,7 @@ from __future__ import annotations
 import logging
 import os
 import sys
+import time
 from datetime import date, datetime, timezone
 
 import pyarrow as pa
@@ -132,9 +133,10 @@ TABLE_SCHEMA = Schema(
     NestedField(11, "transform_timestamp", TimestampType(), required=False),
 )
 
-# Partition by business order_date (identity transform), not ingestion_date.
+# Partition by order_date and channel for cross-channel overwrite isolation
 PARTITION_SPEC = PartitionSpec(
-    PartitionField(source_id=4, field_id=1000, transform=IdentityTransform(), name="order_date")
+    PartitionField(source_id=4, field_id=1000, transform=IdentityTransform(), name="order_date"),
+    PartitionField(source_id=3, field_id=1001, transform=IdentityTransform(), name="channel"),
 )
 
 COLUMN_ORDER = [
@@ -464,7 +466,16 @@ def run() -> None:
             ),
             EqualTo("channel", "shopify"),
         )
-        silver_table.overwrite(df=silver_arrow, overwrite_filter=overwrite_filter)
+        for attempt in range(5):
+            try:
+                fresh_table = catalog.load_table(TABLE_IDENTIFIER)
+                fresh_table.overwrite(df=silver_arrow, overwrite_filter=overwrite_filter)
+                break
+            except Exception as exc:
+                if attempt == 4:
+                    raise
+                logger.warning("silver_table.overwrite attempt %d/5 failed: %s. Retrying in 2s...", attempt + 1, exc)
+                time.sleep(2.0)
 
         written_back = silver_table.scan(row_filter=overwrite_filter).to_arrow()
         rows_confirmed = written_back.num_rows

@@ -1,0 +1,42 @@
+# Phase 1: reproducible baseline
+
+Use Python 3.11 for local tests. Airflow itself runs in Linux containers.
+
+```bash
+python -m venv .venv
+# Activate: .venv/Scripts/Activate.ps1 (PowerShell) or source .venv/bin/activate (bash)
+python -m pip install --require-hashes -r requirements/test.txt
+python scripts/dev.py collect
+python scripts/dev.py test
+```
+
+Alternatively, after activation, python scripts/dev.py bootstrap installs the
+same fully pinned dependency file and runs pip check. Python patch releases
+may differ; the supported minor version is checked by the command helper.
+
+Copy .env.example to .env if Compose interpolation settings need adjustment.
+The .env file is ignored by Git; it is not automatically loaded by standalone
+Python scripts. Export host endpoint variables explicitly when running outside
+Docker. Default credentials are for this local synthetic-data stack only.
+
+With Docker Desktop / Compose v2 available:
+
+```bash
+python scripts/dev.py build
+python scripts/dev.py check-dags
+python scripts/dev.py up
+# Wait for docker compose ps to show healthy Airflow and ready catalog/storage.
+python scripts/dev.py run-local
+python scripts/dev.py down
+```
+
+run-local executes existing scripts sequentially (both source pipelines, then
+four marts) and stops on the first failure. It is a baseline demonstration,
+not the future scheduled workflow or an acceptance/reconciliation test. Current
+scripts use today's UTC batch date and known Gold semantics remain unfixed.
+The command does not erase volumes. generate only creates the two source CSVs.
+
+Read requirements-matrix.md, baseline.md, ../../requirements/README.md and
+../adr/ADR-007-data-contracts-and-replay.md before interpreting test results.
+The old README/test report contains historical counts and stale scope claims;
+this folder records the current Phase 1 evidence.

@@ -1,0 +1,2 @@
+-r test.in
+apache-airflow==2.9.0

@@ -1,5 +1,7 @@
 # CartCo Unified Commerce Lakehouse
 
+> **Phase 1 work in progress:** current setup, dependency locks and verification status are in [the baseline guide](docs/phase1/README.md). Amazon and Gold implementations already exist; several historical sections below predate them.
+
 **One trusted source of truth for revenue across CartCo's sales channels.**
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
@@ -125,7 +127,7 @@ cd cartco-lakehouse
 docker compose build
 ```
 
-> There is no `requirements.txt` yet — all runtime dependencies are baked into the Airflow image via `Dockerfile.airflow`.
+> Runtime and test dependencies are now centrally pinned under [`requirements/`](requirements/README.md); the Airflow image uses the Linux/Python 3.11 lock.
 
 ### Run
 
@@ -223,6 +225,7 @@ Planned sources (not yet implemented) and schema notes are documented in [`docs/
 | [ADR-004](docs/adr/ADR-004-ingestion-tool-choice.md) | Per-source ingestion scripts orchestrated by Airflow |
 | [ADR-005](docs/adr/ADR-005-schema-evolution-policy.md) | Bronze accepts source columns; Silver enforces the canonical schema |
 | [ADR-006](docs/adr/ADR-006-silver-orders-consolidation.md) | Consolidating per-channel Silver tables into a single `silver.orders` table |
+| [ADR-007](docs/adr/ADR-007-data-contracts-and-replay.md) | Target release contracts: keys, updates, money, metrics, batch dates and publication |
 
 ---
 

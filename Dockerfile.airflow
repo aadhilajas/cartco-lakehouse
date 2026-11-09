@@ -1,48 +1,14 @@
-# Custom Airflow image for the CartCo lakehouse.
-# Extends the official Airflow image with PySpark (local mode), PyIceberg,
-# Great Expectations, and Faker for synthetic data generation.
-FROM apache/airflow:2.9.0
-
-# Java is required for PySpark to run in local mode inside this container.
-# build-essential provides gcc/g++ so C-extension deps (e.g. mmhash3, pulled in
-# by pyiceberg) can compile their wheels.
+# Python minor version is shared with .python-version and CI.
+# Registry manifest verified 2026-11-09; application build still needs live CI.
+FROM apache/airflow:2.9.0-python3.11@sha256:72e367209f7d75fd4c9a93129f3df083feef5923b2690a52b5db205f7cd7890b
 USER root
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends default-jdk-headless build-essential \
+    && apt-get install -y --no-install-recommends build-essential \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
-
-# JAVA_HOME is resolved from the default-jdk symlink so PySpark can find the JVM.
-ENV JAVA_HOME=/usr/lib/jvm/default-java
-
 USER airflow
-RUN pip install --no-cache-dir \
-    "pyspark==3.5.1" \
-    "pyiceberg[s3fs,pyarrow]==0.6.1" \
-    "great-expectations==0.18.19" \
-    "faker==25.9.1"
-
-# pyiceberg 0.6.x raises "Cannot write to partitioned tables"; 0.7.x adds
-# partitioned writes plus partial overwrite/delete, which the Bronze loads need
-# for idempotent, ingestion_date-partitioned writes. pyarrow is pinned to keep
-# the resolved version stable.
-RUN pip install --no-cache-dir --upgrade \
-    "pyiceberg[s3fs,pyarrow]==0.7.1" \
-    "pyarrow==15.0.2"
-
-# Test runner for tests/ (unit tests run against these same installed
-# versions; see tests/README or pytest.ini for markers).
-RUN pip install --no-cache-dir "pytest==8.3.3"
-
-# apache/airflow:2.9.0 already ships apache-airflow-providers-openlineage,
-# which pulls in openlineage-python==1.11.3 as a transitive dependency.
-# lineage/emitter.py uses that same client directly for manual lineage
-# emission (see its module docstring for why manual emission, not the
-# provider's automatic extraction). Pinned here explicitly -- rather than
-# left as an implicit transitive dependency -- so the version this code was
-# written and verified against is documented, and so a future provider
-# upgrade doesn't silently change client behavior underneath it. Do NOT
-# bump this without re-verifying lineage/emitter.py's API calls against the
-# new version live (its openlineage.client.run vs. event_v2 module choice is
-# itself version-specific -- see that file's docstring).
-RUN pip install --no-cache-dir "openlineage-python==1.11.3"
+COPY requirements/airflow.txt /tmp/cartco-airflow.txt
+# One resolved install; explicit Airflow pin in the lock prevents silent upgrades.
+# Unused Spark/JVM were removed: all implemented jobs use PyArrow/PyIceberg.
+RUN pip install --no-cache-dir --require-hashes -r /tmp/cartco-airflow.txt \
+    && pip check

@@ -226,3 +226,10 @@ compose-up.log
 
 # Airflow runtime logs (recreated automatically by docker compose volume mount)
 airflow/logs/
+
+# Local configuration and development environments
+.env
+.env.*
+!.env.example
+.venv/
+work/

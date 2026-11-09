@@ -33,5 +33,6 @@ Unused PySpark and Java are no longer installed; no implemented job uses them.
 
 Container manifests were read from Docker Registry on 2026-11-09 for Airflow,
 Postgres, Iceberg REST and Marquez. MinIO/mc registry requests were unauthorized;
-their existing image references remain unchanged pending verified replacements.
-Do not treat these remaining latest tags as reproducibly pinned.
+Dockerfile.minio now builds fixed official source commits with digest-pinned
+Go/Debian base images. See docs/phase1/minio-source-build.md for provenance.
+Its container build and live behavior still require a successful CI run.

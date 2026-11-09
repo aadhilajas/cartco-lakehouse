@@ -12,8 +12,8 @@ business behavior. Status means implemented/evidenced here, not planned success.
 | Airflow orchestration | Three DAG definitions | Real DAG import check added; scheduling/readiness later |
 | Quality on Silver/Gold | Bronze GE gates only | Output gates and persisted results |
 | Lineage | Source and Gold event emission | Live all-source proof, facets and failure-path coverage |
-| Reproducible environment | Shared hashed dependency locks and Python 3.11 | Clean install verification; Docker build and MinIO pinning pending |
-| CI | Unit job; DAG/image job added | Actual remote run pending; integration seeding/status bugs still open |
+| Reproducible environment | Clean hash-checked install, Python 3.11, fixed-source MinIO build | Docker build and live verification pending |
+| CI | Unit job and full-stack baseline job | Remote run pending; both-source seeding, status scope and fresh-snapshot checks prepared |
 | Durability and recovery | Compose storage volumes | Catalog recreation and restore tests |
 | Deployment | Local Compose configuration | Cloud deployment not executed |
 | Final delivery | Historical screenshots/demos and six ADRs | Current architecture/test report and final-week evidence |

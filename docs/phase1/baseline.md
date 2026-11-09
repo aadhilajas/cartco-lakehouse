@@ -58,3 +58,24 @@ Execution: 47 passed, 110 dependency warnings, 12.33 seconds.
 All 35 repository Python files parsed successfully; git diff --check passed.
 The 110 upstream warnings were retained, not suppressed.
 
+## Continuation: storage source build and live-run preparation
+
+Repeated Docker Hub and Quay requests confirmed no anonymous pull access for
+MinIO/server or client. Replaced those references with one local image built
+from fixed official source commits. Go 1.24.9 and Debian base manifest content
+digests were verified from registry responses; provenance is recorded separately.
+This supersedes the earlier pending image-reference note, but is not build proof.
+
+CI now runs both source DAGs and Gold on a disposable fresh stack, then the four
+integration checks. The status assertion is source-scoped, isolation verification
+reloads metadata and sorts keyed rows, and CI fails on missing prerequisites.
+Local recheck: 47 passed, four live tests skipped, 103 warnings in 12.30 seconds.
+Python syntax and Compose/workflow YAML checks passed. Native Git Bash could
+not start in the restricted host, so bash syntax execution is still unverified.
+
+Publishing is blocked by external access: the GitHub account can read repository
+metadata, but create-tree returned HTTP 403 Resource not accessible by integration.
+The local Git credential helper also cannot start under the host restrictions.
+No branch/PR was published, no CI was started, and no remote main branch changed.
+The changes are committed locally and can be exported as a Git bundle.
+

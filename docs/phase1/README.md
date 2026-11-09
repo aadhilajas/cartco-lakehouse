@@ -36,6 +36,16 @@ not the future scheduled workflow or an acceptance/reconciliation test. Current
 scripts use today's UTC batch date and known Gold semantics remain unfixed.
 The command does not erase volumes. generate only creates the two source CSVs.
 
+The CI stack-baseline job builds both images, imports all real DAGs, runs both
+source DAGs followed by Gold with Airflow's dags test command, then executes the
+four live integration tests with strict missing-prerequisite failures. It saves
+task logs, JUnit results and table snapshot/count evidence. This is the existing
+two-source baseline, not acceptance of future metric or replay contracts.
+
+MinIO is built from pinned upstream source because anonymous upstream container
+pulls are unavailable. The image build may take longer on an empty cache; see
+minio-source-build.md for the exact source and base-image provenance.
+
 Read requirements-matrix.md, baseline.md, ../../requirements/README.md and
 ../adr/ADR-007-data-contracts-and-replay.md before interpreting test results.
 The old README/test report contains historical counts and stale scope claims;

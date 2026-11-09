@@ -23,10 +23,17 @@ from __future__ import annotations
 import os
 import string
 import uuid
+import sys
+from pathlib import Path
 
 import numpy as np
 import pandas as pd
 from faker import Faker
+
+REPO_ROOT = str(Path(__file__).resolve().parents[1])
+if REPO_ROOT not in sys.path:
+    sys.path.insert(0, REPO_ROOT)
+from pipeline.batch import resolve_batch_date
 
 N_ROWS = 40_000
 N_CUSTOMERS = 6_000
@@ -91,9 +98,9 @@ def _generate_asins(rng: np.random.Generator, n: int) -> list[str]:
     return ["B0" + "".join(row) for row in suffixes]
 
 
-def generate() -> pd.DataFrame:
+def generate(as_of_date=None) -> pd.DataFrame:
     fake = Faker()
-    Faker.seed(SEED)
+    fake.seed_instance(SEED)
     rng = np.random.default_rng(SEED)
 
     customer_ids = [fake.uuid4() for _ in range(N_CUSTOMERS)]
@@ -103,7 +110,7 @@ def generate() -> pd.DataFrame:
         for asin in asins
     }
 
-    end = pd.Timestamp.now().normalize()
+    end = pd.Timestamp(resolve_batch_date(as_of_date))
     start = end - pd.DateOffset(years=2)
     start_epoch = int(start.timestamp())
     end_epoch = int(end.timestamp())
@@ -125,7 +132,7 @@ def generate() -> pd.DataFrame:
 
     return pd.DataFrame(
         {
-            "order_id": [str(uuid.uuid4()) for _ in range(N_ROWS)],
+            "order_id": [str(uuid.uuid5(uuid.NAMESPACE_URL, f"cartco/amazon/{SEED}/{end.date()}/{i}")) for i in range(N_ROWS)],
             "customer_id": rng.choice(customer_ids, size=N_ROWS),
             "channel": "amazon",
             "order_date": order_dates,

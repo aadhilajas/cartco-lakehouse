@@ -50,7 +50,7 @@ def test_ge_checkpoint_passes_against_live_bronze_data(require_live_stack):
     run_ge_checkpoint Airflow task calls, exercised against the real table.
     """
     bronze_table = _bronze_table_or_skip()
-    bronze_df = bronze_table.scan().to_arrow().to_pandas()
+    bronze_df = ge_bronze_shopify_checkpoint.load_bronze_as_dataframe()
     assert len(bronze_df) > 0, "bronze.shopify_orders exists but has 0 rows"
 
     # Should not raise -- proves the live Bronze data still satisfies the

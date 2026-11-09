@@ -24,7 +24,7 @@ run_date=$(date -u +%Y-%m-%dT00:00:00+00:00)
 for dag in shopify_bronze_ingestion amazon_bronze_ingestion gold_marts_ingestion; do
   docker compose exec -T airflow-scheduler airflow dags test "$dag" "$run_date" 2>&1 | tee "test-results/${dag}.log"
 done
-docker compose exec -T -e RUN_INTEGRATION_TESTS=1 -e CARTCO_STRICT_INTEGRATION=1 airflow-scheduler \
+docker compose exec -T -e RUN_INTEGRATION_TESTS=1 -e CARTCO_STRICT_INTEGRATION=1 -e "CARTCO_BATCH_DATE=${run_date%%T*}" airflow-scheduler \
   python -m pytest -m integration tests/integration -v --junitxml=/tmp/cartco-integration.xml \
   2>&1 | tee test-results/integration.log
 docker compose exec -T airflow-scheduler python /opt/airflow/scripts/check_live_baseline.py \

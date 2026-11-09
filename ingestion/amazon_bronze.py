@@ -7,7 +7,7 @@ deduplication — it only converts format (CSV -> Parquet/Iceberg) and stamps th
 load with an ``ingestion_date`` partition column.
 
 Idempotency: the table is partitioned by ``ingestion_date`` and each run does a
-partition-level overwrite of *today's* partition, so re-running the same day
+partition-level overwrite of the selected batch partition, so re-running the same day
 replaces (never duplicates) that day's rows while leaving prior days intact.
 
 Lineage: emits START/COMPLETE/FAIL OpenLineage events for this write via
@@ -31,6 +31,7 @@ from __future__ import annotations
 import logging
 import os
 import sys
+from pathlib import Path
 from datetime import date, datetime, timezone
 
 import pandas as pd
@@ -54,11 +55,12 @@ from pyiceberg.types import (
 
 # repo root is volume-mounted at /opt/airflow but isn't guaranteed to be on
 # sys.path for every process that runs this script directly.
-REPO_ROOT = "/opt/airflow"
+REPO_ROOT = str(Path(__file__).resolve().parents[1])
 if REPO_ROOT not in sys.path:
     sys.path.insert(0, REPO_ROOT)
 
 from lineage import emitter as lineage  # noqa: E402
+from pipeline.batch import resolve_batch_date  # noqa: E402
 
 LINEAGE_JOB_NAME = "amazon_bronze_ingestion.ingest_to_bronze"
 
@@ -181,9 +183,9 @@ def read_source_csv(csv_path: str, ingestion_day: date) -> tuple[pd.DataFrame, p
     return df, arrow_table
 
 
-def run() -> None:
+def run(batch_date=None) -> None:
     start_time = datetime.now(timezone.utc)
-    ingestion_day = start_time.date()
+    ingestion_day = resolve_batch_date(batch_date)
     logger.info("=== Amazon Bronze ingestion START at %s ===", start_time.isoformat())
     logger.info("Source CSV: %s", CSV_PATH)
     logger.info("Iceberg REST catalog: %s | S3 endpoint: %s", ICEBERG_CATALOG_URI, S3_ENDPOINT)
@@ -200,18 +202,21 @@ def run() -> None:
         catalog = get_catalog()
         table = ensure_table(catalog)
 
-        # Idempotent, partition-level write: replace only today's ingestion_date
+        # Idempotent, partition-level write: replace only the selected ingestion_date
         # partition. On first load the filter matches nothing and this is an append.
         table.overwrite(
             df=arrow_table,
             overwrite_filter=EqualTo("ingestion_date", ingestion_day.isoformat()),
         )
 
-        # Confirm what landed in today's partition by reading it back.
+        # Confirm what landed in the selected partition by reading it back.
+        table = catalog.load_table(TABLE_IDENTIFIER)
         written = table.scan(
             row_filter=EqualTo("ingestion_date", ingestion_day.isoformat())
         ).to_arrow()
         rows_written = written.num_rows
+        if rows_written != rows_read:
+            raise RuntimeError(f"Bronze verification failed: expected {rows_read} rows, found {rows_written}")
         logger.info("Rows written to %s (ingestion_date=%s): %d", TABLE_IDENTIFIER, ingestion_day, rows_written)
     except Exception:
         lineage.emit_fail(LINEAGE_JOB_NAME, run_id, outputs=[output_dataset])
@@ -222,13 +227,6 @@ def run() -> None:
     end_time = datetime.now(timezone.utc)
     duration = (end_time - start_time).total_seconds()
     logger.info("=== Amazon Bronze ingestion END at %s (%.1fs) ===", end_time.isoformat(), duration)
-
-    if rows_written != rows_read:
-        logger.warning(
-            "Row count mismatch: read %d but today's partition holds %d",
-            rows_read,
-            rows_written,
-        )
 
 
 if __name__ == "__main__":

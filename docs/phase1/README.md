@@ -33,7 +33,8 @@ python scripts/dev.py down
 run-local executes existing scripts sequentially (both source pipelines, then
 four marts) and stops on the first failure. It is a baseline demonstration,
 not the future scheduled workflow or an acceptance/reconciliation test. Current
-scripts use today's UTC batch date and known Gold semantics remain unfixed.
+scripts now accept a fixed batch date; known Gold semantics remain unfixed.
+See [Phase 2 batch execution](../phase2/batch-execution.md) for current behavior.
 The command does not erase volumes. generate only creates the two source CSVs.
 
 The CI stack-baseline job builds both images, imports all real DAGs, runs both

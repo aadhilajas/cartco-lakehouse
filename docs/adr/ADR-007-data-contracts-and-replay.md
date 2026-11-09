@@ -42,8 +42,10 @@ Date: 2026-11-09
 
 ## Implementation boundary
 
-Current scripts still use floats, wall-clock dates, date-range overwrites and
-order_date-based deduplication. This ADR authorizes follow-on migrations; it does
-not claim those behaviors were fixed in Phase 1. Migration must preserve existing
-source data, explicitly evolve Iceberg schemas and add regression tests before
-switching writes. ADR-003/006 describe the old implementation where they differ.
+Phase 2 now propagates explicit load dates and guards the legacy range overwrite
+against dropping or changing existing orders. Fixed-date source generation is
+reproducible. Floats and order-placement-time deduplication remain; source update
+versions, immutable manifests and schema migrations are still pending. The guard
+rejects updates until a versioned merge is implemented; it is not an upsert.
+Migration must preserve existing source data and add regression tests before
+switching writes. ADR-003/006 describe the older implementation where they differ.

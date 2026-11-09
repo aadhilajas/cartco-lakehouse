@@ -2,6 +2,8 @@
 
 > **Phase 1 work in progress:** current setup, dependency locks and verification status are in [the baseline guide](docs/phase1/README.md). Amazon and Gold implementations already exist; several historical sections below predate them.
 
+> **Local Phase 2 work:** [batch execution and safety guards](docs/phase2/batch-execution.md) documents fixed-date runs, reproducible source generation and rejected unsafe Silver overwrites. Source-versioned merging and Docker acceptance remain pending.
+
 **One trusted source of truth for revenue across CartCo's sales channels.**
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)

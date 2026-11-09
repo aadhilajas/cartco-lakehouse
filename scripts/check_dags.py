@@ -24,6 +24,15 @@ def main() -> None:
         if set(dag.task_ids) != task_ids:
             raise RuntimeError(f"Unexpected tasks in {name}: {dag.task_ids}")
         if name != "gold_marts_ingestion":
+            if dag.max_active_runs != 1:
+                raise RuntimeError(f"Overlapping source runs are unsafe: {name}")
+            for task_id in source_chain[:2]:
+                task = dag.get_task(task_id)
+                if task.env.get("CARTCO_BATCH_DATE") != "{{ ds }}" or not task.append_env:
+                    raise RuntimeError(f"Missing source batch date: {name}.{task_id}")
+            for task_id in source_chain[2:]:
+                if dag.get_task(task_id).op_kwargs.get("batch_date") != "{{ ds }}":
+                    raise RuntimeError(f"Missing transform batch date: {name}.{task_id}")
             for index, task_id in enumerate(source_chain):
                 downstream = {source_chain[index + 1]} if index + 1 < len(source_chain) else set()
                 if dag.get_task(task_id).downstream_task_ids != downstream:

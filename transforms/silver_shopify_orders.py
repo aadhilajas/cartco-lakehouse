@@ -2,7 +2,7 @@
 
 Builds on the Bronze contract established in ``ingestion/shopify_bronze.py``:
 Bronze lands raw, unmodified Shopify orders into ``bronze.shopify_orders``
-partitioned by ``ingestion_date`` (load date). This module reads *today's*
+partitioned by ``ingestion_date`` (load date). This module reads the selected batch
 Bronze partition and conforms it to the canonical Silver entity model,
 writing the result to ``silver.orders`` (the shared canonical Silver table)
 as an Apache Iceberg table on MinIO, via the same Iceberg REST catalog.
@@ -24,9 +24,9 @@ Silver transformations applied, in order:
        the Bronze contract in ``ingestion/shopify_bronze.py``, Bronze stays
        source-faithful and performs no business logic, so the source ->
        canonical mapping only happens here.
-    2. Type enforcement: ``order_date`` is truncated from timestamp to date.
-    3. Deduplication: one row per ``order_id``, keeping the row with the
-       latest ``order_date`` (handles Bronze re-ingestion of the same order).
+    2. Deduplication: one row per ``order_id``, keeping the latest original
+       ``order_date`` timestamp before truncation.
+    3. Type enforcement: ``order_date`` is truncated from timestamp to date.
     4. Null handling: rows with a null ``order_id`` or ``customer_id`` are
        dropped as unrecoverable; ``quantity``, ``unit_price``, and
        ``product_category`` nulls are filled with defaults.
@@ -36,9 +36,12 @@ Silver transformations applied, in order:
 
 Idempotency: Silver is partitioned by ``order_date`` (business date), not
 ``ingestion_date``. Each run computes the min/max ``order_date`` present in
-today's transformed batch and does a partition-level overwrite of exactly
+the selected transformed batch and does a partition-level overwrite of exactly
 that date range, so re-running against the same Bronze partition replaces
 (never duplicates) those rows.
+Before writing, a safety gate rejects missing existing keys or changed business
+values. Source-versioned updates/deletes are not supported yet; exact business
+replays and new orders with safe coverage are supported.
 
 Lineage: ``run()`` emits START/COMPLETE/FAIL OpenLineage events via
 ``lineage/emitter.py`` (job ``shopify_bronze_ingestion.transform_to_silver``,
@@ -61,6 +64,7 @@ from __future__ import annotations
 import logging
 import os
 import sys
+from pathlib import Path
 import time
 from datetime import date, datetime, timezone
 
@@ -85,11 +89,13 @@ from pyiceberg.types import (
 # repo root is volume-mounted at /opt/airflow but isn't guaranteed to be on
 # sys.path for every process that runs this script directly (see the same
 # pattern in dags/shopify_bronze_dag.py).
-REPO_ROOT = "/opt/airflow"
+REPO_ROOT = str(Path(__file__).resolve().parents[1])
 if REPO_ROOT not in sys.path:
     sys.path.insert(0, REPO_ROOT)
 
 from lineage import emitter as lineage  # noqa: E402
+from pipeline.batch import resolve_batch_date  # noqa: E402
+from pipeline.silver_safety import UnsafeSnapshotError, validate_snapshot_replacement  # noqa: E402
 
 LINEAGE_JOB_NAME = "shopify_bronze_ingestion.transform_to_silver"
 
@@ -351,11 +357,10 @@ def transform(
     del transform_date  # unused: partitioning uses each row's own order_date
 
     table = _canonicalize_status_to_order_status(bronze_df_arrow, stats=stats)
-    table = _truncate_order_date_to_date(table)
-
     rows_before_dedup = table.num_rows
     table = _deduplicate_latest_by_order_id(table)
     rows_after_dedup = table.num_rows
+    table = _truncate_order_date_to_date(table)
     if stats is not None:
         stats["rows_after_dedup"] = rows_after_dedup
         stats["rows_dropped_dedup"] = rows_before_dedup - rows_after_dedup
@@ -376,10 +381,10 @@ def transform(
     return table.cast(expected_arrow_schema)
 
 
-def run() -> None:
+def run(batch_date=None) -> None:
     """Orchestrate the Bronze -> Silver transform: read, transform, write, log."""
     start_time = datetime.now(timezone.utc)
-    transform_date = start_time.date()
+    transform_date = resolve_batch_date(batch_date)
     logger.info("=== Shopify Silver transform START at %s ===", start_time.isoformat())
     logger.info(
         "Source Bronze table: %s | ingestion_date filter: %s",
@@ -413,22 +418,20 @@ def run() -> None:
         logger.info("Rows read from Bronze (ingestion_date=%s): %d", transform_date, rows_read)
 
         if rows_read == 0:
-            logger.warning(
-                "No Bronze rows found for ingestion_date=%s; nothing to transform. "
-                "Run ingestion/shopify_bronze.py for today first.",
-                transform_date,
+            raise RuntimeError(
+                f"No Bronze rows found for ingestion_date={transform_date}; "
+                "the requested batch must be ingested and validated before Silver."
             )
-            lineage.emit_complete(LINEAGE_JOB_NAME, run_id, inputs=[bronze_dataset], outputs=[silver_dataset])
-            end_time = datetime.now(timezone.utc)
-            duration = (end_time - start_time).total_seconds()
-            logger.info(
-                "=== Shopify Silver transform END at %s (%.1fs) ===", end_time.isoformat(), duration
-            )
-            return
 
         stats: dict[str, int] = {}
         silver_arrow = transform(bronze_arrow, transform_date, stats=stats)
         rows_written = silver_arrow.num_rows
+        if rows_written == 0:
+            raise RuntimeError("No valid Silver rows remain; refusing an empty overwrite")
+        if set(silver_arrow.column("channel").to_pylist()) != {"shopify"}:
+            raise ValueError("Silver input contains a missing or unexpected source channel")
+        if silver_arrow.column("order_date").null_count:
+            raise ValueError("Silver order_date cannot be null when writing partitions")
 
         logger.info(
             "Rows read from Bronze: %d -> after dedup: %d (dropped %d) -> "
@@ -456,7 +459,7 @@ def run() -> None:
         max_order_date = pc.max(order_date_col).as_py()
 
         # Idempotent, partition-level write: replace exactly the order_date range
-        # covered by today's transformed Shopify batch, but ONLY for
+        # covered by the selected transformed Shopify batch, but ONLY for
         # channel='shopify' rows — this ensures we never overwrite Amazon rows
         # that share the same order_date partitions in silver.orders.
         overwrite_filter = And(
@@ -469,16 +472,23 @@ def run() -> None:
         for attempt in range(5):
             try:
                 fresh_table = catalog.load_table(TABLE_IDENTIFIER)
+                existing_channel = fresh_table.scan(row_filter=EqualTo("channel", "shopify")).to_arrow()
+                validate_snapshot_replacement(existing_channel, silver_arrow, "shopify")
                 fresh_table.overwrite(df=silver_arrow, overwrite_filter=overwrite_filter)
                 break
+            except UnsafeSnapshotError:
+                raise
             except Exception as exc:
                 if attempt == 4:
                     raise
                 logger.warning("silver_table.overwrite attempt %d/5 failed: %s. Retrying in 2s...", attempt + 1, exc)
                 time.sleep(2.0)
 
+        silver_table = catalog.load_table(TABLE_IDENTIFIER)
         written_back = silver_table.scan(row_filter=overwrite_filter).to_arrow()
         rows_confirmed = written_back.num_rows
+        if rows_confirmed != rows_written:
+            raise RuntimeError(f"Silver verification failed: expected {rows_written} rows, found {rows_confirmed}")
         logger.info(
             "Rows written to %s (order_date between %s and %s): %d",
             TABLE_IDENTIFIER,
@@ -497,13 +507,6 @@ def run() -> None:
     logger.info(
         "=== Shopify Silver transform END at %s (%.1fs) ===", end_time.isoformat(), duration
     )
-
-    if rows_confirmed != rows_written:
-        logger.warning(
-            "Row count mismatch: wrote %d Silver rows but read-back holds %d",
-            rows_written,
-            rows_confirmed,
-        )
 
 
 if __name__ == "__main__":

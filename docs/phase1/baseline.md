@@ -78,4 +78,3 @@ metadata, but create-tree returned HTTP 403 Resource not accessible by integrati
 The local Git credential helper also cannot start under the host restrictions.
 No branch/PR was published, no CI was started, and no remote main branch changed.
 The changes are committed locally and can be exported as a Git bundle.
-

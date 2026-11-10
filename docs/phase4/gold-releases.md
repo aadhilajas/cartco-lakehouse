@@ -31,7 +31,9 @@ float string round-trip would lose cents. That legacy precision limit also bound
 this candidate builder until a separate full decimal schema migration.
 
 The synthetic source contract declares INR. Mixed/unsupported currency values are
-rejected when a source currency column exists. Current Silver state does not
+rejected when a source currency column exists. The versioned source adapter also
+rejects an explicitly supplied non-INR currency before it can reach state.
+Current Silver state does not
 persist currency, so the manifest explicitly labels INR as a declared synthetic
 contract rather than claiming source-level currency verification or FX conversion.
 Silver's stored doubles and full currency/decimal migration remain unfinished.

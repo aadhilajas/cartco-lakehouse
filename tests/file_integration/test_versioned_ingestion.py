@@ -100,7 +100,7 @@ def test_two_channels_share_state_without_key_collision(catalog, tmp_path):
     assert set(rows["channel"].to_pylist()) == {"shopify", "amazon"}
 
 
-@pytest.mark.parametrize("change", [{"source_updated_at": ""}, {"source_updated_at": "2026-01-02"}, {"status": "made_up"}, {"unit_price": "NaN"}, {"is_deleted": "False"}])
+@pytest.mark.parametrize("change", [{"source_updated_at": ""}, {"source_updated_at": "2026-01-02"}, {"status": "made_up"}, {"unit_price": "NaN"}, {"is_deleted": "False"}, {"currency": "USD"}])
 def test_rejected_events_remain_in_raw_bronze_without_changing_state(change, catalog, tmp_path):
     row = source_order()
     row.update(change)

@@ -117,6 +117,8 @@ def canonical_events(batch):
             key = raw.get("order_id", "")
             if not key or key.strip() != key or raw.get("channel", batch.source) != batch.source:
                 raise ValueError("Invalid source key/channel")
+            if "currency" in raw and raw["currency"] != "INR":
+                raise ValueError("Unsupported source currency for the declared INR contract")
             stamp = raw.get("source_updated_at", "")
             version = datetime.fromisoformat(stamp.replace("Z", "+00:00"))
             if version.tzinfo is None or version.utcoffset() is None:

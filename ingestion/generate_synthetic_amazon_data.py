@@ -98,7 +98,7 @@ def _generate_asins(rng: np.random.Generator, n: int) -> list[str]:
     return ["B0" + "".join(row) for row in suffixes]
 
 
-def generate(as_of_date=None) -> pd.DataFrame:
+def generate(as_of_date=None, *, include_versions=False) -> pd.DataFrame:
     fake = Faker()
     fake.seed_instance(SEED)
     rng = np.random.default_rng(SEED)
@@ -130,7 +130,7 @@ def generate(as_of_date=None) -> pd.DataFrame:
     marketplaces = rng.choice(MARKETPLACES, size=N_ROWS, p=MARKETPLACE_WEIGHTS)
     fulfillment_channels = rng.choice(FULFILLMENT_CHANNELS, size=N_ROWS, p=FULFILLMENT_WEIGHTS)
 
-    return pd.DataFrame(
+    frame = pd.DataFrame(
         {
             "order_id": [str(uuid.uuid5(uuid.NAMESPACE_URL, f"cartco/amazon/{SEED}/{end.date()}/{i}")) for i in range(N_ROWS)],
             "customer_id": rng.choice(customer_ids, size=N_ROWS),
@@ -145,11 +145,16 @@ def generate(as_of_date=None) -> pd.DataFrame:
             "fulfillment_channel": fulfillment_channels,
         }
     )
+    if include_versions:
+        # The synthetic source declares its snapshot version; never infer legacy versions.
+        frame["source_updated_at"] = end.isoformat() + "Z"
+        frame["is_deleted"] = "false"
+    return frame
 
 
 def main() -> None:
     os.makedirs(os.path.dirname(OUTPUT_PATH), exist_ok=True)
-    df = generate()
+    df = generate(include_versions=os.environ.get("CARTCO_SOURCE_VERSIONS", "0") == "1")
     df.to_csv(OUTPUT_PATH, index=False)
     print(f"Generated {len(df):,} synthetic Amazon orders -> {OUTPUT_PATH}")
     print(f"Date range: {df['order_date'].min()} .. {df['order_date'].max()}")

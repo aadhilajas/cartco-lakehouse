@@ -191,7 +191,7 @@ def initialize_legacy_state(legacy: pa.Table, versions: pa.Table, *, applied_at:
     return merge_order_versions(empty_state(), incoming, applied_at=applied_at).rows
 
 
-def write_order_state(catalog, identifier: str, incoming: pa.Table, *, channel: str, applied_at: datetime, max_attempts: int = 3) -> WriteResult:
+def write_order_state(catalog, identifier: str, incoming: pa.Table, *, channel: str, applied_at: datetime, max_attempts: int = 3, snapshot_properties: dict[str, str] | None = None) -> WriteResult:
     """Atomically replace one channel with merged state, retrying only conflicts.
 
     The caller must explicitly create a separate state table with STATE_SCHEMA
@@ -205,6 +205,8 @@ def write_order_state(catalog, identifier: str, incoming: pa.Table, *, channel: 
     scope = EqualTo("channel", channel)
     for attempt in range(max_attempts):
         table = catalog.load_table(identifier)
+        if table.properties.get("cartco.state.status") == "initializing":
+            raise ValueError("State migration is still initializing")
         if not schema_to_pyarrow(table.schema()).equals(ARROW_SCHEMA, check_metadata=False):
             raise ValueError("State schema differs; an explicit migration is required")
         channel_id = table.schema().find_field("channel").field_id
@@ -216,7 +218,7 @@ def write_order_state(catalog, identifier: str, incoming: pa.Table, *, channel: 
             snapshot = table.current_snapshot()
             return WriteResult(result.counts, snapshot.snapshot_id if snapshot else None, False)
         try:
-            table.overwrite(df=result.rows, overwrite_filter=scope, snapshot_properties={"cartco.merge.channel": channel})
+            table.overwrite(df=result.rows, overwrite_filter=scope, snapshot_properties={**(snapshot_properties or {}), "cartco.merge.channel": channel})
         except CommitFailedException:
             if attempt + 1 == max_attempts:
                 raise

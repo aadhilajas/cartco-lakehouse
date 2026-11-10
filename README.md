@@ -6,6 +6,8 @@
 
 > **Versioned state:** the [staged merge engine and migration guide](docs/phase2/versioned-order-state.md) includes real local-file Iceberg tests. Source-pipeline activation and Docker acceptance are still pending.
 
+> **Local source-to-state path:** [immutable batch ingestion](docs/phase2/source-batches.md) now supports versioned source CSVs, retained raw evidence, migration installation and replay through a tested local CLI. Legacy Airflow and Gold activation remain pending.
+
 **One trusted source of truth for revenue across CartCo's sales channels.**
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)

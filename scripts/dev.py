@@ -20,7 +20,10 @@ def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("command", choices=["bootstrap", "test", "collect", "build", "up", "down", "check-dags", "generate", "run-local"])
     parser.add_argument("--batch-date", help="YYYY-MM-DD for generate/run-local; defaults to CARTCO_BATCH_DATE or UTC today")
+    parser.add_argument("--source-versions", action="store_true", help="Include explicit source version/delete fields when generating fixtures")
     args = parser.parse_args()
+    if args.source_versions and args.command != "generate":
+        parser.error("--source-versions applies to generate")
     if args.batch_date is not None and args.command not in {"generate", "run-local"}:
         parser.error("--batch-date applies to generate and run-local")
     if args.command in {"generate", "run-local"}:
@@ -44,7 +47,7 @@ def main() -> None:
         run("docker", "compose", "run", "--rm", "--no-deps", "-e", "AIRFLOW__DATABASE__SQL_ALCHEMY_CONN=sqlite:////tmp/cartco-dag-check.db", "--entrypoint", "python", "airflow-scheduler", "/opt/airflow/scripts/check_dags.py")
     elif args.command == "generate":
         for source in ("shopify", "amazon"):
-            run(sys.executable, f"ingestion/generate_synthetic_{source}_data.py", extra_env={"CARTCO_BATCH_DATE": batch_date})
+            run(sys.executable, f"ingestion/generate_synthetic_{source}_data.py", extra_env={"CARTCO_BATCH_DATE": batch_date, "CARTCO_SOURCE_VERSIONS": "1" if args.source_versions else "0"})
     else:
         # Resolve the date once so every stage keeps the same partition.
         # Execute sequentially because both sources write silver.orders.

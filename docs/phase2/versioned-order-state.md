@@ -3,6 +3,10 @@
 Date: 2026-11-10. Status: implemented and tested locally; staged separately from
 the existing source pipelines and Gold publication. No remote changes are made.
 
+The [immutable source-batch path](source-batches.md) now connects CSV events to
+this engine through a local CLI/API and installs verified migration candidates
+in a separate state table. The legacy Airflow/Gold path remains unchanged.
+
 ## Contract
 
 `pipeline/order_state.py` merges canonical events by `(channel, order_id)` and

@@ -56,6 +56,17 @@ def test_fixed_date_generation_repeats_every_column_and_has_unique_order_ids(sou
     assert set(first.order_id).isdisjoint(module.generate("2026-01-06").order_id)
 
 
+@pytest.mark.parametrize("source", ["shopify", "amazon"])
+def test_versioned_generator_explicitly_declares_snapshot_versions(source, monkeypatch):
+    module = importlib.import_module(f"ingestion.generate_synthetic_{source}_data")
+    for key, count in [("N_ROWS", 10), ("N_CUSTOMERS", 5), ("N_PRODUCTS", 4)]:
+        monkeypatch.setattr(module, key, count)
+    rows = module.generate("2026-01-05", include_versions=True)
+    assert set(rows.source_updated_at) == {"2026-01-05T00:00:00Z"}
+    assert set(rows.is_deleted) == {"false"}
+    pd.testing.assert_frame_equal(rows, module.generate("2026-01-05", include_versions=True))
+
+
 class Scan:
     def __init__(self, rows):
         self.rows = rows

@@ -44,7 +44,7 @@ def catalog(tmp_path):
 
 def source_order(source="shopify", *, version=2, status=None, key="o1"):
     row = dict(order_id=key, customer_id="c1", channel=source, order_date="2026-01-01T08:00:00",
-               product_category="Apparel", quantity="1", unit_price="10.00",
+               product_category="Apparel", quantity="1", unit_price="10.00", currency="INR",
                status=status or ("delivered" if source == "shopify" else "shipped"),
                source_updated_at=f"2026-01-{version:02d}T00:00:00Z", is_deleted="false", extra_column="keep me")
     row["asin" if source == "amazon" else "product_id"] = "p1"
@@ -100,7 +100,7 @@ def test_two_channels_share_state_without_key_collision(catalog, tmp_path):
     assert set(rows["channel"].to_pylist()) == {"shopify", "amazon"}
 
 
-@pytest.mark.parametrize("change", [{"source_updated_at": ""}, {"source_updated_at": "2026-01-02"}, {"status": "made_up"}, {"unit_price": "NaN"}, {"is_deleted": "False"}, {"currency": "USD"}])
+@pytest.mark.parametrize("change", [{"source_updated_at": ""}, {"source_updated_at": "2026-01-02"}, {"status": "made_up"}, {"unit_price": "NaN"}, {"is_deleted": "False"}, {"currency": "USD"}, {"currency": ""}, {"unit_price": "0.001"}])
 def test_rejected_events_remain_in_raw_bronze_without_changing_state(change, catalog, tmp_path):
     row = source_order()
     row.update(change)
@@ -154,7 +154,7 @@ def legacy_inputs(catalog, tmp_path):
     old, versions, candidate = (tmp_path / name for name in ["legacy.parquet", "versions.parquet", "candidate.parquet"])
     pq.write_table(legacy.scan().to_arrow(), old)
     pq.write_table(full.select(["channel", "order_id", "source_updated_at"]), versions)
-    prepare_candidate(old, versions, candidate, applied_at=datetime(2026, 1, 20, tzinfo=timezone.utc))
+    prepare_candidate(old, versions, candidate, applied_at=datetime(2026, 1, 20, tzinfo=timezone.utc), currency="INR")
     return legacy.current_snapshot().snapshot_id, candidate
 
 
@@ -203,7 +203,7 @@ def test_concurrent_legacy_change_leaves_migration_not_ready(catalog, tmp_path, 
     interleaved = []
     def commit(request):
         result = original(request)
-        if request.identifier.name == "order_state" and not interleaved:
+        if request.identifier.name == "order_state_v2" and not interleaved:
             interleaved.append(True)
             with monkeypatch.context() as patch:
                 patch.setattr(catalog, "_commit_table", original)
@@ -217,3 +217,89 @@ def test_concurrent_legacy_change_leaves_migration_not_ready(catalog, tmp_path, 
     assert catalog.load_table(STATE_TABLE).properties["cartco.state.status"] == "initializing"
     with pytest.raises(ValueError, match="not ready"):
         run(catalog, csv_file(tmp_path, source_order()), tmp_path)
+
+
+def v1_state(catalog, *, invalid=False, empty=False):
+    import pyarrow as pa
+    from pyiceberg.schema import Schema
+    from pyiceberg.types import NestedField, DoubleType
+    from pyiceberg.partitioning import PartitionSpec, PartitionField
+    from pyiceberg.transforms import IdentityTransform
+    from pipeline.order_state import STATE_SCHEMA
+    from pipeline.versioned_ingestion import V1_STATE_TABLE
+    catalog.create_namespace("silver")
+    schema = Schema(*[NestedField(field.field_id, field.name,
+        DoubleType() if field.name in {"unit_price", "order_total"} else field.field_type,
+        required=field.required) for field in STATE_SCHEMA.fields if field.name != "currency"])
+    table = catalog.create_table(V1_STATE_TABLE, schema=schema,
+        partition_spec=PartitionSpec(PartitionField(source_id=3, field_id=1000, transform=IdentityTransform(), name="channel")),
+        properties={"cartco.state.status": "ready"})
+    if not empty:
+        live = order(unit_price=0.001 if invalid else 0.10, order_total=0.001 if invalid else 0.10)
+        deleted = order("deleted", version=3, is_deleted=True)
+        for key in list(deleted):
+            if key not in {"channel", "order_id", "source_updated_at", "transform_timestamp", "is_deleted"}:
+                deleted[key] = None
+        table.append(pa.Table.from_pylist([live, deleted], schema=schema_to_pyarrow(schema)))
+    return table
+
+
+@pytest.mark.parametrize("empty", [False, True])
+def test_money_migration_preserves_v1_versions_tombstones_and_audit(catalog, tmp_path, empty):
+    from decimal import Decimal
+    from pipeline.state_migration import migrate_money_state
+    from pipeline.versioned_ingestion import V1_STATE_TABLE
+    source = v1_state(catalog, empty=empty)
+    metadata = source.metadata_location
+    report = migrate_money_state(catalog, currency="INR")
+    assert catalog.load_table(V1_STATE_TABLE).metadata_location == metadata
+    assert report["requires_new_source_receipts"] and not report["published_to_gold"]
+    state = catalog.load_table(STATE_TABLE).scan().to_arrow()
+    assert state.num_rows == (0 if empty else 2)
+    if not empty:
+        rows = {row["order_id"]: row for row in state.to_pylist()}
+        assert rows["o1"]["unit_price"] == Decimal("0.10")
+        assert rows["o1"]["currency"] == "INR"
+        assert rows["o1"]["transform_timestamp"] == order()["transform_timestamp"]
+        assert rows["deleted"]["is_deleted"] and rows["deleted"]["currency"] is None
+        assert rows["deleted"]["source_updated_at"] == order(version=3)["source_updated_at"]
+        result = run(catalog, csv_file(tmp_path, dict(source_order(version=1), unit_price="0.10")), tmp_path)
+        assert not result["committed"]
+    with pytest.raises(ValueError, match="already exists"):
+        migrate_money_state(catalog, currency="INR")
+
+
+def test_inexact_v1_money_is_rejected_before_creating_v2(catalog):
+    from pipeline.state_migration import migrate_money_state
+    v1_state(catalog, invalid=True)
+    with pytest.raises(ValueError, match="fractional cents"):
+        migrate_money_state(catalog, currency="INR")
+    with pytest.raises(NoSuchTableError):
+        catalog.load_table(STATE_TABLE)
+
+
+def test_v1_cannot_be_bypassed_with_empty_initialization(catalog, tmp_path):
+    v1_state(catalog)
+    with pytest.raises(ValueError, match="explicit money migration"):
+        run(catalog, csv_file(tmp_path, source_order()), tmp_path)
+
+
+def test_v1_metadata_drift_leaves_v2_initializing(catalog, monkeypatch):
+    from pipeline.state_migration import migrate_money_state
+    from pipeline.versioned_ingestion import V1_STATE_TABLE
+    v1_state(catalog)
+    original = catalog._commit_table
+    interleaved = []
+    def commit(request):
+        result = original(request)
+        if request.identifier.name == "order_state_v2" and not interleaved:
+            interleaved.append(True)
+            with monkeypatch.context() as patch:
+                patch.setattr(catalog, "_commit_table", original)
+                with catalog.load_table(V1_STATE_TABLE).transaction() as transaction:
+                    transaction.set_properties({"concurrent-change": "true"})
+        return result
+    monkeypatch.setattr(catalog, "_commit_table", commit)
+    with pytest.raises(RuntimeError, match="V1 changed"):
+        migrate_money_state(catalog, currency="INR")
+    assert catalog.load_table(STATE_TABLE).properties["cartco.state.status"] == "initializing"

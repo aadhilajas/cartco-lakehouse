@@ -6,7 +6,7 @@ from pathlib import Path
 import sys
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from pipeline.state_migration import install_candidate
+from pipeline.state_migration import install_candidate, migrate_money_state
 from pipeline.versioned_ingestion import run_versioned_batch
 
 
@@ -23,6 +23,8 @@ def main():
     run.add_argument("--initialize-empty-state", action="store_true")
     migrate = commands.add_parser("migrate")
     migrate.add_argument("--candidate", type=Path, required=True)
+    money = commands.add_parser("migrate-money")
+    money.add_argument("--currency", required=True, choices=["INR"])
     args = parser.parse_args()
     try:
         from pyiceberg.catalog.sql import SqlCatalog
@@ -33,7 +35,9 @@ def main():
     catalog = SqlCatalog("cartco-local", uri="sqlite:///" + database.as_posix(),
                          warehouse="file://" + args.warehouse.resolve().as_posix())
     try:
-        if args.command == "migrate":
+        if args.command == "migrate-money":
+            result = migrate_money_state(catalog, currency=args.currency)
+        elif args.command == "migrate":
             result = install_candidate(catalog, args.candidate)
         else:
             result = run_versioned_batch(catalog, args.csv, args.archive_root, source=args.source,

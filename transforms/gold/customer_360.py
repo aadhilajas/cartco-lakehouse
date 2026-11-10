@@ -43,7 +43,7 @@ if REPO_ROOT not in sys.path:
     sys.path.insert(0, REPO_ROOT)
 
 from lineage import emitter as lineage  # noqa: E402
-from pipeline.commerce_metrics import completed_orders, legacy_money  # noqa: E402
+from pipeline.commerce_metrics import money_schema, amount, completed_orders, legacy_money  # noqa: E402
 
 LINEAGE_JOB_NAME = "gold_marts.customer_360"
 
@@ -120,11 +120,12 @@ def ensure_table(catalog):
     return _retry(_get_or_create)
 
 
-def transform(silver_table: pa.Table) -> pa.Table:
+def transform(silver_table: pa.Table, *, decimal_output=False) -> pa.Table:
     """Pure PyArrow transformation: aggregates silver.orders by customer_id and channel."""
+    money_values = lambda values: pa.array([amount(v) for v in values], pa.decimal128(18, 2)) if decimal_output else legacy_money(values)
     silver_table = completed_orders(silver_table)
     if silver_table.num_rows == 0:
-        expected_arrow_schema = schema_to_pyarrow(TABLE_SCHEMA)
+        expected_arrow_schema = money_schema(schema_to_pyarrow(TABLE_SCHEMA), ('total_spend',), decimal_output)
         return pa.Table.from_batches([], schema=expected_arrow_schema)
 
     # 1. Compute customer lifetime order counts, total spend, min date, max date
@@ -172,7 +173,7 @@ def transform(silver_table: pa.Table) -> pa.Table:
     sorted_fav_cat = fav_cat_table.take(sort_fav)
 
     total_orders = pc.cast(sorted_cust_agg.column("order_id_count"), pa.int32())
-    total_spend = legacy_money(sorted_cust_agg.column("order_total_sum").to_pylist())
+    total_spend = money_values(sorted_cust_agg.column("order_total_sum").to_pylist())
 
     res = pa.Table.from_arrays(
         [
@@ -195,7 +196,7 @@ def transform(silver_table: pa.Table) -> pa.Table:
         ],
     )
 
-    expected_arrow_schema = schema_to_pyarrow(TABLE_SCHEMA)
+    expected_arrow_schema = money_schema(schema_to_pyarrow(TABLE_SCHEMA), ('total_spend',), decimal_output)
     return res.cast(expected_arrow_schema)
 
 

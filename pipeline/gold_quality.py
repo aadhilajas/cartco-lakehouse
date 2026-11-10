@@ -103,7 +103,7 @@ def build_marts(orders, *, currency="INR"):
     clean = validated_orders(orders)
     if "currency" in clean.column_names and set(clean["currency"].to_pylist()) - {currency}:
         raise ValueError("Mixed or unsupported source currencies block publication")
-    marts = {name: module.transform(orders) for name, module in MARTS.items()}
+    marts = {name: module.transform(orders, **({"decimal_output": True} if name in MONEY_COLUMNS else {})) for name, module in MARTS.items()}
     units = marts["category_unit_sales"]
     marts["category_unit_sales"] = units.rename_columns(["reporting_period" if name == "turnover_period" else name for name in units.column_names])
     # New release artifacts persist decimal money; legacy table schemas stay unchanged.

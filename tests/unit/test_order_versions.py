@@ -108,7 +108,7 @@ def test_invalid_canonical_events_are_rejected(changes):
 def test_legacy_migration_requires_complete_trusted_version_map():
     legacy = events(order()).select(events(order()).column_names[:11])
     versions = pa.table({"channel": ["shopify"], "order_id": ["o1"], "source_updated_at": [datetime(2026, 1, 8)]})
-    state = initialize_legacy_state(legacy, versions, applied_at=APPLIED)
+    state = initialize_legacy_state(legacy, versions, applied_at=APPLIED, currency="INR")
     assert state["source_updated_at"].to_pylist() == [datetime(2026, 1, 8)]
     assert state["order_total"].to_pylist() == [10.0]
 
@@ -118,4 +118,4 @@ def test_incomplete_or_unmatched_migration_baselines_fail(key):
     legacy = events(order()).select(events(order()).column_names[:11])
     versions = pa.table({"channel": ["shopify"], "order_id": [key], "source_updated_at": [datetime(2026, 1, 8)]})
     with pytest.raises(ValueError):
-        initialize_legacy_state(legacy, versions, applied_at=APPLIED)
+        initialize_legacy_state(legacy, versions, applied_at=APPLIED, currency="INR")

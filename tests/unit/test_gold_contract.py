@@ -105,7 +105,7 @@ def test_corrupt_mart_fails_independent_reconciliation():
 
 
 def test_mixed_currency_values_are_not_silently_aggregated():
-    rows = mixed_orders().append_column("currency", pa.array(["INR", "USD", "INR", "INR", "INR"]))
+    rows = mixed_orders().set_column(mixed_orders().schema.get_field_index("currency"), "currency", pa.array(["INR", "USD", "INR", "INR", "INR"]))
     with pytest.raises(ValueError, match="currencies"):
         build_marts(rows)
 

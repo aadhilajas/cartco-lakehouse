@@ -7,7 +7,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import date, datetime, timezone
-import math
+from pipeline.money import exact_money
 
 import pyarrow as pa
 import pyarrow.compute as pc
@@ -16,7 +16,7 @@ from pyiceberg.expressions import EqualTo
 from pyiceberg.io.pyarrow import schema_to_pyarrow
 from pyiceberg.schema import Schema
 from pyiceberg.transforms import IdentityTransform
-from pyiceberg.types import BooleanType, DateType, DoubleType, IntegerType, NestedField, StringType, TimestampType
+from pyiceberg.types import BooleanType, DateType, DecimalType, IntegerType, NestedField, StringType, TimestampType
 
 
 STATE_SCHEMA = Schema(
@@ -27,12 +27,13 @@ STATE_SCHEMA = Schema(
     NestedField(5, "product_id", StringType(), required=False),
     NestedField(6, "product_category", StringType(), required=False),
     NestedField(7, "quantity", IntegerType(), required=False),
-    NestedField(8, "unit_price", DoubleType(), required=False),
+    NestedField(8, "unit_price", DecimalType(18, 2), required=False),
     NestedField(9, "order_status", StringType(), required=False),
-    NestedField(10, "order_total", DoubleType(), required=False),
+    NestedField(10, "order_total", DecimalType(18, 2), required=False),
     NestedField(11, "transform_timestamp", TimestampType(), required=False),
     NestedField(12, "source_updated_at", TimestampType(), required=True),
     NestedField(13, "is_deleted", BooleanType(), required=True),
+    NestedField(14, "currency", StringType(), required=False),
 )
 ARROW_SCHEMA = schema_to_pyarrow(STATE_SCHEMA)
 KEYS = ("channel", "order_id")
@@ -94,9 +95,15 @@ def _normalize(row, *, audit: datetime | None = None):
             raise ValueError("A live order needs customer_id")
         if not isinstance(result["order_date"], date) or isinstance(result["order_date"], datetime):
             raise ValueError("A live order needs a calendar order_date")
+        if result["currency"] != "INR":
+            raise ValueError("Live state requires explicit INR currency")
         for name in ("unit_price", "order_total"):
-            if result[name] is not None and (isinstance(result[name], bool) or not isinstance(result[name], (int, float)) or not math.isfinite(result[name]) or result[name] < 0):
-                raise ValueError(f"{name} must be a finite nonnegative number")
+            result[name] = exact_money(result[name])
+        quantity = result["quantity"]
+        if isinstance(quantity, bool) or not isinstance(quantity, int) or quantity < 0:
+            raise ValueError("Quantity must be a nonnegative integer")
+        if result["order_total"] != exact_money(result["unit_price"] * quantity):
+            raise ValueError("Order total differs from quantity times unit price")
     if audit is not None:
         result["transform_timestamp"] = audit
     elif result["transform_timestamp"] is not None:
@@ -161,11 +168,11 @@ def merge_order_versions(existing: pa.Table, incoming: pa.Table, *, applied_at: 
 
 
 def active_orders(state: pa.Table) -> pa.Table:
-    """Project the legacy business schema for candidate publication, not a commit."""
-    return state.filter(pc.equal(state["is_deleted"], False)).select(ARROW_SCHEMA.names[:11])
+    """Project live business fields and persisted currency for candidate publication."""
+    return state.filter(pc.equal(state["is_deleted"], False)).select([*ARROW_SCHEMA.names[:11], "currency"])
 
 
-def initialize_legacy_state(legacy: pa.Table, versions: pa.Table, *, applied_at: datetime) -> pa.Table:
+def initialize_legacy_state(legacy: pa.Table, versions: pa.Table, *, applied_at: datetime, currency: str) -> pa.Table:
     """Prepare migration with a complete, externally trusted key/version map.
 
     Neither order_date, audit time nor load date is a source update version.
@@ -186,7 +193,12 @@ def initialize_legacy_state(legacy: pa.Table, versions: pa.Table, *, applied_at:
         raise ValueError("Baseline versions must match legacy keys exactly")
     if set(legacy.column_names) != set(ARROW_SCHEMA.names[:11]):
         raise ValueError("Legacy export must contain exactly the eleven business/audit columns")
-    events = [dict(row, source_updated_at=version_map[_key(row)], is_deleted=False) for row in legacy.to_pylist()]
+    if currency != "INR":
+        raise ValueError("Legacy migration requires an explicit INR declaration")
+    events = [dict(row, unit_price=exact_money(row["unit_price"], allow_legacy_float=True),
+                   order_total=exact_money(row["order_total"], allow_legacy_float=True),
+                   currency=currency, source_updated_at=version_map[_key(row)], is_deleted=False)
+              for row in legacy.to_pylist()]
     incoming = pa.Table.from_pylist(events, schema=ARROW_SCHEMA)
     return merge_order_versions(empty_state(), incoming, applied_at=applied_at).rows
 

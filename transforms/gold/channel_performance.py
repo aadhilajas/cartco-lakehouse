@@ -38,7 +38,7 @@ if REPO_ROOT not in sys.path:
     sys.path.insert(0, REPO_ROOT)
 
 from lineage import emitter as lineage  # noqa: E402
-from pipeline.commerce_metrics import validated_orders, legacy_money  # noqa: E402
+from pipeline.commerce_metrics import money_schema, amount, validated_orders, legacy_money  # noqa: E402
 
 LINEAGE_JOB_NAME = "gold_marts.channel_performance"
 
@@ -114,11 +114,12 @@ def ensure_table(catalog):
     return _retry(_get_or_create)
 
 
-def transform(silver_table: pa.Table) -> pa.Table:
+def transform(silver_table: pa.Table, *, decimal_output=False) -> pa.Table:
     """Pure PyArrow transformation: aggregates silver.orders by channel to compute lifetime performance metrics."""
+    money_values = lambda values: pa.array([amount(v) for v in values], pa.decimal128(18, 2)) if decimal_output else legacy_money(values)
     silver_table = validated_orders(silver_table)
     if silver_table.num_rows == 0:
-        expected_arrow_schema = schema_to_pyarrow(TABLE_SCHEMA)
+        expected_arrow_schema = money_schema(schema_to_pyarrow(TABLE_SCHEMA), ('total_revenue',), decimal_output)
         return pa.Table.from_batches([], schema=expected_arrow_schema)
 
     is_cancelled = pc.cast(pc.equal(silver_table.column("order_status"), "cancelled"), pa.int64())
@@ -135,7 +136,7 @@ def transform(silver_table: pa.Table) -> pa.Table:
         ("is_refunded", "sum"),
     ])
 
-    total_rev = legacy_money(agg.column("order_total_sum").to_pylist())
+    total_rev = money_values(agg.column("order_total_sum").to_pylist())
     total_ords = pc.cast(agg.column("order_id_count"), pa.int32())
     canc_rate = pc.divide(pc.cast(agg.column("is_cancelled_sum"), pa.float64()), pc.cast(total_ords, pa.float64()))
     ref_rate = pc.divide(pc.cast(agg.column("is_refunded_sum"), pa.float64()), pc.cast(total_ords, pa.float64()))
@@ -163,7 +164,7 @@ def transform(silver_table: pa.Table) -> pa.Table:
     sort_idx = pc.sort_indices(res, sort_keys=[("channel", "ascending")])
     res = res.take(sort_idx)
 
-    expected_arrow_schema = schema_to_pyarrow(TABLE_SCHEMA)
+    expected_arrow_schema = money_schema(schema_to_pyarrow(TABLE_SCHEMA), ('total_revenue',), decimal_output)
     return res.cast(expected_arrow_schema)
 
 

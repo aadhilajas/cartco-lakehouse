@@ -2,7 +2,7 @@
 
 Status: implemented and tested locally on 2026-11-10. Legacy DAGs and Gold readers
 are unchanged. This explicitly selected path writes separate Bronze event tables
-and silver.order_state; it does not publish a new Gold release.
+and silver.order_state_v2; it does not publish a new Gold release.
 
 ## Execution sequence
 
@@ -104,3 +104,5 @@ force another attempt. Gold activation is a separate publication step.
 This proves the local CLI/API path with real Iceberg files and SQLite metadata.
 REST/MinIO, Airflow execution, container builds, Gold reconciliation and runtime
 switch-over are still unverified. No remote CI was started and nothing was pushed.
+
+Source live rows now require explicit INR currency and exact-cent prices. See [money-state v2](money-state-v2.md) before running against an older catalog.

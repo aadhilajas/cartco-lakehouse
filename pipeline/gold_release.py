@@ -18,6 +18,8 @@ from pipeline.batch import resolve_batch_date
 from pipeline.gold_quality import MARTS, build_marts
 from pipeline.raw_batches import _write_once
 from pipeline.versioned_ingestion import STATE_TABLE
+from pipeline.order_state import ARROW_SCHEMA
+from pyiceberg.io.pyarrow import schema_to_pyarrow
 
 METRIC_VERSION = "retained-completed-sales-v2"
 
@@ -106,6 +108,8 @@ def publish_gold_release(catalog, output_root, receipt_paths, *, batch_date, exp
         state = catalog.load_table(STATE_TABLE)
         if state.properties.get("cartco.state.status") != "ready":
             raise ValueError("Order state is not ready")
+        if not schema_to_pyarrow(state.schema()).equals(ARROW_SCHEMA, check_metadata=False):
+            raise ValueError("Gold requires the explicit decimal/currency V2 state schema")
         snapshot_id, evidence = _source_evidence(catalog, state, receipt_paths, required, day)
         orders = state.scan(snapshot_id=snapshot_id).to_arrow()
         if set(orders["channel"].to_pylist()) - required:
@@ -114,7 +118,7 @@ def publish_gold_release(catalog, output_root, receipt_paths, *, batch_date, exp
         contract = dict(metric_version=METRIC_VERSION, state_table_uuid=str(state.metadata.table_uuid),
                         state_snapshot_id=snapshot_id, batch_date=day, required_sources=sorted(required),
                         source_evidence=evidence, currency=currency,
-                        currency_basis="Verified source currency column" if "currency" in orders.column_names else "Declared synthetic INR contract; Silver has no persisted currency field")
+                        currency_basis="Persisted INR source contract or explicit migration declaration")
         release_id = hashlib.sha256(_json(contract)).hexdigest()
         directory = root / "releases" / release_id
         artifacts = {}

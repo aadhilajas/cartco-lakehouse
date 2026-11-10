@@ -23,20 +23,16 @@ Tombstones are excluded. Unknown statuses block publication.
 
 ## Money and currency
 
-Input totals are normalized to cents using Decimal and ROUND_HALF_UP and checked
-against quantity times source unit price. Aggregation uses exact decimal cents.
-New Parquet releases persist decimal128(18,2) financial columns. AOV is rounded
-half-up to cents. Legacy table schemas remain double; conversions fail if the
-float string round-trip would lose cents. That legacy precision limit also bounds
-this candidate builder until a separate full decimal schema migration.
+The versioned release path requires [v2 state](../phase2/money-state-v2.md),
+with decimal(18,2) source prices/totals and persisted INR currency. Ingestion
+rejects fractional cents, missing currency and unsupported currency. Gold keeps
+money decimal throughout grouping and artifact serialization, with AOV rounded
+ROUND_HALF_UP to cents. Legacy table functions retain double output compatibility
+and fail if their float string round-trip would lose cents; the new artifact
+builder no longer uses that conversion.
 
-The synthetic source contract declares INR. Mixed/unsupported currency values are
-rejected when a source currency column exists. The versioned source adapter also
-rejects an explicitly supplied non-INR currency before it can reach state.
-Current Silver state does not
-persist currency, so the manifest explicitly labels INR as a declared synthetic
-contract rather than claiming source-level currency verification or FX conversion.
-Silver's stored doubles and full currency/decimal migration remain unfinished.
+INR is an explicit synthetic source contract or migration declaration, not FX
+conversion or independent confirmation of a real marketplace's currency.
 
 ## Validation and source readiness
 

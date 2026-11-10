@@ -15,10 +15,12 @@ from pyiceberg.schema import Schema
 from pyiceberg.transforms import IdentityTransform
 from pyiceberg.types import DateType, IntegerType, NestedField, StringType
 
+from pipeline.money import exact_money
 from pipeline.order_state import ARROW_SCHEMA, STATE_SCHEMA, empty_state, merge_order_versions, write_order_state
 from pipeline.raw_batches import archive_csv, record_receipt
 
-STATE_TABLE = "silver.order_state"
+V1_STATE_TABLE = "silver.order_state"
+STATE_TABLE = "silver.order_state_v2"
 RAW_SCHEMA = Schema(
     NestedField(1, "batch_id", StringType(), required=True),
     NestedField(2, "source_row_number", IntegerType(), required=True),
@@ -50,6 +52,12 @@ def require_state(catalog, *, initialize_empty=False):
     except NoSuchTableError:
         if not initialize_empty:
             raise ValueError("State table is absent: explicitly initialize a new catalog or migrate legacy orders")
+        try:
+            catalog.load_table(V1_STATE_TABLE)
+        except NoSuchTableError:
+            pass
+        else:
+            raise ValueError("V1 state exists; explicit money migration is required")
         try:
             legacy = catalog.load_table("silver.orders")
         except NoSuchTableError:
@@ -133,7 +141,9 @@ def canonical_events(batch):
                 if any(not raw.get(name, "").strip() for name in required):
                     raise ValueError("A live event needs the complete source order")
                 quantity = int(raw["quantity"])
-                price = Decimal(raw["unit_price"])
+                price = exact_money(raw["unit_price"])
+                if raw.get("currency") != "INR":
+                    raise ValueError("Live source event requires explicit INR currency")
                 if not 0 <= quantity <= 10000 or not price.is_finite() or not 0 <= price <= 500000:
                     raise ValueError("Quantity/price outside source contract")
                 status = STATUS[batch.source].get(raw["status"])
@@ -141,7 +151,7 @@ def canonical_events(batch):
                     raise ValueError("Unknown source status")
                 row.update(customer_id=raw["customer_id"], order_date=datetime.fromisoformat(raw["order_date"]).date(),
                     product_id=raw[product_key], product_category=raw["product_category"], quantity=quantity,
-                    unit_price=float(price), order_status=status, order_total=float(quantity * price))
+                    unit_price=price, order_status=status, order_total=exact_money(quantity * price), currency="INR")
             rows.append(row)
         except (ValueError, InvalidOperation, OverflowError) as exc:
             raise ValueError(f"Source row {index}: {exc}") from exc

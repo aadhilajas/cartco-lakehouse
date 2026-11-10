@@ -77,3 +77,9 @@ def validated_orders(table: pa.Table) -> pa.Table:
 def completed_orders(table: pa.Table) -> pa.Table:
     table = validated_orders(table)
     return table.filter(pc.equal(table["order_status"], "completed"))
+
+
+def money_schema(schema, columns, decimal_output):
+    """Select decimal artifact fields while retaining legacy table compatibility."""
+    return pa.schema([pa.field(field.name, MONEY if decimal_output and field.name in columns else field.type,
+                              nullable=field.nullable) for field in schema])

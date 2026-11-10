@@ -29,16 +29,17 @@ timestamps; the in-memory/Iceberg timestamp representation is naive UTC.
 The state schema preserves the eleven existing business/audit field IDs and
 adds `source_updated_at` (12) and `is_deleted` (13). Customer/date fields are
 nullable in state for tombstones; live events still require customer/date.
-`active_orders()` produces the eleven-column candidate business projection and
+`active_orders()` produces the eleven business/audit columns plus currency and
 excludes tombstones. It does not publish or overwrite legacy `silver.orders`.
 
-Money fields retain the current double representation. Decimal/currency
-migration is a separate remaining contract change.
+Money fields now use decimal(18,2), with currency field ID 14. See the
+[money-state v2 guide](money-state-v2.md) for the exact-cent contract and explicit
+v1 migration. This changes the default local state target to `silver.order_state_v2`.
 
 ## Writer and limits
 
 `write_order_state()` requires an explicitly created state table, for example
-`silver.order_state`, with the exact state schema and identity channel partition.
+`silver.order_state_v2`, with the exact state schema and identity channel partition.
 It reads a fresh channel state, computes the merge, then uses one Iceberg
 transaction to replace that channel. Unmentioned orders and other channels
 remain present. This reconstructs one complete channel in memory; it is suited
@@ -70,7 +71,7 @@ times are never substituted for missing source versions.
 With a complete eleven-column legacy Parquet export and a trusted version map:
 
 ```bash
-python scripts/prepare_order_state.py --legacy legacy.parquet --versions versions.parquet --output candidate.parquet --applied-at 2026-11-10T00:00:00Z
+python scripts/prepare_order_state.py --legacy legacy.parquet --versions versions.parquet --output candidate.parquet --applied-at 2026-11-10T00:00:00Z --currency INR
 ```
 
 The tool prepares and verifies a candidate Parquet file plus a manifest with

@@ -107,6 +107,7 @@ def generate(as_of_date=None, *, include_versions=False) -> pd.DataFrame:
         }
     )
     if include_versions:
+        frame["currency"] = "INR"
         # The synthetic source declares its snapshot version; never infer legacy versions.
         frame["source_updated_at"] = end.isoformat() + "Z"
         frame["is_deleted"] = "false"

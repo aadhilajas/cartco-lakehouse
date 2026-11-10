@@ -10,6 +10,8 @@
 
 > **Gold metrics and releases:** [the local Gold release guide](docs/phase4/gold-releases.md) covers corrected completed-sales metrics, decimal artifacts, reconciliation and publication from one pinned state snapshot. Legacy mart functions are corrected; Airflow release activation remains pending.
 
+> **Exact money state:** [the v2 money and currency guide](docs/phase2/money-state-v2.md) covers persisted decimals/INR and explicit migration from the preserved v1 table. Local ingestion and Gold now target v2; legacy Airflow remains unchanged.
+
 **One trusted source of truth for revenue across CartCo's sales channels.**
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)

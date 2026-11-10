@@ -36,7 +36,7 @@ def source_rows(source, *, updated=False):
     for index, status in enumerate((["delivered", "cancelled"] if source == "shopify" else ["shipped", "pending"])):
         row = dict(order_id=f"o{index}", customer_id="c1", channel=source, order_date="2026-01-01T08:00:00",
                    product_category="Apparel", quantity="1", unit_price="0.10" if index == 0 else "99.00",
-                   status="refund_initiated" if updated and index == 0 else status,
+                   currency="INR", status="refund_initiated" if updated and index == 0 else status,
                    source_updated_at="2026-01-03T00:00:00Z" if updated else "2026-01-02T00:00:00Z", is_deleted="false")
         row["asin" if source == "amazon" else "product_id"] = "p1"
         rows.append(row)
@@ -100,9 +100,9 @@ def test_corrupt_metric_blocks_publication_before_pointer_change(environment, mo
     publish(catalog, root, receipts)
     before = (root / "gold/CURRENT.json").read_bytes()
     original = daily_revenue.transform
-    def corrupt(orders):
+    def corrupt(orders, **kwargs):
         import pyarrow as pa
-        table = original(orders)
+        table = original(orders, **kwargs)
         return table.set_column(table.schema.get_field_index("total_revenue"), "total_revenue", pa.array([999.0] * table.num_rows))
     monkeypatch.setattr(daily_revenue, "transform", corrupt)
     with pytest.raises(ValueError, match="reconcile"):

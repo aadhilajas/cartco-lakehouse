@@ -1,7 +1,7 @@
 """Gold mart: daily revenue aggregated by date and channel (gold.daily_revenue).
 
 Reads canonical orders from ``silver.orders`` and computes daily metrics:
-    - total_revenue (sum of order_total)
+    - total_revenue (completed-order sales only; exact-cent sums)
     - order_count (count of order_id)
     - avg_order_value (total_revenue / order_count)
 
@@ -18,6 +18,7 @@ from __future__ import annotations
 import logging
 import os
 import sys
+from pathlib import Path
 import time
 from datetime import datetime, timezone
 
@@ -29,11 +30,12 @@ from pyiceberg.io.pyarrow import schema_to_pyarrow
 from pyiceberg.schema import Schema
 from pyiceberg.types import DateType, DoubleType, IntegerType, NestedField, StringType
 
-REPO_ROOT = "/opt/airflow"
+REPO_ROOT = str(Path(__file__).resolve().parents[2])
 if REPO_ROOT not in sys.path:
     sys.path.insert(0, REPO_ROOT)
 
 from lineage import emitter as lineage  # noqa: E402
+from pipeline.commerce_metrics import completed_orders, legacy_money, amount  # noqa: E402
 
 LINEAGE_JOB_NAME = "gold_marts.daily_revenue"
 
@@ -96,8 +98,8 @@ def ensure_table(catalog):
     try:
         catalog.create_namespace(NAMESPACE)
         logger.info("Created namespace '%s'", NAMESPACE)
-    except Exception:
-        pass
+    except NamespaceAlreadyExistsError:
+        logger.info("Namespace already exists")
 
     def _get_or_create():
         try:
@@ -110,6 +112,7 @@ def ensure_table(catalog):
 
 def transform(silver_table: pa.Table) -> pa.Table:
     """Pure PyArrow transformation: aggregates silver.orders by order_date and channel."""
+    silver_table = completed_orders(silver_table)
     if silver_table.num_rows == 0:
         expected_arrow_schema = schema_to_pyarrow(TABLE_SCHEMA)
         return pa.Table.from_batches([], schema=expected_arrow_schema)
@@ -119,9 +122,9 @@ def transform(silver_table: pa.Table) -> pa.Table:
         ("order_id", "count"),
     ])
 
-    total_rev = pc.cast(agg.column("order_total_sum"), pa.float64())
+    total_rev = legacy_money(agg.column("order_total_sum").to_pylist())
     order_cnt = pc.cast(agg.column("order_id_count"), pa.int32())
-    avg_val = pc.divide(total_rev, pc.cast(order_cnt, pa.float64()))
+    avg_val = legacy_money([amount(value / count) for value, count in zip(agg.column("order_total_sum").to_pylist(), order_cnt.to_pylist())])
 
     res = pa.Table.from_arrays(
         [

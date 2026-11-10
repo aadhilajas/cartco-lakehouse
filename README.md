@@ -8,6 +8,8 @@
 
 > **Local source-to-state path:** [immutable batch ingestion](docs/phase2/source-batches.md) now supports versioned source CSVs, retained raw evidence, migration installation and replay through a tested local CLI. Legacy Airflow and Gold activation remain pending.
 
+> **Gold metrics and releases:** [the local Gold release guide](docs/phase4/gold-releases.md) covers corrected completed-sales metrics, decimal artifacts, reconciliation and publication from one pinned state snapshot. Legacy mart functions are corrected; Airflow release activation remains pending.
+
 **One trusted source of truth for revenue across CartCo's sales channels.**
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)

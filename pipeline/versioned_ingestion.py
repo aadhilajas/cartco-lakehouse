@@ -158,7 +158,8 @@ def run_versioned_batch(catalog, csv_path, archive_root, *, source, batch_date, 
         result = write_order_state(catalog, STATE_TABLE, incoming, channel=source, applied_at=applied_at,
                                    snapshot_properties={"cartco.batch_id": batch.batch_id})
         report.update(status="complete", state_snapshot_id=result.snapshot_id, committed=result.committed,
-                      counts=result.counts, batch_id=batch.batch_id)
+                      counts=result.counts, batch_id=batch.batch_id,
+                      state_table_uuid=str(catalog.load_table(STATE_TABLE).metadata.table_uuid))
     except Exception as exc:
         report.update(error_type=type(exc).__name__, error=str(exc))
         record_receipt(batch, report)

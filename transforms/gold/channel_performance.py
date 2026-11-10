@@ -1,11 +1,11 @@
 """Gold mart: lifetime channel performance metrics (gold.channel_performance).
 
 Reads canonical orders from ``silver.orders`` and computes lifetime channel metrics:
-    - total_revenue (sum of order_total)
+    - total_revenue (completed-order sales only; exact-cent sums)
     - total_orders (count of order_id)
     - cancellation_rate (cancelled order count / total_orders)
     - refund_rate (refunded order count / total_orders)
-    - avg_fulfillment_days (0.0 — fulfillment lead time is not captured in current Silver schema)
+    - avg_fulfillment_days (null — fulfillment lead time is not captured in current Silver schema)
 
 One row per channel (e.g. shopify, amazon).
 
@@ -21,6 +21,7 @@ from __future__ import annotations
 import logging
 import os
 import sys
+from pathlib import Path
 import time
 from datetime import datetime, timezone
 
@@ -32,11 +33,12 @@ from pyiceberg.io.pyarrow import schema_to_pyarrow
 from pyiceberg.schema import Schema
 from pyiceberg.types import DoubleType, IntegerType, NestedField, StringType
 
-REPO_ROOT = "/opt/airflow"
+REPO_ROOT = str(Path(__file__).resolve().parents[2])
 if REPO_ROOT not in sys.path:
     sys.path.insert(0, REPO_ROOT)
 
 from lineage import emitter as lineage  # noqa: E402
+from pipeline.commerce_metrics import validated_orders, legacy_money  # noqa: E402
 
 LINEAGE_JOB_NAME = "gold_marts.channel_performance"
 
@@ -100,8 +102,8 @@ def ensure_table(catalog):
     try:
         catalog.create_namespace(NAMESPACE)
         logger.info("Created namespace '%s'", NAMESPACE)
-    except Exception:
-        pass
+    except NamespaceAlreadyExistsError:
+        logger.info("Namespace already exists")
 
     def _get_or_create():
         try:
@@ -114,6 +116,7 @@ def ensure_table(catalog):
 
 def transform(silver_table: pa.Table) -> pa.Table:
     """Pure PyArrow transformation: aggregates silver.orders by channel to compute lifetime performance metrics."""
+    silver_table = validated_orders(silver_table)
     if silver_table.num_rows == 0:
         expected_arrow_schema = schema_to_pyarrow(TABLE_SCHEMA)
         return pa.Table.from_batches([], schema=expected_arrow_schema)
@@ -121,7 +124,9 @@ def transform(silver_table: pa.Table) -> pa.Table:
     is_cancelled = pc.cast(pc.equal(silver_table.column("order_status"), "cancelled"), pa.int64())
     is_refunded = pc.cast(pc.equal(silver_table.column("order_status"), "refunded"), pa.int64())
 
-    prep = silver_table.append_column("is_cancelled", is_cancelled).append_column("is_refunded", is_refunded)
+    retained = pc.if_else(pc.equal(silver_table["order_status"], "completed"), silver_table["order_total"], pa.scalar(0, type=silver_table["order_total"].type))
+    prep = silver_table.set_column(silver_table.schema.get_field_index("order_total"), "order_total", retained)
+    prep = prep.append_column("is_cancelled", is_cancelled).append_column("is_refunded", is_refunded)
 
     agg = prep.group_by(["channel"]).aggregate([
         ("order_total", "sum"),
@@ -130,11 +135,11 @@ def transform(silver_table: pa.Table) -> pa.Table:
         ("is_refunded", "sum"),
     ])
 
-    total_rev = pc.cast(agg.column("order_total_sum"), pa.float64())
+    total_rev = legacy_money(agg.column("order_total_sum").to_pylist())
     total_ords = pc.cast(agg.column("order_id_count"), pa.int32())
     canc_rate = pc.divide(pc.cast(agg.column("is_cancelled_sum"), pa.float64()), pc.cast(total_ords, pa.float64()))
     ref_rate = pc.divide(pc.cast(agg.column("is_refunded_sum"), pa.float64()), pc.cast(total_ords, pa.float64()))
-    avg_fulf = pa.array([0.0] * agg.num_rows, type=pa.float64())
+    avg_fulf = pa.nulls(agg.num_rows, type=pa.float64())
 
     res = pa.Table.from_arrays(
         [

@@ -39,10 +39,33 @@ jobs:
           path: test-results/
           if-no-files-found: warn
 
+  file-integration:
+    name: Local-file Iceberg transactions
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install isolated SQLite catalog test dependencies
+        run: |
+          python -m pip install --require-hashes -r requirements/file-integration.txt
+          python -m pip check
+      - name: Test actual Iceberg files and transaction conflicts
+        run: python -m pytest tests/file_integration -v --junitxml=test-results/file-integration.xml
+      - name: Save local-file evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: file-integration-results
+          path: test-results/
+          if-no-files-found: warn
+
   stack-baseline:
     name: Build, DAG imports and live stack baseline
     runs-on: ubuntu-latest
-    needs: unit-tests
+    needs: [unit-tests, file-integration]
     timeout-minutes: 45
     steps:
       - uses: actions/checkout@v4

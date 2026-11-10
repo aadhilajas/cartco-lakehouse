@@ -2,7 +2,9 @@
 
 > **Phase 1 work in progress:** current setup, dependency locks and verification status are in [the baseline guide](docs/phase1/README.md). Amazon and Gold implementations already exist; several historical sections below predate them.
 
-> **Local Phase 2 work:** [batch execution and safety guards](docs/phase2/batch-execution.md) documents fixed-date runs, reproducible source generation and rejected unsafe Silver overwrites. Source-versioned merging and Docker acceptance remain pending.
+> **Local Phase 2 work:** [batch execution and safety guards](docs/phase2/batch-execution.md) documents fixed-date runs, reproducible source generation and rejected unsafe Silver overwrites. Activation of versioned merging and Docker acceptance remain pending.
+
+> **Versioned state:** the [staged merge engine and migration guide](docs/phase2/versioned-order-state.md) includes real local-file Iceberg tests. Source-pipeline activation and Docker acceptance are still pending.
 
 **One trusted source of truth for revenue across CartCo's sales channels.**
 

@@ -232,4 +232,5 @@ airflow/logs/
 .env.*
 !.env.example
 .venv/
+.venv-*/
 work/

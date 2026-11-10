@@ -36,3 +36,16 @@ Postgres, Iceberg REST and Marquez. MinIO/mc registry requests were unauthorized
 Dockerfile.minio now builds fixed official source commits with digest-pinned
 Go/Debian base images. See docs/phase1/minio-source-build.md for provenance.
 Its container build and live behavior still require a successful CI run.
+
+## Optional local-file transaction checks
+
+file-integration.in adds SQLAlchemy 2.0 for PyIceberg's SQLite catalog. Install
+file-integration.txt in a separate Python 3.11 virtual environment. Do not install
+it in the Airflow environment, whose SQLAlchemy 1.4 pin must remain intact.
+
+```bash
+uv pip compile requirements/file-integration.in -c requirements/test.txt --universal --python-version 3.11 --generate-hashes -o requirements/file-integration.txt
+```
+
+This lock reuses test.txt versions wherever packages overlap. The dedicated
+file-integration CI job installs it separately and runs real local Iceberg files.

@@ -88,7 +88,11 @@ Compose mount and the batch-date CLI were checked. No new dependency was added.
 
 ## Next implementation work
 
-Immutable raw inputs and manifests; source_updated_at and explicit tombstones;
-Iceberg schema migrations and a versioned atomic merge; source business-timezone
+The next local slice is implemented in [versioned order state](versioned-order-state.md):
+a staged merge engine, explicit migration preparation, and real local-file
+Iceberg transaction checks. It is not yet activated in these source DAGs.
+
+Immutable raw inputs and manifests; wiring source versions and tombstones into
+the source DAGs; verified schema migrations and merge activation; business-timezone
 and currency/decimal contracts; legitimate empty-source manifests; persisted
 quality results and a common publication snapshot. Gold metrics remain unchanged.

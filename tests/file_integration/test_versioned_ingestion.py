@@ -16,6 +16,7 @@ from pyiceberg.io.pyarrow import schema_to_pyarrow
 from order_state_helpers import APPLIED, events, order
 from pipeline.order_state import active_orders
 from pipeline.state_migration import install_candidate
+from pipeline.source_contracts import daily_contract
 from pipeline.versioned_ingestion import STATE_TABLE, run_versioned_batch
 from scripts.prepare_order_state import prepare_candidate
 from transforms.silver_shopify_orders import TABLE_SCHEMA as LEGACY_SCHEMA
@@ -62,7 +63,7 @@ def csv_file(tmp_path, *rows):
 
 def run(catalog, path, tmp_path, source="shopify", initialize=True):
     return run_versioned_batch(catalog, path, tmp_path / "archive", source=source,
-        batch_date="2026-01-05", applied_at=APPLIED, initialize_empty=initialize)
+        batch_date="2026-01-05", contract=daily_contract(source, "2026-01-05", business_timezone="UTC"), applied_at=APPLIED, initialize_empty=initialize)
 
 
 @pytest.mark.parametrize("source", ["shopify", "amazon"])
@@ -154,7 +155,7 @@ def legacy_inputs(catalog, tmp_path):
     old, versions, candidate = (tmp_path / name for name in ["legacy.parquet", "versions.parquet", "candidate.parquet"])
     pq.write_table(legacy.scan().to_arrow(), old)
     pq.write_table(full.select(["channel", "order_id", "source_updated_at"]), versions)
-    prepare_candidate(old, versions, candidate, applied_at=datetime(2026, 1, 20, tzinfo=timezone.utc), currency="INR")
+    prepare_candidate(old, versions, candidate, applied_at=datetime(2026, 1, 20, tzinfo=timezone.utc), currency="INR", business_timezone="UTC")
     return legacy.current_snapshot().snapshot_id, candidate
 
 
@@ -251,7 +252,7 @@ def test_money_migration_preserves_v1_versions_tombstones_and_audit(catalog, tmp
     from pipeline.versioned_ingestion import V1_STATE_TABLE
     source = v1_state(catalog, empty=empty)
     metadata = source.metadata_location
-    report = migrate_money_state(catalog, currency="INR")
+    report = migrate_money_state(catalog, currency="INR", business_timezone="UTC")
     assert catalog.load_table(V1_STATE_TABLE).metadata_location == metadata
     assert report["requires_new_source_receipts"] and not report["published_to_gold"]
     state = catalog.load_table(STATE_TABLE).scan().to_arrow()
@@ -266,14 +267,14 @@ def test_money_migration_preserves_v1_versions_tombstones_and_audit(catalog, tmp
         result = run(catalog, csv_file(tmp_path, dict(source_order(version=1), unit_price="0.10")), tmp_path)
         assert not result["committed"]
     with pytest.raises(ValueError, match="already exists"):
-        migrate_money_state(catalog, currency="INR")
+        migrate_money_state(catalog, currency="INR", business_timezone="UTC")
 
 
 def test_inexact_v1_money_is_rejected_before_creating_v2(catalog):
     from pipeline.state_migration import migrate_money_state
     v1_state(catalog, invalid=True)
     with pytest.raises(ValueError, match="fractional cents"):
-        migrate_money_state(catalog, currency="INR")
+        migrate_money_state(catalog, currency="INR", business_timezone="UTC")
     with pytest.raises(NoSuchTableError):
         catalog.load_table(STATE_TABLE)
 
@@ -301,5 +302,52 @@ def test_v1_metadata_drift_leaves_v2_initializing(catalog, monkeypatch):
         return result
     monkeypatch.setattr(catalog, "_commit_table", commit)
     with pytest.raises(RuntimeError, match="V1 changed"):
-        migrate_money_state(catalog, currency="INR")
+        migrate_money_state(catalog, currency="INR", business_timezone="UTC")
     assert catalog.load_table(STATE_TABLE).properties["cartco.state.status"] == "initializing"
+
+
+@pytest.mark.parametrize("changes", [{"source_schema_version": "unknown"}, {"delivery_mode": "incremental"}])
+def test_delivery_gate_retains_raw_and_rejects_before_state(changes, catalog, tmp_path):
+    delivery = {**daily_contract("shopify", "2026-01-05"), **changes}
+    path = csv_file(tmp_path, source_order())
+    with pytest.raises(ValueError):
+        run_versioned_batch(catalog, path, tmp_path / "archive", source="shopify", batch_date="2026-01-05",
+                            applied_at=APPLIED, contract=delivery, initialize_empty=True)
+    assert catalog.load_table("bronze.shopify_order_events").scan().to_arrow().num_rows == 1
+    assert json.loads(next((tmp_path / "archive").rglob("receipts/*.json")).read_text())["status"] == "rejected"
+    with pytest.raises(NoSuchTableError):
+        catalog.load_table(STATE_TABLE)
+
+
+def test_business_date_is_persisted_and_timezone_change_is_blocked(catalog, tmp_path):
+    path = csv_file(tmp_path, dict(source_order(), order_date="2026-01-01T23:30:00Z"))
+    args = dict(source="shopify", batch_date="2026-01-05", applied_at=APPLIED, initialize_empty=True)
+    first = run_versioned_batch(catalog, path, tmp_path / "archive", **args, contract=daily_contract("shopify", "2026-01-05"))
+    assert str(catalog.load_table(STATE_TABLE).scan().to_arrow()["order_date"][0].as_py()) == "2026-01-02"
+    with pytest.raises(ValueError, match="timezone differs"):
+        run_versioned_batch(catalog, path, tmp_path / "archive", **args,
+                            contract=daily_contract("shopify", "2026-01-05", business_timezone="UTC"))
+    assert catalog.load_table(STATE_TABLE).current_snapshot().snapshot_id == first["state_snapshot_id"]
+
+
+def test_unbound_existing_state_requires_explicit_rebuild(catalog, tmp_path):
+    from pipeline.versioned_ingestion import create_state_table
+    create_state_table(catalog)
+    with pytest.raises(ValueError, match="undeclared"):
+        run(catalog, csv_file(tmp_path, source_order()), tmp_path)
+
+
+
+def test_timezone_drift_between_readiness_and_write_is_rejected(catalog, tmp_path, monkeypatch):
+    from pipeline import versioned_ingestion as module
+    path = csv_file(tmp_path, source_order())
+    first = run(catalog, path, tmp_path)
+    original = module.write_order_state
+    def interleaved(*args, **kwargs):
+        with catalog.load_table(STATE_TABLE).transaction() as transaction:
+            transaction.set_properties({"cartco.business.timezone": "Asia/Kolkata"})
+        return original(*args, **kwargs)
+    monkeypatch.setattr(module, "write_order_state", interleaved)
+    with pytest.raises(ValueError, match="timezone changed"):
+        run(catalog, csv_file(tmp_path, source_order(version=3)), tmp_path)
+    assert catalog.load_table(STATE_TABLE).current_snapshot().snapshot_id == first["state_snapshot_id"]

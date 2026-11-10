@@ -71,7 +71,7 @@ times are never substituted for missing source versions.
 With a complete eleven-column legacy Parquet export and a trusted version map:
 
 ```bash
-python scripts/prepare_order_state.py --legacy legacy.parquet --versions versions.parquet --output candidate.parquet --applied-at 2026-11-10T00:00:00Z --currency INR
+python scripts/prepare_order_state.py --legacy legacy.parquet --versions versions.parquet --output candidate.parquet --applied-at 2026-11-10T00:00:00Z --currency INR --business-timezone UTC
 ```
 
 The tool prepares and verifies a candidate Parquet file plus a manifest with

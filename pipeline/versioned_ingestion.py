@@ -3,7 +3,7 @@
 Legacy Bronze/Silver tables and Gold publication are never modified here.
 """
 from datetime import date, datetime, timezone
-from decimal import Decimal, InvalidOperation
+from decimal import InvalidOperation
 import json
 
 import pyarrow as pa
@@ -16,6 +16,7 @@ from pyiceberg.transforms import IdentityTransform
 from pyiceberg.types import DateType, IntegerType, NestedField, StringType
 
 from pipeline.money import exact_money
+from pipeline.source_contracts import TIMEZONE_PROPERTY, business_date, check_source_version, validate_contract, zone, timestamp
 from pipeline.order_state import ARROW_SCHEMA, STATE_SCHEMA, empty_state, merge_order_versions, write_order_state
 from pipeline.raw_batches import archive_csv, record_receipt
 
@@ -39,14 +40,17 @@ def ensure_namespace(catalog, name):
         pass
 
 
-def create_state_table(catalog, *, initializing=False):
+def create_state_table(catalog, *, initializing=False, business_timezone=None):
+    if business_timezone is not None:
+        zone(business_timezone)
     ensure_namespace(catalog, "silver")
     return catalog.create_table(STATE_TABLE, schema=STATE_SCHEMA,
         partition_spec=PartitionSpec(PartitionField(source_id=3, field_id=1000, transform=IdentityTransform(), name="channel")),
-        properties={"cartco.state.status": "initializing" if initializing else "ready"})
+        properties={"cartco.state.status": "initializing" if initializing else "ready",
+                    **({TIMEZONE_PROPERTY: business_timezone} if business_timezone else {})})
 
 
-def require_state(catalog, *, initialize_empty=False):
+def require_state(catalog, *, initialize_empty=False, business_timezone):
     try:
         state = catalog.load_table(STATE_TABLE)
     except NoSuchTableError:
@@ -65,11 +69,13 @@ def require_state(catalog, *, initialize_empty=False):
         if legacy is not None and legacy.scan(limit=1).to_arrow().num_rows:
             raise ValueError("Legacy orders exist; a trusted version-map migration is required")
         try:
-            state = create_state_table(catalog)
+            state = create_state_table(catalog, business_timezone=business_timezone)
         except TableAlreadyExistsError:
             state = catalog.load_table(STATE_TABLE)
     if state.properties.get("cartco.state.status") != "ready":
         raise ValueError("State is not ready; finish or repair the explicit migration first")
+    if state.properties.get(TIMEZONE_PROPERTY) != business_timezone:
+        raise ValueError("State business timezone differs or is undeclared; explicit rebuild/migration required")
     return state
 
 
@@ -117,6 +123,7 @@ def land_raw_batch(catalog, batch):
 
 
 def canonical_events(batch):
+    contract = validate_contract(batch.contract, source=batch.source, batch_date=batch.batch_date)
     if {"order_id", "source_updated_at", "is_deleted"} - set(batch.columns):
         raise ValueError("Versioned input needs order_id, source_updated_at and is_deleted headers")
     rows = []
@@ -128,9 +135,10 @@ def canonical_events(batch):
             if "currency" in raw and raw["currency"] != "INR":
                 raise ValueError("Unsupported source currency for the declared INR contract")
             stamp = raw.get("source_updated_at", "")
-            version = datetime.fromisoformat(stamp.replace("Z", "+00:00"))
+            version = timestamp(stamp)
             if version.tzinfo is None or version.utcoffset() is None:
                 raise ValueError("Source version requires a timezone")
+            check_source_version(version.astimezone(timezone.utc), contract)
             version = version.astimezone(timezone.utc).replace(tzinfo=None)
             if raw.get("is_deleted") not in {"true", "false"}:
                 raise ValueError("is_deleted must be true or false")
@@ -149,7 +157,7 @@ def canonical_events(batch):
                 status = STATUS[batch.source].get(raw["status"])
                 if status is None:
                     raise ValueError("Unknown source status")
-                row.update(customer_id=raw["customer_id"], order_date=datetime.fromisoformat(raw["order_date"]).date(),
+                row.update(customer_id=raw["customer_id"], order_date=business_date(raw["order_date"], contract),
                     product_id=raw[product_key], product_category=raw["product_category"], quantity=quantity,
                     unit_price=price, order_status=status, order_total=exact_money(quantity * price), currency="INR")
             rows.append(row)
@@ -158,17 +166,17 @@ def canonical_events(batch):
     return pa.Table.from_pylist(rows, schema=ARROW_SCHEMA)
 
 
-def run_versioned_batch(catalog, csv_path, archive_root, *, source, batch_date, applied_at, initialize_empty=False):
-    batch = archive_csv(csv_path, archive_root, source=source, batch_date=batch_date)
+def run_versioned_batch(catalog, csv_path, archive_root, *, source, batch_date, applied_at, contract, initialize_empty=False):
+    batch = archive_csv(csv_path, archive_root, source=source, batch_date=batch_date, contract=contract)
     report = {"status": "rejected"}
     try:
         report["bronze_snapshot_id"] = land_raw_batch(catalog, batch)
         incoming = canonical_events(batch)
         # Batch-level key/version conflicts are a quality failure before state access.
         merge_order_versions(empty_state(), incoming, applied_at=applied_at)
-        require_state(catalog, initialize_empty=initialize_empty)
+        require_state(catalog, initialize_empty=initialize_empty, business_timezone=batch.contract["business_timezone"])
         result = write_order_state(catalog, STATE_TABLE, incoming, channel=source, applied_at=applied_at,
-                                   snapshot_properties={"cartco.batch_id": batch.batch_id})
+                                   snapshot_properties={"cartco.batch_id": batch.batch_id}, business_timezone=batch.contract["business_timezone"])
         report.update(status="complete", state_snapshot_id=result.snapshot_id, committed=result.committed,
                       counts=result.counts, batch_id=batch.batch_id,
                       state_table_uuid=str(catalog.load_table(STATE_TABLE).metadata.table_uuid))

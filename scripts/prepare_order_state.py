@@ -12,10 +12,12 @@ import pyarrow as pa
 import pyarrow.parquet as pq
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+from pipeline.source_contracts import zone
 from pipeline.order_state import active_orders, initialize_legacy_state
 
 
-def prepare_candidate(legacy_path: Path, versions_path: Path, output_path: Path, *, applied_at: datetime, currency: str):
+def prepare_candidate(legacy_path: Path, versions_path: Path, output_path: Path, *, applied_at: datetime, currency: str, business_timezone: str):
+    zone(business_timezone)
     legacy_path, versions_path, output_path = (Path(p).resolve() for p in (legacy_path, versions_path, output_path))
     manifest_path = output_path.with_suffix(output_path.suffix + ".manifest.json")
     if output_path in {legacy_path, versions_path} or manifest_path in {legacy_path, versions_path}:
@@ -35,7 +37,7 @@ def prepare_candidate(legacy_path: Path, versions_path: Path, output_path: Path,
     if not pq.read_table(pa.BufferReader(output_bytes)).equals(candidate):
         raise RuntimeError("Migration candidate failed serialization verification")
     report = {
-        "currency_declaration": currency,
+        "currency_declaration": currency, "business_timezone": business_timezone,
         "kind": "prepared-order-state-migration", "published": False,
         "legacy_rows": legacy.num_rows, "state_rows": candidate.num_rows,
         "active_rows": active_orders(candidate).num_rows,
@@ -61,10 +63,11 @@ def main():
     parser.add_argument("--output", required=True, type=Path)
     parser.add_argument("--applied-at", required=True, help="ISO timestamp with UTC offset; audit time only")
     parser.add_argument("--currency", required=True, choices=["INR"])
+    parser.add_argument("--business-timezone", required=True, help="Declared timezone of existing order dates; no date conversion")
     args = parser.parse_args()
     try:
         audit = datetime.fromisoformat(args.applied_at.replace("Z", "+00:00"))
-        report = prepare_candidate(args.legacy, args.versions, args.output, applied_at=audit, currency=args.currency)
+        report = prepare_candidate(args.legacy, args.versions, args.output, applied_at=audit, currency=args.currency, business_timezone=args.business_timezone)
     except (ValueError, FileExistsError) as exc:
         parser.error(str(exc))
     print(json.dumps(report, indent=2))

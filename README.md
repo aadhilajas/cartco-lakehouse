@@ -12,6 +12,8 @@
 
 > **Exact money state:** [the v2 money and currency guide](docs/phase2/money-state-v2.md) covers persisted decimals/INR and explicit migration from the preserved v1 table. Local ingestion and Gold now target v2; legacy Airflow remains unchanged.
 
+> **Source time contracts:** [the delivery contract guide](docs/phase2/source-time-contracts.md) covers explicit source schema versions, extraction windows, business dates and matching source readiness at Gold. New run commands require the generated contract sidecar.
+
 **One trusted source of truth for revenue across CartCo's sales channels.**
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)

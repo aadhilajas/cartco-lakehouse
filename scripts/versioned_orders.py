@@ -20,11 +20,13 @@ def main():
     run.add_argument("--csv", type=Path, required=True)
     run.add_argument("--archive-root", type=Path, required=True)
     run.add_argument("--batch-date", required=True)
+    run.add_argument("--contract", required=True, type=Path, help="Explicit delivery contract JSON")
     run.add_argument("--initialize-empty-state", action="store_true")
     migrate = commands.add_parser("migrate")
     migrate.add_argument("--candidate", type=Path, required=True)
     money = commands.add_parser("migrate-money")
     money.add_argument("--currency", required=True, choices=["INR"])
+    money.add_argument("--business-timezone", required=True, help="Declared timezone of existing order dates; no date conversion")
     args = parser.parse_args()
     try:
         from pyiceberg.catalog.sql import SqlCatalog
@@ -36,12 +38,12 @@ def main():
                          warehouse="file://" + args.warehouse.resolve().as_posix())
     try:
         if args.command == "migrate-money":
-            result = migrate_money_state(catalog, currency=args.currency)
+            result = migrate_money_state(catalog, currency=args.currency, business_timezone=args.business_timezone)
         elif args.command == "migrate":
             result = install_candidate(catalog, args.candidate)
         else:
             result = run_versioned_batch(catalog, args.csv, args.archive_root, source=args.source,
-                batch_date=args.batch_date, applied_at=datetime.now(timezone.utc),
+                batch_date=args.batch_date, applied_at=datetime.now(timezone.utc), contract=json.loads(args.contract.read_text(encoding="utf-8")),
                 initialize_empty=args.initialize_empty_state)
         print(json.dumps(result, indent=2))
     finally:

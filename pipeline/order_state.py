@@ -203,7 +203,7 @@ def initialize_legacy_state(legacy: pa.Table, versions: pa.Table, *, applied_at:
     return merge_order_versions(empty_state(), incoming, applied_at=applied_at).rows
 
 
-def write_order_state(catalog, identifier: str, incoming: pa.Table, *, channel: str, applied_at: datetime, max_attempts: int = 3, snapshot_properties: dict[str, str] | None = None) -> WriteResult:
+def write_order_state(catalog, identifier: str, incoming: pa.Table, *, channel: str, applied_at: datetime, max_attempts: int = 3, snapshot_properties: dict[str, str] | None = None, business_timezone: str | None = None) -> WriteResult:
     """Atomically replace one channel with merged state, retrying only conflicts.
 
     The caller must explicitly create a separate state table with STATE_SCHEMA
@@ -221,6 +221,8 @@ def write_order_state(catalog, identifier: str, incoming: pa.Table, *, channel: 
             raise ValueError("State migration is still initializing")
         if not schema_to_pyarrow(table.schema()).equals(ARROW_SCHEMA, check_metadata=False):
             raise ValueError("State schema differs; an explicit migration is required")
+        if business_timezone is not None and table.properties.get("cartco.business.timezone") != business_timezone:
+            raise ValueError("State business timezone changed during the write")
         channel_id = table.schema().find_field("channel").field_id
         if not any(field.source_id == channel_id and isinstance(field.transform, IdentityTransform) for field in table.spec().fields):
             raise ValueError("State table must use an identity channel partition")

@@ -11,6 +11,7 @@ from pathlib import Path
 import tempfile
 
 from pipeline.batch import resolve_batch_date
+from pipeline.source_contracts import batch_identity
 
 SOURCES = {"shopify", "amazon"}
 
@@ -23,6 +24,7 @@ class RawBatch:
     directory: Path
     columns: tuple[str, ...]
     rows: tuple[dict[str, str], ...]
+    contract: dict | None = None
 
 
 def _write_once(path: Path, content: bytes):
@@ -60,33 +62,33 @@ def _rows(content: bytes):
     return tuple(reader.fieldnames), tuple(rows)
 
 
-def archive_csv(csv_path, archive_root, *, source: str, batch_date) -> RawBatch:
+def archive_csv(csv_path, archive_root, *, source: str, batch_date, contract=None) -> RawBatch:
     if source not in SOURCES:
         raise ValueError("Unsupported source")
     day = resolve_batch_date(batch_date).isoformat()
     content = Path(csv_path).read_bytes()
     checksum = hashlib.sha256(content).hexdigest()
-    batch_id = hashlib.sha256(f"{source}\n{day}\n{checksum}".encode()).hexdigest()
+    batch_id = batch_identity(source, day, checksum, contract)
     directory = Path(archive_root).resolve() / source / day / batch_id
     # Archive malformed input too; parsing never destroys original evidence.
     _write_once(directory / "source.csv", content)
     try:
         columns, rows = _rows(content)
     except (ValueError, UnicodeDecodeError, csv.Error) as exc:
-        rejected = dict(schema_version=1, source=source, batch_date=day, batch_id=batch_id,
+        rejected = dict(schema_version=2 if contract else 1, **({"delivery_contract": contract} if contract else {}), source=source, batch_date=day, batch_id=batch_id,
                         sha256=checksum, bytes=len(content), rows=None, parse_error=str(exc))
         _write_once(directory / "manifest.json", (json.dumps(rejected, sort_keys=True, indent=2) + "\n").encode())
         raise
-    manifest = dict(schema_version=1, source=source, batch_date=day, batch_id=batch_id,
+    manifest = dict(schema_version=2 if contract else 1, **({"delivery_contract": contract} if contract else {}), source=source, batch_date=day, batch_id=batch_id,
                     sha256=checksum, bytes=len(content), rows=len(rows), columns=columns)
     _write_once(directory / "manifest.json", (json.dumps(manifest, sort_keys=True, indent=2) + "\n").encode())
-    return RawBatch(batch_id, source, day, directory, columns, rows)
+    return RawBatch(batch_id, source, day, directory, columns, rows, contract)
 
 
 def record_receipt(batch: RawBatch, report: dict):
     """Attempt receipts are append-only; the input manifest never changes."""
     from uuid import uuid4
-    content = dict(report, batch_id=batch.batch_id, source=batch.source, batch_date=batch.batch_date)
+    content = dict(report, batch_id=batch.batch_id, source=batch.source, batch_date=batch.batch_date, delivery_contract=batch.contract)
     path = batch.directory / "receipts" / f"{uuid4()}.json"
     _write_once(path, (json.dumps(content, sort_keys=True, indent=2) + "\n").encode())
     return path

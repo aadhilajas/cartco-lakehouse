@@ -8,11 +8,12 @@ import pyarrow as pa
 import pyarrow.parquet as pq
 from pyiceberg.exceptions import NoSuchTableError
 
+from pipeline.source_contracts import zone
 from pipeline.order_state import ARROW_SCHEMA, active_orders, empty_state, merge_order_versions
 from pipeline.versioned_ingestion import STATE_TABLE, V1_STATE_TABLE, create_state_table
 
 
-def migrate_money_state(catalog, *, currency):
+def migrate_money_state(catalog, *, currency, business_timezone):
     """Copy v1 into a separate v2 table; never replace or alter the v1 table.
 
     Caller must stop v1 writers before migrating. Metadata drift observed during
@@ -21,6 +22,7 @@ def migrate_money_state(catalog, *, currency):
     from pipeline.money import exact_money
     from pyiceberg.io.pyarrow import schema_to_pyarrow
 
+    zone(business_timezone)
     if currency != "INR":
         raise ValueError("Money migration requires an explicit INR declaration")
     try:
@@ -54,9 +56,9 @@ def migrate_money_state(catalog, *, currency):
         raise ValueError("V1 state is not canonical")
     provenance = dict(source_table=V1_STATE_TABLE, source_uuid=str(source.metadata.table_uuid),
                       source_snapshot_id=source_id, source_metadata=source.metadata_location,
-                      currency_declaration=currency, contract="exact-inr-decimal-v2")
+                      currency_declaration=currency, business_timezone=business_timezone, contract="exact-inr-decimal-v2")
     fingerprint = hashlib.sha256(json.dumps(provenance, sort_keys=True).encode()).hexdigest()
-    target = create_state_table(catalog, initializing=True)
+    target = create_state_table(catalog, initializing=True, business_timezone=business_timezone)
     if candidate.num_rows:
         target.overwrite(candidate, snapshot_properties={"cartco.migration.sha256": fingerprint})
     verified = catalog.load_table(STATE_TABLE).scan().to_arrow()
@@ -120,7 +122,9 @@ def install_candidate(catalog, candidate_path):
     current_business = current.select(business).cast(expected_business.schema).sort_by([("channel", "ascending"), ("order_id", "ascending")])
     if not current_business.equals(expected_business):
         raise ValueError("Current legacy orders differ from the migration baseline")
-    table = create_state_table(catalog, initializing=True)
+    business_timezone = manifest.get("business_timezone")
+    zone(business_timezone)
+    table = create_state_table(catalog, initializing=True, business_timezone=business_timezone)
     table.overwrite(candidate, snapshot_properties={"cartco.migration.sha256": manifest["candidate_sha256"]})
     snapshot_id = table.current_snapshot().snapshot_id
     verified = catalog.load_table(STATE_TABLE).scan(snapshot_id=snapshot_id).to_arrow()

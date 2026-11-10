@@ -15,6 +15,7 @@ import pyarrow.parquet as pq
 from pyiceberg.expressions import EqualTo
 
 from pipeline.batch import resolve_batch_date
+from pipeline.source_contracts import TIMEZONE_PROPERTY, validate_contract, batch_identity, timestamp
 from pipeline.gold_quality import MARTS, build_marts
 from pipeline.raw_batches import _write_once
 from pipeline.versioned_ingestion import STATE_TABLE
@@ -58,7 +59,10 @@ def _source_evidence(catalog, state, receipt_paths, required, day):
         batch_directory = Path(path).resolve().parent.parent
         raw_manifest = json.loads((batch_directory / "manifest.json").read_text(encoding="utf-8"))
         input_sha = hashlib.sha256((batch_directory / "source.csv").read_bytes()).hexdigest()
-        expected_batch_id = hashlib.sha256(f"{source}\n{day}\n{input_sha}".encode()).hexdigest()
+        delivery = validate_contract(raw_manifest.get("delivery_contract"), source=source, batch_date=day)
+        if receipt.get("delivery_contract") != delivery or state.properties.get(TIMEZONE_PROPERTY) != delivery["business_timezone"]:
+            raise ValueError("Delivery contract differs from receipt or state business timezone")
+        expected_batch_id = batch_identity(source, day, input_sha, delivery)
         if (raw_manifest.get("sha256"), raw_manifest.get("batch_id"), raw_manifest.get("source"), raw_manifest.get("batch_date"), raw_manifest.get("rows")) != (
             input_sha, expected_batch_id, source, day, receipt.get("counts", {}).get("input_rows")) or receipt.get("batch_id") != expected_batch_id:
             raise ValueError("Archived source manifest/checksum differs from the receipt")
@@ -85,9 +89,12 @@ def _source_evidence(catalog, state, receipt_paths, required, day):
         if records.num_rows and (set(records["source"].to_pylist()) != {source}
             or set(records["ingestion_date"].to_pylist()) != {date.fromisoformat(day)}):
             raise ValueError("Raw batch source/date differs from completion receipt")
-        receipts[source] = dict(batch_id=receipt["batch_id"], state_snapshot_id=receipt_id, bronze_snapshot_id=raw_id, input_sha256=input_sha)
+        receipts[source] = dict(batch_id=receipt["batch_id"], state_snapshot_id=receipt_id, bronze_snapshot_id=raw_id, input_sha256=input_sha, delivery_contract=delivery)
     if set(receipts) != required:
         raise ValueError("A required source completion receipt is missing")
+    windows = {(timestamp(r["delivery_contract"]["extraction_start"]), timestamp(r["delivery_contract"]["extraction_end"]), r["delivery_contract"]["business_timezone"]) for r in receipts.values()}
+    if len(windows) != 1:
+        raise ValueError("Required sources have different extraction windows")
     if not any(receipt["state_snapshot_id"] == current_id for receipt in receipts.values()):
         raise ValueError("Receipts do not cover the latest state snapshot")
     return current_id, receipts
@@ -117,7 +124,7 @@ def publish_gold_release(catalog, output_root, receipt_paths, *, batch_date, exp
         marts, quality = build_marts(orders, currency=currency)
         contract = dict(metric_version=METRIC_VERSION, state_table_uuid=str(state.metadata.table_uuid),
                         state_snapshot_id=snapshot_id, batch_date=day, required_sources=sorted(required),
-                        source_evidence=evidence, currency=currency,
+                        source_evidence=evidence, currency=currency, business_timezone=state.properties[TIMEZONE_PROPERTY],
                         currency_basis="Persisted INR source contract or explicit migration declaration")
         release_id = hashlib.sha256(_json(contract)).hexdigest()
         directory = root / "releases" / release_id
@@ -136,7 +143,7 @@ def publish_gold_release(catalog, output_root, receipt_paths, *, batch_date, exp
         _write_once(directory / "manifest.json", content)
         latest = catalog.load_table(STATE_TABLE)
         latest_id = latest.current_snapshot().snapshot_id if latest.current_snapshot() else None
-        if latest_id != snapshot_id or latest.metadata.table_uuid != state.metadata.table_uuid or latest.properties.get("cartco.state.status") != "ready":
+        if latest_id != snapshot_id or latest.metadata.table_uuid != state.metadata.table_uuid or latest.properties.get("cartco.state.status") != "ready" or latest.properties.get(TIMEZONE_PROPERTY) != state.properties.get(TIMEZONE_PROPERTY):
             raise ValueError("State changed during Gold preparation; previous release retained")
         pointer = _json(dict(release_id=release_id, manifest_sha256=hashlib.sha256(content).hexdigest()))
         with tempfile.NamedTemporaryFile(dir=root, delete=False) as stream:

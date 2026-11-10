@@ -11,6 +11,7 @@ Run inside the Airflow container (deps are pre-installed there):
 
 from __future__ import annotations
 
+import json
 import os
 import uuid
 import sys
@@ -24,6 +25,7 @@ REPO_ROOT = str(Path(__file__).resolve().parents[1])
 if REPO_ROOT not in sys.path:
     sys.path.insert(0, REPO_ROOT)
 from pipeline.batch import resolve_batch_date
+from pipeline.source_contracts import daily_contract
 
 N_ROWS = 50_000
 N_CUSTOMERS = 8_000
@@ -118,6 +120,9 @@ def main() -> None:
     os.makedirs(os.path.dirname(OUTPUT_PATH), exist_ok=True)
     df = generate(include_versions=os.environ.get("CARTCO_SOURCE_VERSIONS", "0") == "1")
     df.to_csv(OUTPUT_PATH, index=False)
+    if os.environ.get("CARTCO_SOURCE_VERSIONS", "0") == "1":
+        contract = daily_contract("shopify", resolve_batch_date())
+        Path(OUTPUT_PATH + ".contract.json").write_text(json.dumps(contract, indent=2) + "\n", encoding="utf-8")
     print(f"Generated {len(df):,} synthetic Shopify orders -> {OUTPUT_PATH}")
     print(f"Date range: {df['order_date'].min()} .. {df['order_date'].max()}")
     print("Status distribution:")

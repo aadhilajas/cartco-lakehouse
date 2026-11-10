@@ -11,6 +11,7 @@ pytest.importorskip("sqlalchemy", minversion="2.0", reason="Use the isolated cat
 from pyiceberg.catalog.sql import SqlCatalog
 
 from pipeline.gold_release import publish_gold_release, read_gold_release
+from pipeline.source_contracts import daily_contract
 from pipeline.versioned_ingestion import run_versioned_batch
 from transforms.gold import daily_revenue
 
@@ -51,7 +52,7 @@ def ingest(catalog, root, source, *, updated=False, empty=False):
         writer.writeheader()
         if not empty:
             writer.writerows(rows)
-    return run_versioned_batch(catalog, path, root / "archive", source=source, batch_date=DAY,
+    return run_versioned_batch(catalog, path, root / "archive", source=source, batch_date=DAY, contract=daily_contract(source, DAY, business_timezone="UTC"),
                               applied_at=datetime(2026, 1, 5), initialize_empty=True)["receipt"]
 
 
@@ -203,3 +204,32 @@ def test_receipt_from_another_catalog_is_rejected(environment):
             publish(catalog, root, [foreign, receipts[1]])
     finally:
         other.engine.dispose()
+
+
+def test_different_source_windows_block_gold(environment):
+    import json
+    catalog, root = environment
+    first = ingest(catalog, root, "shopify")
+    ingest(catalog, root, "amazon")
+    delivery = daily_contract("amazon", DAY, business_timezone="UTC")
+    delivery["extraction_end"] = "2026-01-07T00:00:00Z"
+    result = run_versioned_batch(catalog, root / "amazon.csv", root / "archive", source="amazon", batch_date=DAY,
+                                 applied_at=datetime(2026, 1, 5), contract=delivery)
+    with pytest.raises(ValueError, match="different extraction windows"):
+        publish(catalog, root, [first, result["receipt"]])
+    assert not (root / "gold/CURRENT.json").exists()
+
+
+def test_contract_tampering_blocks_gold_and_keeps_pointer(environment):
+    import json
+    catalog, root = environment
+    receipts = seed(catalog, root)
+    publish(catalog, root, receipts)
+    pointer = (root / "gold/CURRENT.json").read_bytes()
+    path = Path(receipts[0]).parent.parent / "manifest.json"
+    manifest = json.loads(path.read_text())
+    manifest["delivery_contract"]["source_timezone"] = "Asia/Kolkata"
+    path.write_text(json.dumps(manifest), encoding="utf-8")
+    with pytest.raises(ValueError, match="Delivery contract"):
+        publish(catalog, root, receipts)
+    assert (root / "gold/CURRENT.json").read_bytes() == pointer

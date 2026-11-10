@@ -7,7 +7,7 @@ and silver.order_state_v2; it does not publish a new Gold release.
 ## Execution sequence
 
 1. Read the input bytes once; compute SHA-256 and a batch ID from source, load
-   date and checksum. Preserve original bytes under source/date/batch-ID.
+   date, checksum and the explicit delivery contract. Preserve original bytes under source/date/batch-ID.
 2. Publish a manifest containing that identity, checksum, byte count, headers and
    row count. Original files/manifests are never overwritten by the archive API.
    Malformed CSV bytes are retained with a parse-error manifest.
@@ -23,10 +23,10 @@ Receipts follow the data commit; they are not a distributed transaction with the
 catalog. A receipt failure fails the attempt, and source-version replay can
 recover a previously successful commit without duplicating business data.
 
-The current manifest covers input identity and the adapter's CSV headers. Source
-extraction intervals, independently supplied source schema versions, shared
-publication manifests and external artifact retention policies remain future
-contract work. Content addressing is API-level immutability, not WORM storage;
+The manifest now includes the explicit extraction window, source schema version
+and timezones; see [source time contracts](source-time-contracts.md). Controlled
+Gold release manifests are implemented separately; external artifact retention
+policies remain future work. Content addressing is API-level immutability, not WORM storage;
 manual changes are detected on replay rather than silently repaired.
 
 ## Source contract
@@ -62,8 +62,8 @@ requirements/file-integration.txt. Use a short warehouse path on Windows because
 PyArrow 15 cannot write every long hash-partition path beneath a deep temp root.
 
 ```bash
-python scripts/versioned_orders.py --catalog-db ../work/versioned/catalog.db --warehouse ../work/vw run --source shopify --csv data/raw/shopify_orders.csv --archive-root ../work/archive --batch-date 2026-07-25 --initialize-empty-state
-python scripts/versioned_orders.py --catalog-db ../work/versioned/catalog.db --warehouse ../work/vw run --source amazon --csv data/raw/amazon_orders.csv --archive-root ../work/archive --batch-date 2026-07-25
+python scripts/versioned_orders.py --catalog-db ../work/versioned/catalog.db --warehouse ../work/vw run --source shopify --csv data/raw/shopify_orders.csv --contract data/raw/shopify_orders.csv.contract.json --archive-root ../work/archive --batch-date 2026-07-25 --initialize-empty-state
+python scripts/versioned_orders.py --catalog-db ../work/versioned/catalog.db --warehouse ../work/vw run --source amazon --csv data/raw/amazon_orders.csv --contract data/raw/amazon_orders.csv.contract.json --archive-root ../work/archive --batch-date 2026-07-25
 ```
 
 The initializer is explicit and refuses a catalog containing nonempty legacy
@@ -106,3 +106,5 @@ REST/MinIO, Airflow execution, container builds, Gold reconciliation and runtime
 switch-over are still unverified. No remote CI was started and nothing was pushed.
 
 Source live rows now require explicit INR currency and exact-cent prices. See [money-state v2](money-state-v2.md) before running against an older catalog.
+
+The run CLI requires `--contract` with the matching generated sidecar. Existing unbound v2 tables require an explicit rebuild; see the time-contract guide.

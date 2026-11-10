@@ -34,6 +34,14 @@ builder no longer uses that conversion.
 INR is an explicit synthetic source contract or migration declaration, not FX
 conversion or independent confirmation of a real marketplace's currency.
 
+## Delivery time contracts
+
+[Explicit source contracts](../phase2/source-time-contracts.md) are required in
+archived manifests and completion receipts. Required sources must share the
+same extraction window and business timezone, matching the state declaration.
+The release contract records these declarations. Old uncontracted receipts cannot
+authorize a new release; existing release artifacts remain readable.
+
 ## Validation and source readiness
 
 - Validate canonical keys, uniqueness, dates, statuses, finite nonnegative amounts

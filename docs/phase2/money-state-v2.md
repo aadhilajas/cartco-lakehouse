@@ -33,7 +33,7 @@ SQLite CLI. Generate source-versioned CSVs, then initialize deliberately:
 
 ```sh
 python scripts/dev.py generate --batch-date 2026-07-25 --source-versions
-python scripts/versioned_orders.py --catalog-db local/catalog.db --warehouse local/warehouse run --source shopify --csv input/raw/shopify_orders.csv --archive-root local/archive --batch-date 2026-07-25 --initialize-empty-state
+python scripts/versioned_orders.py --catalog-db local/catalog.db --warehouse local/warehouse run --source shopify --csv data/raw/shopify_orders.csv --contract data/raw/shopify_orders.csv.contract.json --archive-root local/archive --batch-date 2026-07-25 --initialize-empty-state
 ```
 
 Run Amazon with the same date and its CSV, omitting the initialization flag.
@@ -42,11 +42,13 @@ An existing v1 table blocks empty initialization, even when it has no rows.
 
 ## Existing v1 catalog
 
-Stop v1 writers and keep them stopped through cutover. Preserve a catalog and
+Stop v1 writers and keep them stopped through cutover. The timezone option
+asserts the meaning of existing dates and does not convert them; declare UTC only
+when supported by trusted evidence. Preserve a catalog and
 warehouse backup. Inspect the currency authority before declaring INR:
 
 ```sh
-python scripts/versioned_orders.py --catalog-db local/catalog.db --warehouse local/warehouse migrate-money --currency INR
+python scripts/versioned_orders.py --catalog-db local/catalog.db --warehouse local/warehouse migrate-money --currency INR --business-timezone UTC
 ```
 
 Migration reads a pinned v1 snapshot and creates v2 in `initializing` status.
@@ -79,14 +81,15 @@ explicitly. The previous Gold release remains readable through its own manifest.
 ## Legacy orders without trusted source versions
 
 Use the existing reviewed-candidate workflow with the new required
-`--currency INR` option on `scripts/prepare_order_state.py`. A complete trusted
+`--currency INR --business-timezone UTC` options on `scripts/prepare_order_state.py`. A complete trusted
 key/version map is still required. The candidate targets v2; installation
 refuses bypassing an existing v1 table. Legacy source data is preserved.
 
 ## Scope still pending
 
-This implements the local persisted money/currency contract. Business timezone,
-source extraction intervals and schema versions remain separate work. The
+This implements the local persisted money/currency contract. Explicit timezone,
+extraction intervals and schema versions are now implemented in the
+[source time contract guide](source-time-contracts.md). The
 legacy Airflow path still writes its original tables. Docker/REST/MinIO/Airflow
 acceptance, distributed writer coordination, operational migration recovery,
 and legacy consumer cutover remain pending. No remote deployment is activated.

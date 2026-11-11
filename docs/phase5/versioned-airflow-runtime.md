@@ -168,9 +168,10 @@ scheduler/executor or operational recovery acceptance.
 
 ## Remaining scope
 
-Structured runtime stage success/failure logs include run ID and business date.
-Detailed lineage facets, verified Marquez delivery and failure alerts remain
-pending. Scheduling, freshness SLAs, independent source watermarks, Kafka,
+Structured runtime logs include run ID and business date.
+[Runtime lineage and the local alert outbox](runtime-observability.md) now add
+serialized batch/schema/snapshot/release evidence and retry/terminal callbacks.
+Live Marquez HTTP/graph acceptance and external alert delivery remain pending. Scheduling, freshness SLAs, independent source watermarks, Kafka,
 distributed coordination, backup/restore, stale-lock recovery, retention, real
 inventory connectors and cloud deployment are also separate work. Legacy DAGs
 and table consumers remain unchanged; no remote activation was performed.

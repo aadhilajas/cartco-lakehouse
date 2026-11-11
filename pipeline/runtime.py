@@ -7,6 +7,7 @@ import os
 from pathlib import Path
 from uuid import uuid4
 
+from pipeline import observability
 from pipeline.batch import resolve_batch_date
 from pipeline.gold_release import publish_gold_release, read_gold_release
 from pipeline.inventory import read_bundle
@@ -222,13 +223,20 @@ def _settings():
                 input_root=os.environ.get("CARTCO_RUNTIME_INPUT_ROOT", "/opt/airflow/data/deliveries"))
 
 
-def _logged(stage, batch_date, run_id, action):
+def _logged(stage, batch_date, run_id, action, *, work_root=None, input_root=None, mode_hint=None):
+    settings = _settings()
+    root = work_root if work_root is not None else settings["work_root"]
+    inputs = input_root if input_root is not None else settings["input_root"]
+    token = observability.best_effort(lambda: observability.begin(stage=stage, batch_date=batch_date, run_id=run_id,
+        path=run_path(root, batch_date, run_id), work_root=root, input_root=inputs, mode_hint=mode_hint))
     try:
         result = action()
-    except Exception:
-        logger.exception(json.dumps(dict(event="runtime_stage_failed", stage=stage, batch_date=batch_date, run_id=run_id)))
+    except Exception as error:
+        observability.best_effort(lambda: observability.finish(token, error=error))
+        observability.best_effort(lambda: logger.exception(json.dumps(dict(event="runtime_stage_failed", stage=stage, batch_date=batch_date, run_id=run_id))))
         raise
-    logger.info(json.dumps(dict(event="runtime_stage_complete", stage=stage, batch_date=batch_date, run_id=run_id)))
+    observability.best_effort(lambda: observability.finish(token, result=result))
+    observability.best_effort(lambda: logger.info(json.dumps(dict(event="runtime_stage_complete", stage=stage, batch_date=batch_date, run_id=run_id))))
     return result
 
 
@@ -237,7 +245,7 @@ def prepare_task(batch_date, run_id):
     return _logged("prepare", batch_date, run_id, lambda: prepare_run(**_settings(), batch_date=batch_date, run_id=run_id,
         mode=os.environ.get("CARTCO_RUNTIME_MODE", "delivered"), rows_per_source=int(rows) if rows else None,
         inventory_mode=os.environ.get("CARTCO_RUNTIME_INVENTORY_MODE", "none"),
-        allow_empty_init=_bool(os.environ.get("CARTCO_RUNTIME_ALLOW_EMPTY_INIT", "false"))))
+        allow_empty_init=_bool(os.environ.get("CARTCO_RUNTIME_ALLOW_EMPTY_INIT", "false"))), mode_hint=os.environ.get("CARTCO_RUNTIME_MODE", "delivered"))
 
 
 def ingest_task(batch_date, run_id, source):
@@ -250,3 +258,11 @@ def inventory_task(batch_date, run_id):
 
 def publish_task(batch_date, run_id):
     return _logged("publish", batch_date, run_id, lambda: publish_run(work_root=_settings()["work_root"], batch_date=batch_date, run_id=run_id))
+
+
+def task_failure_callback(context):
+    observability.best_effort(lambda: observability.task_alert(context, work_root=_settings()["work_root"], terminal=True))
+
+
+def task_retry_callback(context):
+    observability.best_effort(lambda: observability.task_alert(context, work_root=_settings()["work_root"], terminal=False))

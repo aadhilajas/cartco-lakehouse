@@ -1,0 +1,60 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:cartco:observability:v1",
+  "$defs": {
+    "RuntimeRunFacet": {
+      "type": "object",
+      "required": ["_producer", "_schemaURL", "stage", "batchDate", "orchestrationRunId", "invocationId", "evidence"],
+      "additionalProperties": false,
+      "properties": {
+        "_producer": {"type": "string", "format": "uri"},
+        "_schemaURL": {"const": "urn:cartco:observability:v1#/$defs/RuntimeRunFacet"},
+        "stage": {"enum": ["prepare", "shopify", "amazon", "pos", "inventory", "publish"]},
+        "batchDate": {"type": "string", "format": "date"},
+        "orchestrationRunId": {"type": "string", "minLength": 1},
+        "invocationId": {"type": "string", "format": "uuid"},
+        "evidence": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "mode": {"enum": ["delivered", "synthetic"]},
+            "source": {"enum": ["shopify", "amazon", "pos"]},
+            "sourceBatchId": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+            "sourceSchemaVersion": {"enum": ["shopify.orders.v2", "amazon.orders.v2", "pos.orders.v1"]},
+            "bronzeSnapshotId": {"type": "integer"},
+            "receiptStateSnapshotId": {"type": "integer"},
+            "stateTableUuid": {"type": "string", "format": "uuid"},
+            "counts": {"type": "object", "additionalProperties": {"type": "integer", "minimum": 0}},
+            "receiptStateCommitted": {"type": "boolean"},
+            "reusedReceipt": {"type": "boolean"},
+            "inventoryEnabled": {"type": "boolean"},
+            "inventorySchemaVersion": {"const": "inventory.v1"},
+            "costBasis": {"const": "fixed-standard-cost-v1"},
+            "periodStart": {"type": "string", "format": "date"},
+            "periodEnd": {"type": "string", "format": "date"},
+            "isSynthetic": {"type": "boolean"},
+            "releaseId": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+            "publicationId": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+            "requiredSources": {"type": "array", "items": {"enum": ["shopify", "amazon", "pos"]}, "uniqueItems": true},
+            "martRows": {"type": "object", "additionalProperties": {"type": "integer", "minimum": 0}},
+            "publicationOutcome": {"enum": ["completed_or_recovered", "committed_before_task_failure"]},
+            "inventoryQuality": {"type": "object", "additionalProperties": {"type": "integer", "minimum": 0}},
+            "errorType": {"type": "string"},
+            "evidenceErrorType": {"type": "string"}
+          }
+        }
+      }
+    },
+    "SnapshotDatasetFacet": {
+      "type": "object",
+      "required": ["_producer", "_schemaURL"],
+      "additionalProperties": false,
+      "properties": {
+        "_producer": {"type": "string", "format": "uri"},
+        "_schemaURL": {"const": "urn:cartco:observability:v1#/$defs/SnapshotDatasetFacet"},
+        "snapshotId": {"type": "integer"},
+        "tableUuid": {"type": "string", "format": "uuid"}
+      }
+    }
+  }
+}

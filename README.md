@@ -20,6 +20,8 @@
 
 > **Airflow wiring:** [the versioned runtime guide](docs/phase5/versioned-airflow-runtime.md) defines a paused/manual three-source DAG with frozen inputs, retry-safe receipts and coordinated publication. Its exact callbacks are locally tested; real DagBag/container/scheduler acceptance remains pending.
 
+> **Observability:** [runtime lineage and alerts](docs/phase5/runtime-observability.md) now retain schema-validated local events and a local failure-alert outbox. Pinned client/file-transport checks pass; live Marquez and scheduler callback dispatch remain unverified. No external notifications are sent.
+
 **One trusted source of truth for revenue across CartCo's sales channels.**
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)

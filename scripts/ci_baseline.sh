@@ -29,6 +29,22 @@ for pass in first replay; do
 done
 docker compose exec -T airflow-scheduler python /opt/airflow/scripts/check_versioned_runtime.py --rows-per-source 50 \
   | tee test-results/versioned-runtime.json
+docker compose exec -T airflow-scheduler python - <<'PY' | tee test-results/runtime-observability.json
+import json
+from pathlib import Path
+from scripts.check_runtime_observability import inspect_run
+root = Path("/opt/airflow/data/versioned")
+reports = []
+for path in (root / "runs").glob("*/*/run.json"):
+    manifest = json.loads(path.read_text())
+    report = inspect_run(root, manifest["batch_date"], manifest["run_id"])
+    if not report["clean_history"]:
+        raise RuntimeError("Versioned runtime observability history is incomplete or failed")
+    reports.append(report)
+if not reports:
+    raise RuntimeError("No versioned observability journal was retained")
+print(json.dumps(reports, indent=2))
+PY
 for dag in shopify_bronze_ingestion amazon_bronze_ingestion gold_marts_ingestion; do
   docker compose exec -T airflow-scheduler airflow dags test "$dag" "$run_date" 2>&1 | tee "test-results/${dag}.log"
 done

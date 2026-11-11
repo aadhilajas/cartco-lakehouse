@@ -69,6 +69,10 @@ jobs:
     timeout-minutes: 45
     steps:
       - uses: actions/checkout@v4
+      - name: Prepare writable bind mounts for the CI user
+        run: |
+          mkdir -p data airflow/logs
+          echo "AIRFLOW_UID=$(id -u)" >> "$GITHUB_ENV"
       - name: Build Airflow and pinned-source MinIO images
         run: docker compose build
       - name: Import real DAGs and check dependency graphs

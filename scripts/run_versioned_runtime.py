@@ -32,12 +32,16 @@ def main():
         catalog = runtime.get_catalog()
     context = dict(work_root=args.work_root, batch_date=args.batch_date, run_id=args.run_id)
     try:
-        runtime.prepare_run(**context, input_root=args.input_root, mode=args.mode, inventory_mode=args.inventory_mode,
-                            rows_per_source=args.rows_per_source, allow_empty_init=args.allow_empty_init)
+        runtime._logged("prepare", args.batch_date, args.run_id, lambda: runtime.prepare_run(**context, input_root=args.input_root, mode=args.mode, inventory_mode=args.inventory_mode,
+                            rows_per_source=args.rows_per_source, allow_empty_init=args.allow_empty_init),
+            work_root=args.work_root, input_root=args.input_root, mode_hint=args.mode)
         for source in runtime.SOURCE_ORDER:
-            runtime.ingest_source(**context, source=source, catalog=catalog)
-        runtime.prepare_inventory(**context, input_root=args.input_root, catalog=catalog)
-        result = runtime.publish_run(**context, catalog=catalog)
+            runtime._logged(source, args.batch_date, args.run_id, lambda: runtime.ingest_source(**context, source=source, catalog=catalog),
+                work_root=args.work_root, input_root=args.input_root)
+        runtime._logged("inventory", args.batch_date, args.run_id, lambda: runtime.prepare_inventory(**context, input_root=args.input_root, catalog=catalog),
+            work_root=args.work_root, input_root=args.input_root)
+        result = runtime._logged("publish", args.batch_date, args.run_id, lambda: runtime.publish_run(**context, catalog=catalog),
+            work_root=args.work_root, input_root=args.input_root)
         print(json.dumps(result, indent=2))
     finally:
         if hasattr(catalog, "engine"):

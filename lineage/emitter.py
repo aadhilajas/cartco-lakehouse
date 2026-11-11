@@ -1,43 +1,9 @@
-"""Minimal OpenLineage emission for the working Shopify Bronze -> GE -> Silver path.
+"""Best-effort manual OpenLineage emitter for the legacy pipeline jobs.
 
-Scope (deliberately limited to what is actually implemented and verified end
-to end — see ``docs/lineage.md`` for the full coverage statement):
-    - ``bronze.shopify_orders`` write (``ingestion/shopify_bronze.py``)
-    - the pre-Silver Great Expectations checkpoint
-      (``transforms/ge_bronze_shopify_checkpoint.py``)
-    - ``silver.orders`` write (``transforms/silver_shopify_orders.py``)
-
-Not covered: any other channel (Amazon, etc.), Gold, or column-level
-lineage. Do not instrument connectors that do not exist yet.
-
-Design choice — manual client emission, not the Airflow OpenLineage provider:
-``shopify_bronze_dag.py`` runs its Bronze task via ``BashOperator`` (a
-separate ``python ingestion/shopify_bronze.py`` process) and its GE/Silver
-tasks via ``PythonOperator`` calling into plain Python modules — none of
-these are declarative SQL/operator-level work that
-``apache-airflow-providers-openlineage``'s automatic extraction is built to
-introspect. Emitting explicitly from inside each script's own ``run()``
-gives correct, verifiable dataset-level lineage regardless of whether the
-script is invoked by Airflow or by hand (e.g.
-``docker exec ... python ingestion/shopify_bronze.py``), and matches what
-the OpenLineage docs themselves recommend for custom integrations
-(https://openlineage.io/docs/client/python/).
-
-API note: ``apache/airflow:2.9.0`` already ships
-``apache-airflow-providers-openlineage``, which pulls in
-``openlineage-python==1.11.3`` as a transitive dependency (see
-``Dockerfile.airflow``). This module deliberately reuses that already-pinned
-version rather than upgrading it, to avoid a dependency conflict with the
-provider package. ``openlineage-python==1.11.3`` does not have the newer
-``openlineage.client.event_v2`` module documented on openlineage.io's
-current site (that module raised ``ModuleNotFoundError`` when checked live
-against this exact installed version, inside the Airflow container) -- its
-``RunEvent``/``Job``/``Run``/``Dataset`` classes live in
-``openlineage.client.run`` instead, which is what this module imports.
-
-Failure handling: a Marquez outage must never break the pipeline it is
-observing. Every public function here catches and logs (never raises) any
-exception raised while building or emitting an event.
+Uses the pinned 1.11.3 client's run models. Unset OPENLINEAGE_URL disables
+client emission; construction and client failures never replace data outcomes.
+Client completion is not proof of backend persistence. The versioned runtime's
+journal, custom facets and local alerts live in pipeline.observability.
 """
 
 from __future__ import annotations
@@ -60,7 +26,7 @@ JOB_NAMESPACE = os.environ.get("OPENLINEAGE_NAMESPACE", "cartco-lakehouse")
 # namespace is enough to distinguish them from any future dataset source
 # without inventing per-table connection strings.
 DATASET_NAMESPACE = "iceberg://cartco-lakehouse"
-PRODUCER = "https://github.com/cartco-lakehouse/shopify-pipeline"
+PRODUCER = "https://github.com/aadhilajas/cartco-lakehouse"
 
 _client: Optional[OpenLineageClient] = None
 _client_initialized = False
@@ -110,20 +76,17 @@ def table_dataset(table_identifier: str) -> Dataset:
     return Dataset(namespace=DATASET_NAMESPACE, name=table_identifier)
 
 
-def _emit(event: RunEvent) -> None:
-    client = _get_client()
-    if client is None:
-        return
+def _emit(event: RunEvent) -> str:
+    """Report transport outcome truthfully; never confuse disabled with delivered."""
     try:
+        client = _get_client()
+        if client is None:
+            return "unavailable" if OPENLINEAGE_URL else "disabled"
         client.emit(event)
+        return "client_completed"
     except Exception:
-        logger.warning(
-            "Failed to emit OpenLineage %s event for job=%s; continuing "
-            "without lineage for this event.",
-            event.eventType,
-            event.job.name,
-            exc_info=True,
-        )
+        logger.warning("OpenLineage transport failed; pipeline result is unchanged", exc_info=True)
+        return "failed"
 
 
 def _run_event(
@@ -144,38 +107,28 @@ def _run_event(
     )
 
 
-def emit_start(
-    job_name: str,
-    run_id: str,
-    inputs: Sequence[Dataset] = (),
-    outputs: Sequence[Dataset] = (),
-) -> None:
-    """Emit a START RunEvent for ``job_name``/``run_id``. Never raises."""
-    _emit(_run_event(RunState.START, job_name, run_id, inputs, outputs))
-    logger.info("Emitted OpenLineage START for job=%s run_id=%s", job_name, run_id)
+def _safe_emit(event_type, job_name, run_id, inputs, outputs):
+    try:
+        outcome = _emit(_run_event(event_type, job_name, run_id, inputs, outputs))
+        logger.info("OpenLineage job=%s event=%s transport=%s", job_name, event_type.value, outcome)
+    except Exception:
+        # Construction errors must be as harmless as endpoint failures.
+        try:
+            logger.warning("OpenLineage event construction failed; pipeline result is unchanged", exc_info=True)
+        except Exception:
+            pass
 
 
-def emit_complete(
-    job_name: str,
-    run_id: str,
-    inputs: Sequence[Dataset] = (),
-    outputs: Sequence[Dataset] = (),
-) -> None:
-    """Emit a COMPLETE RunEvent for ``job_name``/``run_id``. Never raises."""
-    _emit(_run_event(RunState.COMPLETE, job_name, run_id, inputs, outputs))
-    logger.info("Emitted OpenLineage COMPLETE for job=%s run_id=%s", job_name, run_id)
+def emit_start(job_name: str, run_id: str, inputs: Sequence[Dataset] = (), outputs: Sequence[Dataset] = ()) -> None:
+    """Best-effort START; construction and transport failures never replace task results."""
+    _safe_emit(RunState.START, job_name, run_id, inputs, outputs)
 
 
-def emit_fail(
-    job_name: str,
-    run_id: str,
-    inputs: Sequence[Dataset] = (),
-    outputs: Sequence[Dataset] = (),
-) -> None:
-    """Emit a FAIL RunEvent for ``job_name``/``run_id``.
+def emit_complete(job_name: str, run_id: str, inputs: Sequence[Dataset] = (), outputs: Sequence[Dataset] = ()) -> None:
+    """Best-effort COMPLETE; disabled or failed transport is logged accurately."""
+    _safe_emit(RunState.COMPLETE, job_name, run_id, inputs, outputs)
 
-    Never raises itself -- call this from an ``except`` block and then
-    re-raise the original exception so the Airflow task still fails.
-    """
-    _emit(_run_event(RunState.FAIL, job_name, run_id, inputs, outputs))
-    logger.info("Emitted OpenLineage FAIL for job=%s run_id=%s", job_name, run_id)
+
+def emit_fail(job_name: str, run_id: str, inputs: Sequence[Dataset] = (), outputs: Sequence[Dataset] = ()) -> None:
+    """Best-effort FAIL; callers must still re-raise the original pipeline failure."""
+    _safe_emit(RunState.FAIL, job_name, run_id, inputs, outputs)

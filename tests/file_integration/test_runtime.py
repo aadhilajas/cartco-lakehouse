@@ -27,6 +27,9 @@ def environment(tmp_path_factory, monkeypatch):
     else:
         root = tmp_path_factory.mktemp("runtime")
     incoming, work = deliveries(root / "input"), root / "runtime"
+    from lineage import emitter
+    monkeypatch.setattr(emitter, "_get_client", lambda: None)
+    monkeypatch.setattr(emitter, "OPENLINEAGE_URL", "")
     catalog = SqlCatalog("runtime", uri="sqlite:///" + (root / "catalog.db").as_posix(), warehouse="file://" + (root / "w").as_posix())
     monkeypatch.setattr(runtime, "get_catalog", lambda: catalog)
     for key, value in dict(CARTCO_RUNTIME_WORK_ROOT=str(work), CARTCO_RUNTIME_INPUT_ROOT=str(incoming),
@@ -217,4 +220,93 @@ def test_lost_old_publication_ack_cannot_roll_back_a_new_run(environment, monkey
     pointer = (work / "gold/CURRENT.json").read_bytes()
     with pytest.raises(ValueError, match="pointer changed"):
         runtime.publish_task(DAY, "old-unacknowledged")
+    assert (work / "gold/CURRENT.json").read_bytes() == pointer
+
+
+@pytest.fixture
+def observed(environment, monkeypatch):
+    from lineage import emitter
+    from openlineage.client import OpenLineageClient
+    from openlineage.client.transport.file import FileConfig, FileTransport
+    catalog, root, work, incoming = environment
+    capture = root / "openlineage.jsonl"
+    client = OpenLineageClient(transport=FileTransport(FileConfig(log_file_path=str(capture), append=True)))
+    monkeypatch.setattr(emitter, "_get_client", lambda: client)
+    return catalog, root, work, incoming, capture
+
+
+def test_pinned_client_serialization_snapshot_facets_and_cached_attempts(observed):
+    from scripts.check_runtime_observability import inspect_run
+    catalog, root, work, incoming, capture = observed
+    first = execute("observed")
+    assert execute("observed") == first
+    events = [json.loads(line) for line in capture.read_text().splitlines()]
+    assert len(events) == 24
+    report = inspect_run(work, DAY, "observed")
+    assert report["clean_history"] and report["all_client_calls_completed"] and report["invocations"] == 12
+    assert not report["backend_graph_verified"] and not report["notifications_sent"]
+    for source in runtime.SOURCE_ORDER:
+        complete = [event for event in events if event["job"]["name"].endswith("." + source) and event["eventType"] == "COMPLETE"]
+        assert [event["run"]["facets"]["cartco_runtime"]["evidence"]["reusedReceipt"] for event in complete] == [False, True]
+        state_output = next(dataset for dataset in complete[0]["outputs"] if dataset["name"] == STATE_TABLE)
+        fields = {field["name"]: field["type"] for field in state_output["facets"]["schema"]["fields"]}
+        assert fields["unit_price"] == "decimal(18, 2)" and fields["currency"] == "string"
+        assert state_output["facets"]["cartco_snapshot"]["tableUuid"] == str(catalog.load_table(STATE_TABLE).metadata.table_uuid)
+    publish = [event for event in events if event["job"]["name"].endswith(".publish") and event["eventType"] == "COMPLETE"][0]
+    assert publish["inputs"][0]["facets"]["cartco_snapshot"]["snapshotId"] == first["state_snapshot_id"]
+    assert all(dataset["name"].startswith("gold/releases/" + first["release_id"]) for dataset in publish["outputs"])
+
+
+def test_failed_source_journal_and_terminal_alert_do_not_export_raw_rows(observed):
+    from types import SimpleNamespace
+    from scripts.check_runtime_observability import inspect_run
+    catalog, root, work, incoming, capture = observed
+    write_csv(incoming / DAY / "pos.csv", {**receipt(), "status": "partially_refunded", "unknown_field": "PRIVATE_RAW_ROW_VALUE"})
+    with pytest.raises(ValueError):
+        execute("failed-observed")
+    task = SimpleNamespace(dag_id="versioned_commerce_release", task_id="ingest_pos", run_id="failed-observed", try_number=3)
+    runtime.task_failure_callback(dict(task_instance=task, dag_run=SimpleNamespace(conf={"batch_date": DAY}), ds=DAY, exception=ValueError("PRIVATE_RAW_ROW_VALUE")))
+    report = inspect_run(work, DAY, "failed-observed")
+    assert report["event_counts"]["FAIL"] == 1 and report["terminal_alerts"] == 1 and not report["clean_history"]
+    assert not (work / "gold/CURRENT.json").exists()
+    run = runtime.run_path(work, DAY, "failed-observed")
+    files = list((run / "observability").glob("*.json")) + list((work / "alerts").glob("*.json")) + [capture]
+    assert all("PRIVATE_RAW_ROW_VALUE" not in path.read_text() for path in files)
+
+
+def test_transport_failure_is_audit_metadata_not_a_business_failure(environment, monkeypatch):
+    from lineage import emitter
+    from scripts.check_runtime_observability import inspect_run
+    catalog, root, work, incoming = environment
+    class Client:
+        def emit(self, event):
+            raise OSError("backend unavailable")
+    monkeypatch.setattr(emitter, "_get_client", lambda: Client())
+    execute("transport-down")
+    report = inspect_run(work, DAY, "transport-down")
+    assert report["clean_history"] and report["delivery_counts"]["failed"] == 12
+    assert not report["all_client_calls_completed"] and report["terminal_alerts"] == 0
+    assert len(read_gold_release(work / "gold")[0]) == 4
+
+
+def test_publication_committed_before_task_failure_is_reported_truthfully(observed, monkeypatch):
+    catalog, root, work, incoming, capture = observed
+    original = runtime._write_once
+    failed = []
+    def write(path, data):
+        if path.name == "published.json" and not failed:
+            failed.append(True)
+            raise OSError("acknowledgement lost after commit")
+        return original(path, data)
+    monkeypatch.setattr(runtime, "_write_once", write)
+    with pytest.raises(OSError):
+        execute("committed-but-failed")
+    _, manifest = read_gold_release(work / "gold")
+    events = [json.loads(line) for line in capture.read_text().splitlines()]
+    failure = next(event for event in events if event["job"]["name"].endswith(".publish") and event["eventType"] == "FAIL")
+    evidence = failure["run"]["facets"]["cartco_runtime"]["evidence"]
+    assert evidence["publicationOutcome"] == "committed_before_task_failure" and evidence["releaseId"] == manifest["release_id"]
+    assert evidence["errorType"] == "OSError"
+    pointer = (work / "gold/CURRENT.json").read_bytes()
+    runtime.publish_task(DAY, "committed-but-failed")
     assert (work / "gold/CURRENT.json").read_bytes() == pointer

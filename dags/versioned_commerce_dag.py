@@ -22,7 +22,8 @@ with DAG(
     is_paused_upon_creation=True,
     max_active_runs=1,
     dagrun_timeout=timedelta(minutes=90),
-    default_args={"owner": "cartco", "retries": 2, "retry_delay": timedelta(minutes=1), "execution_timeout": timedelta(minutes=30)},
+    default_args={"owner": "cartco", "retries": 2, "retry_delay": timedelta(minutes=1), "execution_timeout": timedelta(minutes=30),
+                  "on_failure_callback": runtime.task_failure_callback, "on_retry_callback": runtime.task_retry_callback},
     tags=["versioned", "three-source", "controlled-release"],
 ) as dag:
     common = {"batch_date": BATCH_DATE, "run_id": RUN_ID}

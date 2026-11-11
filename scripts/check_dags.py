@@ -36,6 +36,8 @@ def main() -> None:
                     raise RuntimeError(f"Unsafe runtime dependency: {task_id}")
                 if task.op_kwargs.get("run_id") != "{{ run_id }}" or task.op_kwargs.get("batch_date") != "{{ dag_run.conf.get('batch_date', ds) }}":
                     raise RuntimeError(f"Missing runtime context: {task_id}")
+                if getattr(task.on_failure_callback, "__name__", None) != "task_failure_callback" or getattr(task.on_retry_callback, "__name__", None) != "task_retry_callback":
+                    raise RuntimeError(f"Missing runtime failure/retry alert callbacks: {task_id}")
                 if task.retries < 1 or task.execution_timeout is None:
                     raise RuntimeError(f"Missing bounded runtime retry/timeout: {task_id}")
             for source in ("shopify", "amazon", "pos"):

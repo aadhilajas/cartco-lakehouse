@@ -51,6 +51,18 @@ def test_real_files_replay_does_not_commit_another_snapshot(catalog, tmp_path):
     assert state(catalog).num_rows == 1
 
 
+def test_populated_partition_overwrite_records_delete_and_append(catalog):
+    write(catalog,events(order()))
+    write_order_state(catalog,TABLE,events(order(version=2)),channel='shopify',applied_at=APPLIED,
+                      snapshot_properties={'cartco.batch_id':'fixture-overwrite'})
+    snapshots=catalog.load_table(TABLE).metadata.snapshots
+    assert len(snapshots)==3
+    assert [s.summary.operation.value for s in snapshots[-2:]]==['delete','append']
+    assert all(s.summary.additional_properties['cartco.batch_id']=='fixture-overwrite' for s in snapshots[-2:])
+    assert snapshots[-1].parent_snapshot_id==snapshots[-2].snapshot_id
+    assert state(catalog).num_rows==1
+
+
 def test_sparse_range_preserves_unmentioned_orders_on_disk(catalog):
     write(catalog, events(order("middle", order_date=date(2026, 1, 2))))
     write(catalog, events(order("left"), order("right", order_date=date(2026, 1, 3))))

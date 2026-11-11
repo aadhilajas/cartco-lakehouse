@@ -1,5 +1,6 @@
 import json
 from pathlib import Path
+from types import SimpleNamespace
 
 import pyarrow as pa
 import pytest
@@ -58,3 +59,35 @@ def test_reused_pid_or_repeat_kill_is_refused(tmp_path,monkeypatch,reused_pid):
     monkeypatch.setattr(drill.os,'kill',lambda *args:pytest.fail('Signal guard failed'))
     with pytest.raises(RuntimeError,match='PID was reused' if reused_pid else 'already signalled'):
         drill.crash(scenario,tmp_path/'report.json')
+
+
+def snapshot_history():
+    history=[SimpleNamespace(snapshot_id=n) for n in [1,2,3]]
+    receipts={}
+    for source in drill.runtime.SOURCE_ORDER:
+        for operation in ['delete','append']:
+            number=len(history)+1
+            history.append(SimpleNamespace(snapshot_id=number,parent_snapshot_id=number-1,
+                summary=SimpleNamespace(operation=SimpleNamespace(value=operation),
+                    additional_properties={'cartco.batch_id':source+'-batch','cartco.merge.channel':source})))
+        receipts[source]=dict(committed=True,batch_id=source+'-batch',state_snapshot_id=history[-1].snapshot_id)
+    return history,receipts
+
+
+def test_populated_partition_overwrites_have_two_snapshots_each():
+    history,receipts=snapshot_history()
+    evidence=drill.verify_state_snapshots([1,2,3],history,receipts,set(drill.runtime.SOURCE_ORDER))
+    assert len(evidence)==6
+    assert [x['operation'] for x in evidence]==['delete','append']*3
+
+
+@pytest.mark.parametrize('corruption',['extra','missing','batch','parent','receipt'])
+def test_overwrite_history_corruption_is_rejected(corruption):
+    history,receipts=snapshot_history()
+    if corruption=='extra':history.append(history[-1])
+    elif corruption=='missing':history.pop()
+    elif corruption=='batch':history[-1].summary.additional_properties['cartco.batch_id']='wrong'
+    elif corruption=='parent':history[-1].parent_snapshot_id=1
+    else:receipts['pos']['state_snapshot_id']=1
+    with pytest.raises(RuntimeError):
+        drill.verify_state_snapshots([1,2,3],history,receipts,set(drill.runtime.SOURCE_ORDER))

@@ -158,17 +158,32 @@ after its commit/receipt completes and waits. The controller verifies DAG/run/ta
 identity, running state, matching Airflow PID and `/proc` start time before
 sending one SIGKILL to that task process. It refuses mismatched or reused PIDs
 and repeat signals. Airflow must retry the task and complete all six stages.
-The post-commit checkpoint must remain exactly unchanged by that retry, the fresh
-batch must add exactly three state snapshots and one Bronze snapshot per source,
-and local evidence must contain the retry callback without a terminal alert.
+The post-commit checkpoint must remain exactly unchanged by that retry. The fresh
+batch must add one Bronze snapshot per source; state snapshot ancestry,
+operations and batch IDs must reconcile to all three completion receipts.
+Pinned PyIceberg 0.7.1 overwrites populated channel partitions with delete and
+append snapshots inside one transaction, so this fixture adds six state snapshots
+across three channel merges, not three. A real-file regression verifies this.
+Local evidence must contain the retry callback without a terminal alert.
 Expected retry alerts remain part of history rather than being labelled clean.
 
-This mode is implemented, Compose/PowerShell/Python checked, with seven focused
+This mode is implemented, Compose/PowerShell/Python checked, with fourteen focused
 unit checks of comparison and signal guards. It has not run against Docker yet.
 The host command captures diagnostics and stops only its isolated project in a
 finally block. A successful result would cover one post-commit POS task kill;
 arbitrary mid-commit crashes, scheduler/container loss and source outages remain
 separate requirements. Archives, fresh drill volumes and reports are retained.
+
+The 2026-11-11 host attempt reached the POS commit, sent the guarded SIGKILL and
+observed Airflow retry with a new process; all six tasks succeeded. The initial
+checker then failed on its incorrect one-snapshot-per-merge assumption. Exact
+pre-crash/post-retry catalog comparison had already passed. The checker now
+validates delete/append history, parent chain, batch IDs and receipt snapshot IDs,
+plus a changed worker PID and increased attempt count. Fourteen focused unit
+checks and the real-file overwrite regression passed. A completion runner can
+boot only those retained data services and rerun read-only verification without
+starting the scheduler, restaging data or killing another task. Full final
+application/journal verification remains pending that completion command.
 
 `scripts/check_marquez_runtime.py` independently reads the Marquez API to require
 six completed indexed stage runs with the expected orchestration identity,

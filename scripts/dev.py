@@ -46,7 +46,7 @@ def main() -> None:
     elif args.command == "check-dags":
         run("docker", "compose", "run", "--rm", "--no-deps", "-e", "AIRFLOW__DATABASE__SQL_ALCHEMY_CONN=sqlite:////tmp/cartco-dag-check.db", "--entrypoint", "python", "airflow-scheduler", "/opt/airflow/scripts/check_dags.py")
     elif args.command == "generate":
-        for source in ("shopify", "amazon"):
+        for source in (("shopify", "amazon", "pos") if args.source_versions else ("shopify", "amazon")):
             run(sys.executable, f"ingestion/generate_synthetic_{source}_data.py", extra_env={"CARTCO_BATCH_DATE": batch_date, "CARTCO_SOURCE_VERSIONS": "1" if args.source_versions else "0"})
     else:
         # Resolve the date once so every stage keeps the same partition.

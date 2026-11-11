@@ -6,6 +6,7 @@ from pathlib import Path
 import sys
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+from pipeline.source_contracts import SOURCES
 from pipeline.state_migration import install_candidate, migrate_money_state
 from pipeline.versioned_ingestion import run_versioned_batch
 
@@ -16,7 +17,7 @@ def main():
     parser.add_argument("--warehouse", required=True, type=Path)
     commands = parser.add_subparsers(dest="command", required=True)
     run = commands.add_parser("run")
-    run.add_argument("--source", choices=["shopify", "amazon"], required=True)
+    run.add_argument("--source", choices=sorted(SOURCES), required=True)
     run.add_argument("--csv", type=Path, required=True)
     run.add_argument("--archive-root", type=Path, required=True)
     run.add_argument("--batch-date", required=True)

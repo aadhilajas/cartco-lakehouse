@@ -62,7 +62,9 @@ orchestration work. Applied/audit time never substitutes for source update time.
 
 ## Supported source schemas
 
-Only `shopify.orders.v2` and `amazon.orders.v2` are supported. Both require
+`shopify.orders.v2`, `amazon.orders.v2` and `pos.orders.v1` are supported.
+The [POS guide](../phase3/pos-source.md) defines its native receipt identity,
+single-product grain, status vocabulary and walk-in handling. Online sources require
 `order_id`, explicitly offset source_updated_at and literal true/false is_deleted
 headers. Key/version/delete-only tombstones and empty files with these headers
 are valid. Live rows additionally require customer_id, order_date, product key,

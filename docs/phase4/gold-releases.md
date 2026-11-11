@@ -42,6 +42,10 @@ same extraction window and business timezone, matching the state declaration.
 The release contract records these declarations. Old uncontracted receipts cannot
 authorize a new release; existing release artifacts remain readable.
 
+The default required-source set is now Shopify, Amazon and POS. An intentionally
+two-source catalog must explicitly request shopify/amazon; undeclared channels
+still block publication. See the [POS guide](../phase3/pos-source.md).
+
 ## Validation and source readiness
 
 - Validate canonical keys, uniqueness, dates, statuses, finite nonnegative amounts
@@ -85,9 +89,10 @@ are not sufficient publication evidence.
 PowerShell example after generating versioned fixtures:
 
 ```powershell
-$shop = python scripts/versioned_orders.py --catalog-db ../work/versioned/catalog.db --warehouse ../work/vw run --source shopify --csv data/raw/shopify_orders.csv --archive-root ../work/archive --batch-date 2026-07-25 --initialize-empty-state | ConvertFrom-Json
-$amazon = python scripts/versioned_orders.py --catalog-db ../work/versioned/catalog.db --warehouse ../work/vw run --source amazon --csv data/raw/amazon_orders.csv --archive-root ../work/archive --batch-date 2026-07-25 | ConvertFrom-Json
-python scripts/gold_release.py publish --catalog-db ../work/versioned/catalog.db --warehouse ../work/vw --output-root ../work/gold --batch-date 2026-07-25 --receipt $shop.receipt --receipt $amazon.receipt
+$shop = python scripts/versioned_orders.py --catalog-db ../work/versioned/catalog.db --warehouse ../work/vw run --source shopify --csv data/raw/shopify_orders.csv --contract data/raw/shopify_orders.csv.contract.json --archive-root ../work/archive --batch-date 2026-07-25 --initialize-empty-state | ConvertFrom-Json
+$amazon = python scripts/versioned_orders.py --catalog-db ../work/versioned/catalog.db --warehouse ../work/vw run --source amazon --csv data/raw/amazon_orders.csv --contract data/raw/amazon_orders.csv.contract.json --archive-root ../work/archive --batch-date 2026-07-25 | ConvertFrom-Json
+$pos = python scripts/versioned_orders.py --catalog-db ../work/versioned/catalog.db --warehouse ../work/vw run --source pos --csv data/raw/pos_orders.csv --contract data/raw/pos_orders.csv.contract.json --archive-root ../work/archive --batch-date 2026-07-25 | ConvertFrom-Json
+python scripts/gold_release.py publish --catalog-db ../work/versioned/catalog.db --warehouse ../work/vw --output-root ../work/gold --batch-date 2026-07-25 --receipt $shop.receipt --receipt $amazon.receipt --receipt $pos.receipt
 python scripts/gold_release.py inspect --output-root ../work/gold
 ```
 
@@ -100,7 +105,7 @@ fresh completion receipts without changing the same business versions.
 Tests exercise mixed statuses, exact cents, empty completed populations, category
 ties, tombstones, invalid totals/keys/currencies, source readiness, drift during
 publication, failed metrics and artifact tampering. The local CLI demonstration
-uses all 90,000 orders and verifies consumer checksums and repeat publication.
+uses all 120,000 records across Shopify, Amazon and POS and verifies consumer checksums and repeat publication.
 
 REST/MinIO, real Airflow execution, container builds and the four Docker tests
 remain unexecuted on this host. New local release files do not establish those

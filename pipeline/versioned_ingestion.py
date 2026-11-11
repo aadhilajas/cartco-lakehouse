@@ -16,6 +16,7 @@ from pyiceberg.transforms import IdentityTransform
 from pyiceberg.types import DateType, IntegerType, NestedField, StringType
 
 from pipeline.money import exact_money
+from pipeline.pos import validate_pos_key, pos_customer, validate_pos_amounts
 from pipeline.source_contracts import TIMEZONE_PROPERTY, business_date, check_source_version, validate_contract, zone, timestamp
 from pipeline.order_state import ARROW_SCHEMA, STATE_SCHEMA, empty_state, merge_order_versions, write_order_state
 from pipeline.raw_batches import archive_csv, record_receipt
@@ -30,7 +31,8 @@ RAW_SCHEMA = Schema(
     NestedField(5, "raw_payload", StringType(), required=True),
 )
 STATUS = {"shopify": {"delivered": "completed", "cancelled": "cancelled", "returned": "refunded"},
-          "amazon": {"shipped": "completed", "cancelled": "cancelled", "refund_initiated": "refunded", "pending": "pending"}}
+          "amazon": {"shipped": "completed", "cancelled": "cancelled", "refund_initiated": "refunded", "pending": "pending"},
+          "pos": {"paid": "completed", "voided": "cancelled", "refunded": "refunded", "open": "pending"}}
 
 
 def ensure_namespace(catalog, name):
@@ -124,15 +126,20 @@ def land_raw_batch(catalog, batch):
 
 def canonical_events(batch):
     contract = validate_contract(batch.contract, source=batch.source, batch_date=batch.batch_date)
-    if {"order_id", "source_updated_at", "is_deleted"} - set(batch.columns):
+    required_headers = {"order_id", "source_updated_at", "is_deleted"}
+    if batch.source == "pos":
+        required_headers.update({"store_id", "terminal_id", "transaction_id"})
+    if required_headers - set(batch.columns):
         raise ValueError("Versioned input needs order_id, source_updated_at and is_deleted headers")
     rows = []
     for index, raw in enumerate(batch.rows, 1):
         try:
             key = raw.get("order_id", "")
-            if not key or key.strip() != key or raw.get("channel", batch.source) != batch.source:
+            if not key or key.strip() != key or raw.get("channel", batch.source) not in {"", batch.source}:
                 raise ValueError("Invalid source key/channel")
-            if "currency" in raw and raw["currency"] != "INR":
+            if batch.source == "pos":
+                validate_pos_key(raw)
+            if "currency" in raw and raw["currency"] not in {"", "INR"}:
                 raise ValueError("Unsupported source currency for the declared INR contract")
             stamp = raw.get("source_updated_at", "")
             version = timestamp(stamp)
@@ -144,10 +151,15 @@ def canonical_events(batch):
                 raise ValueError("is_deleted must be true or false")
             row = dict(order_id=key, channel=batch.source, source_updated_at=version, is_deleted=raw["is_deleted"] == "true")
             if not row["is_deleted"]:
-                product_key = "asin" if batch.source == "amazon" else "product_id"
-                required = ["customer_id", "order_date", product_key, "product_category", "quantity", "unit_price", "status"]
+                if raw.get("channel", batch.source) != batch.source:
+                    raise ValueError("A live event cannot have an empty source channel")
+                product_key = {"amazon": "asin", "shopify": "product_id", "pos": "sku"}[batch.source]
+                required = ["order_date", product_key, "product_category", "quantity", "unit_price", "status"]
                 if any(not raw.get(name, "").strip() for name in required):
                     raise ValueError("A live event needs the complete source order")
+                customer_id = pos_customer(raw) if batch.source == "pos" else raw.get("customer_id", "")
+                if not customer_id or customer_id.strip() != customer_id:
+                    raise ValueError("A live event needs a canonical customer_id")
                 quantity = int(raw["quantity"])
                 price = exact_money(raw["unit_price"])
                 if raw.get("currency") != "INR":
@@ -157,7 +169,9 @@ def canonical_events(batch):
                 status = STATUS[batch.source].get(raw["status"])
                 if status is None:
                     raise ValueError("Unknown source status")
-                row.update(customer_id=raw["customer_id"], order_date=business_date(raw["order_date"], contract),
+                if batch.source == "pos":
+                    validate_pos_amounts(raw, exact_money(quantity * price))
+                row.update(customer_id=customer_id, order_date=business_date(raw["order_date"], contract),
                     product_id=raw[product_key], product_category=raw["product_category"], quantity=quantity,
                     unit_price=price, order_status=status, order_total=exact_money(quantity * price), currency="INR")
             rows.append(row)

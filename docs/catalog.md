@@ -6,7 +6,27 @@ This document serves as the central data catalog for the CartCo E-Commerce Data 
 
 ---
 
-## Catalog Overview & Summary
+## Local versioned three-source path
+
+The local adapter path also has bronze.shopify_order_events,
+bronze.amazon_order_events and bronze.pos_order_events, partitioned by batch_id.
+Their fields are batch_id (required string), source_row_number (required int),
+ingestion_date (required date), source (required string) and raw_payload (required
+JSON string). POS native store/terminal/transaction IDs remain in raw_payload.
+
+The shared target silver.order_state_v2 is identity-partitioned by channel,
+with (channel, order_id) keys, exact decimal(18,2) prices/totals, source versions,
+retained tombstones and INR currency. Business timezone is declared in table
+properties. The [POS guide](phase3/pos-source.md) defines single-product receipt
+identity and customer mappings. This table is separate from legacy silver.orders.
+
+Coordinated local Gold artifacts are daily_revenue, channel_performance,
+customer_360 and category_unit_sales under a checksum-verified release manifest
+and CURRENT.json. These are local Parquet release artifacts, not the legacy SQL
+Gold tables below. See [Gold releases](phase4/gold-releases.md). Kafka and live
+REST/MinIO/Airflow integration are not established by the local proof.
+
+## Legacy Catalog Overview & Summary
 
 | Layer | Table Identifier | Owner | Partition Spec | Primary Downstream |
 |---|---|---|---|---|

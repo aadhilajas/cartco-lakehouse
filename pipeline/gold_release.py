@@ -15,7 +15,7 @@ import pyarrow.parquet as pq
 from pyiceberg.expressions import EqualTo
 
 from pipeline.batch import resolve_batch_date
-from pipeline.source_contracts import TIMEZONE_PROPERTY, validate_contract, batch_identity, timestamp
+from pipeline.source_contracts import SOURCES, TIMEZONE_PROPERTY, validate_contract, batch_identity, timestamp
 from pipeline.gold_quality import MARTS, build_marts
 from pipeline.raw_batches import _write_once
 from pipeline.versioned_ingestion import STATE_TABLE
@@ -100,7 +100,7 @@ def _source_evidence(catalog, state, receipt_paths, required, day):
     return current_id, receipts
 
 
-def publish_gold_release(catalog, output_root, receipt_paths, *, batch_date, expected_channels=("shopify", "amazon"), currency="INR"):
+def publish_gold_release(catalog, output_root, receipt_paths, *, batch_date, expected_channels=("shopify", "amazon", "pos"), currency="INR"):
     root = Path(output_root).resolve()
     root.mkdir(parents=True, exist_ok=True)
     lock = root / ".publication.lock"
@@ -109,7 +109,7 @@ def publish_gold_release(catalog, output_root, receipt_paths, *, batch_date, exp
         stream.write(str(os.getpid()))
     try:
         required = set(expected_channels)
-        if not required or required - {"shopify", "amazon"}:
+        if not required or required - SOURCES:
             raise ValueError("Declare supported required sources explicitly")
         day = resolve_batch_date(batch_date).isoformat()
         state = catalog.load_table(STATE_TABLE)

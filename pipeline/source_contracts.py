@@ -8,6 +8,8 @@ from pipeline.batch import resolve_batch_date
 
 FIELDS = {"contract_version", "source_schema_version", "business_timezone", "source_timezone",
           "extraction_start", "extraction_end", "delivery_mode"}
+SOURCE_SCHEMAS = {"shopify": "shopify.orders.v2", "amazon": "amazon.orders.v2", "pos": "pos.orders.v1"}
+SOURCES = frozenset(SOURCE_SCHEMAS)
 TIMEZONE_PROPERTY = "cartco.business.timezone"
 
 
@@ -34,7 +36,7 @@ def validate_contract(contract, *, source, batch_date):
         raise ValueError("Delivery contract has missing or unexpected fields")
     if type(contract["contract_version"]) is not int or contract["contract_version"] != 1:
         raise ValueError("Unsupported delivery contract version")
-    if source not in {"shopify", "amazon"} or contract["source_schema_version"] != f"{source}.orders.v2":
+    if source not in SOURCES or contract["source_schema_version"] != SOURCE_SCHEMAS[source]:
         raise ValueError("Unsupported source schema version")
     business = zone(contract["business_timezone"])
     zone(contract["source_timezone"])
@@ -82,7 +84,7 @@ def check_source_version(version, contract):
 def daily_contract(source, batch_date, *, business_timezone="Asia/Kolkata", source_timezone="UTC", delivery_mode="snapshot"):
     day = resolve_batch_date(batch_date)
     business = zone(business_timezone)
-    return validate_contract(dict(contract_version=1, source_schema_version=f"{source}.orders.v2",
+    return validate_contract(dict(contract_version=1, source_schema_version=SOURCE_SCHEMAS.get(source),
         business_timezone=business_timezone, source_timezone=source_timezone, delivery_mode=delivery_mode,
         extraction_start=datetime.combine(day, time(), business).isoformat(),
         extraction_end=datetime.combine(day + timedelta(days=1), time(), business).isoformat()), source=source, batch_date=day)

@@ -5,6 +5,7 @@ from pathlib import Path
 import sys
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+from pipeline.source_contracts import SOURCES
 from pipeline.gold_release import publish_gold_release, read_gold_release
 
 
@@ -17,6 +18,7 @@ def main():
     publish.add_argument("--output-root", required=True, type=Path)
     publish.add_argument("--receipt", required=True, action="append", type=Path)
     publish.add_argument("--batch-date", required=True)
+    publish.add_argument("--required-source", choices=sorted(SOURCES), action="append", help="Repeat for an explicit source set; default shopify, amazon, pos")
     inspect = commands.add_parser("inspect")
     inspect.add_argument("--output-root", required=True, type=Path)
     args = parser.parse_args()
@@ -32,7 +34,7 @@ def main():
         catalog = SqlCatalog("cartco-local", uri="sqlite:///" + args.catalog_db.resolve().as_posix(),
                              warehouse="file://" + args.warehouse.resolve().as_posix())
         try:
-            manifest = publish_gold_release(catalog, args.output_root, args.receipt, batch_date=args.batch_date)
+            manifest = publish_gold_release(catalog, args.output_root, args.receipt, batch_date=args.batch_date, expected_channels=args.required_source or ("shopify", "amazon", "pos"))
         finally:
             catalog.engine.dispose()
     print(json.dumps(manifest, indent=2))

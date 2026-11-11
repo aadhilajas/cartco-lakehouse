@@ -61,7 +61,7 @@ def seed(catalog, root):
 
 
 def publish(catalog, root, receipts):
-    return publish_gold_release(catalog, root / "gold", receipts, batch_date=DAY)
+    return publish_gold_release(catalog, root / "gold", receipts, batch_date=DAY, expected_channels=("shopify", "amazon"))
 
 
 def test_publish_reads_complete_decimal_marts_from_one_snapshot(environment):

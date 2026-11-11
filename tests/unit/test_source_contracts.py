@@ -58,7 +58,7 @@ def test_identical_csv_with_changed_delivery_metadata_is_a_distinct_batch(tmp_pa
     assert one.batch_id == same.batch_id != other.batch_id
 
 
-@pytest.mark.parametrize("source", ["shopify", "amazon"])
+@pytest.mark.parametrize("source", ["shopify", "amazon", "pos"])
 def test_source_generator_emits_matching_explicit_sidecar(source, tmp_path, monkeypatch):
     import importlib
     import json

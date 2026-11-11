@@ -42,10 +42,10 @@ Date: 2026-11-09
 
 ## Implementation boundary
 
-Phase 2 now propagates explicit load dates and guards the legacy range overwrite
-against dropping or changing existing orders. Fixed-date source generation is
-reproducible. Floats and order-placement-time deduplication remain; source update
-versions, immutable manifests and schema migrations are still pending. The guard
-rejects updates until a versioned merge is implemented; it is not an upsert.
-Migration must preserve existing source data and add regression tests before
-switching writes. ADR-003/006 describe the older implementation where they differ.
+The local versioned path now implements raw manifests, explicit source versions,
+exact decimal/currency state, time/extraction/schema contracts and coordinated
+Gold releases. Legacy Airflow still uses its guarded original tables; Docker
+and live-runtime acceptance remain pending. ADR-008 adds POS v1 while preserving
+the single-product receipt grain. Exact-cent source prices/totals are rejected
+if they require rounding; ROUND_HALF_UP applies to AOV. Historical ADR-003/006
+and earlier milestone deliverables describe the legacy implementation.

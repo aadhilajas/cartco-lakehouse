@@ -11,9 +11,8 @@ from pathlib import Path
 import tempfile
 
 from pipeline.batch import resolve_batch_date
-from pipeline.source_contracts import batch_identity
+from pipeline.source_contracts import SOURCES, batch_identity
 
-SOURCES = {"shopify", "amazon"}
 
 
 @dataclass(frozen=True)
@@ -27,9 +26,22 @@ class RawBatch:
     contract: dict | None = None
 
 
+def _ensure_directory(path: Path):
+    """Tolerate a competing mkdir, including Windows' access-denied variant."""
+    if path.is_dir():
+        return
+    if path.parent != path:
+        _ensure_directory(path.parent)
+    try:
+        path.mkdir()
+    except OSError:
+        if not path.is_dir():
+            raise
+
+
 def _write_once(path: Path, content: bytes):
     """Publish a complete file without replacing another writer's artifact."""
-    path.parent.mkdir(parents=True, exist_ok=True)
+    _ensure_directory(path.parent)
     with tempfile.NamedTemporaryFile(dir=path.parent, delete=False) as stream:
         temporary = Path(stream.name)
         stream.write(content)

@@ -14,6 +14,8 @@
 
 > **Source time contracts:** [the delivery contract guide](docs/phase2/source-time-contracts.md) covers explicit source schema versions, extraction windows, business dates and matching source readiness at Gold. New run commands require the generated contract sidecar.
 
+> **Third source:** [POS v1](docs/phase3/pos-source.md) now supports deterministic receipts, immutable ingestion and three-source Gold reconciliation. Kafka transport and Airflow activation remain pending.
+
 **One trusted source of truth for revenue across CartCo's sales channels.**
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
@@ -243,13 +245,12 @@ Planned sources (not yet implemented) and schema notes are documented in [`docs/
 
 ## Known Limitations
 
-- **Only the Shopify source is implemented.** `ingestion/amazon_bronze.py`, `kafka_instore_bronze.py`, and `sftp_distributor_bronze.py` are stubs with no logic yet.
-- **No Gold layer yet.** There are no business marts (revenue, channel performance, inventory turnover, customer 360) — Silver is currently the last layer.
-- **Bronze and Silver use PyIceberg + PyArrow, not Spark.** PySpark is installed in the Airflow image but is not used by any script yet.
-- **Lineage is table-level and Shopify-only.** No column-level lineage, no schema/row-count facets on the OpenLineage events themselves, and no lineage for channels or a Gold layer that don't exist yet. See [`docs/lineage.md`](docs/lineage.md) for the full statement of what's covered.
-- **Version-sensitive integrations, caught only by live runs so far.** The Silver dedup logic, the GE checkpoint's Fluent-API call chain, and the OpenLineage client each had a real bug tied to the exact installed library version (`pyarrow==15.0.2`'s `combine_chunks()` return type, `great_expectations==0.18.19`'s Fluent API surface, and `openlineage-python`'s `event_v2` module not existing on the `1.11.3` version actually shipped by `apache-airflow-providers-openlineage` in `apache/airflow:2.9.0`) that only surfaced when actually executed inside the Airflow container. All are now fixed and re-verified with a full green run, but there is no automated test pinning most of this behavior yet, so a future dependency bump could reintroduce a similar break silently.
-- **Stack is local-only and not production-hardened** — default credentials, no TLS, no secrets management, no cloud deployment.
-- **Test coverage is unit-level plus opt-in integration, not exhaustive.** Bronze ingestion itself, the DAG wiring, and the lineage emitter's fail-safe behavior are still only verified manually, not by an automated test. Full scope and gap list: [`docs/test_report.md`](docs/test_report.md).
+- The tested versioned path uses local SQLite/Iceberg/Parquet. Docker image builds, REST/MinIO/Airflow execution and the four live integration checks remain unverified on this host.
+- Shopify, Amazon and POS have local batch adapters. Kafka transport, SFTP ingestion and versioned Airflow activation remain pending.
+- POS v1 supports single-product receipts; multi-product receipts, partial refunds and separate taxes/discounts need expanded contracts and metrics.
+- The legacy inventory_turnover table measures category unit sales. Real inventory turnover requires inventory balances, product/location coverage and COGS.
+- Scheduling, independent source watermarks, operational recovery, retention, security hardening and cloud deployment remain pending.
+- Local tests and demonstrations do not establish production readiness. Follow the current phase guides; older milestone deliverables describe earlier revisions.
 
 ---
 

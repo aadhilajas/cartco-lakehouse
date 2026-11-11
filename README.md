@@ -1,5 +1,12 @@
 # CartCo Unified Commerce Lakehouse
 
+> Assignment alignment review, 2026-11-11: the verified implementation below is
+> not yet the complete assessed B1 stack. Spark batch compute, local IaC, basic
+> Grafana and a listed catalog are now confirmed requirements. See the
+> [gap matrix](docs/final/assignment-gap-matrix.md) and
+> [revised phase plan](docs/final/assignment-aligned-plan.md). Earlier local-scope
+> completion statements are superseded by this review.
+
 A verified local medallion lakehouse for three synthetic commerce channels:
 Shopify, Amazon and single-product POS. Built by Aadhil A Kareem for Problem B1,
 Data Platform & Pipeline Engineering. Licensed under MIT.

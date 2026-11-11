@@ -1,6 +1,14 @@
 # ADR-012: Local completion scope and compute choice
 
-Status: Implemented local scope; cloud/publication milestones deferred
+Status: Partially superseded by the actual B1 assignment review, 2026-11-11
+
+The newly supplied authoritative brief explicitly requires Spark, IaC, basic
+Grafana and a listed catalog. The earlier optional-compute/IaC interpretation
+below is historical and does not waive those requirements. See
+[assignment gap matrix](../final/assignment-gap-matrix.md) and
+[revised plan](../final/assignment-aligned-plan.md). The standing local-only
+publication constraint still applies. B1 accepts reproducible Compose as a
+backend deployment option; a generic live-URL requirement needs separate review.
 
 Date: 2026-11-11
 

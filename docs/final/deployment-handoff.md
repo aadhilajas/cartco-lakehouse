@@ -1,3 +1,5 @@
+> Superseded scope interpretation: review the actual B1 requirements in docs/final/assignment-gap-matrix.md and assignment-aligned-plan.md. Spark, IaC, Grafana and a listed catalog are mandatory gaps; reproducible Compose is a permitted backend option. Historical evidence below remains scoped to the tested baseline.
+
 # Deployment and publication handoff
 
 No cloud deployment or final remote CI execution is included in the local proof.

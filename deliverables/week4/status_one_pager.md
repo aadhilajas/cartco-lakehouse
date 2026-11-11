@@ -1,5 +1,10 @@
 # Week 4 final local status
 
+> Superseded assessment: the actual B1 assignment/delivery specification supplied
+> on 2026-11-11 exposes additional mandatory technical and submission gaps.
+> This records the earlier tested local baseline, not assignment completion.
+> See docs/final/assignment-gap-matrix.md and assignment-aligned-plan.md.
+
 Date: 2026-11-11
 
 The local three-source synthetic lakehouse is implemented and extensively

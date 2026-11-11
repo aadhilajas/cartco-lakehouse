@@ -6,9 +6,9 @@ The newly supplied authoritative brief explicitly requires Spark, IaC, basic
 Grafana and a listed catalog. The earlier optional-compute/IaC interpretation
 below is historical and does not waive those requirements. See
 [assignment gap matrix](../final/assignment-gap-matrix.md) and
-[revised plan](../final/assignment-aligned-plan.md). The standing local-only
-publication constraint still applies. B1 accepts reproducible Compose as a
-backend deployment option; a generic live-URL requirement needs separate review.
+[revised plan](../final/assignment-aligned-plan.md). User clarification now requires all four connectors and a hosted backend.
+Reviewed code/dashboard may be published when ready; budget is zero with no existing server; free hosting feasibility is open. The target viva is 1 December 2026. Earlier local-only
+paragraphs below are historical, not current authorization constraints.
 
 Date: 2026-11-11
 

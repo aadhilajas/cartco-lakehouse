@@ -93,13 +93,15 @@ passed; four strict live integration tests passed in the Docker acceptance run.
 
 [Original design](docs/B1_Design_Doc.pdf) · [Scope/compute decision](docs/adr/ADR-012-local-completion-scope.md)
 
-The initial scope is three synthetic connectors, not five live API integrations.
-Kafka/Feast are bonuses, additional SFTP/ERP sources are extensions, and Terraform
-is stretch. PyArrow/PyIceberg is the documented local compute deviation from the
-original PySpark selection. Real external alert delivery, cloud deployment,
-remote CI for the final branch and a newly published video are not claimed.
-Changes remain local under the standing publishing constraint. The reproducible
-walkthrough and final written deliverables are supplied; no hosted URL is invented.
+The current target requires all four connectors (Shopify GraphQL, Amazon SP-API,
+Kafka POS and SFTP), real PySpark batch work, Terraform, Grafana and a listed
+catalog. The tested PyArrow/PyIceberg baseline is preserved while these gaps are
+closed. A hosted backend and public dashboard are required for the 1 December
+2026 viva; hosting feasibility is unresolved under the confirmed zero budget.
+Reviewed code and dashboard publication is authorized when ready. Final remote
+CI, deployment and recordings are not yet claimed. See the
+[assignment-aligned plan](docs/final/assignment-aligned-plan.md) and
+[hosting feasibility](docs/final/hosting-feasibility.md).
 
 Historical walkthroughs: [earlier pipeline](https://canva.link/lwgltzauodnuic5)
 and [Week 1](https://canva.link/9vqcf3kxbfiat0n). These precede the completed local

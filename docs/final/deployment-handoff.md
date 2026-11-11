@@ -1,24 +1,24 @@
-> Superseded scope interpretation: review the actual B1 requirements in docs/final/assignment-gap-matrix.md and assignment-aligned-plan.md. Spark, IaC, Grafana and a listed catalog are mandatory gaps; reproducible Compose is a permitted backend option. Historical evidence below remains scoped to the tested baseline.
-
 # Deployment and publication handoff
 
-No cloud deployment or final remote CI execution is included in the local proof.
-The repository remains local under the user's standing instruction.
+Updated: 2026-11-11. The assignment-aligned plan supersedes historical optional
+Spark/IaC and local-only scope interpretations.
 
-Before cloud implementation, select the target account/region and budget, source
-and secret ownership, storage/catalog/metadata services, network/TLS design and
-backup/alert recipients. The local Compose credentials and exposed endpoints are
-not deployment settings. Decide the executor from actual workload requirements.
-Terraform was a stretch item in the original design; no unvalidated template is
-presented as provisioned infrastructure.
+The user authorizes publishing reviewed code and the dashboard when ready.
+All four connectors and a hosted backend are required for the 1 December viva.
+Budget is zero; there is no existing server. See
+[hosting feasibility](hosting-feasibility.md) for the unresolved hosting gate.
+No cloud deployment or final remote CI execution is claimed by local proof.
 
-Before publishing the code, review the local branch and complete-history bundle,
-authorize the remote update, ensure the integration has contents/workflow write
-access, and run the prepared GitHub Actions workflow against the final commit.
-Record actual run URLs and outcomes. Do not reuse historical green CI as proof of
-new changes. Preserve local test reports while that step is pending.
+Before deployment, verify free account capacity, architecture compatibility,
+measured memory, persistent storage, HTTPS/access controls and recovery. Replace
+local fixture credentials; do not expose backend administrative or write APIs.
+Terraform and Compose must not concurrently own the same resources.
 
-Before publishing a demo, record the final walkthrough, verify that no secrets
-or private data appear, and upload through the user's chosen destination. Add
-the actual URL afterward. The written walkthrough is a local deliverable, not a
-claim that a final video or hosted service already exists.
+Before publishing code, review the branch and secret scan, resolve GitHub write
+access if needed, and run CI against the actual final commit. Record genuine run
+URLs; historical green CI does not validate new changes. Publication authorization
+need not be requested again for ready reviewed code/dashboard.
+
+Record the final walkthrough against the completed build and add the actual URL.
+Written scripts are not proof of a published video. Paid services, signatures,
+external messages and form submissions are not authorized by this handoff.

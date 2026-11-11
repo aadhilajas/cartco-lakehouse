@@ -9,7 +9,7 @@ No application code was changed as part of this planning review.
 
 | Requirement | Current evidence | Required action |
 |---|---|---|
-| 2-3 synthetic connectors within stated scope | Three CSV-backed Shopify/Amazon/POS adapters and generators | Add protocol-faithful Shopify GraphQL, Amazon SP-API and Kafka POS paths; clarify four-source wording versus 2-3 boundary |
+| Four connectors, confirmed by user | Three CSV-backed Shopify/Amazon/POS adapters and generators | Add protocol-faithful Shopify GraphQL, Amazon SP-API, Kafka POS and SFTP paths |
 | S3/MinIO and Iceberg or Delta | Working MinIO/Iceberg with ADR and recovery proof | Keep Iceberg; no format migration |
 | Spark batch compute | Main compute uses PyArrow/PyIceberg | Implement actual PySpark Silver/Gold batch transformations and parity checks |
 | Bronze raw/date partitioning | Immutable raw bytes; versioned event tables partition by batch_id | Safely align assessed tables with ingestion_date partitioning, retaining batch identity |
@@ -24,7 +24,7 @@ No application code was changed as part of this planning review.
 | Terraform/Pulumi whole-stack IaC | Compose exists; no IaC implementation | Add local Terraform Docker provisioning and reproducible Compose entrypoint |
 | Performance/open-table working depth | Existing snapshots/replay/decimal correctness proof | Demonstrate Spark explain/shuffle/broadcast, time travel, schema evolution and one bounded file/compaction example |
 | At least one stretch | Versioned delivery contracts exist | Complete schema-as-code plus real owner approval; choose this over Feast/Flink |
-| Backend deployment | Working local Compose | B1 accepts this; still satisfy/clarify universal live-URL requirement via public dashboard |
+| Backend deployment | Working local Compose | User requires hosted backend; local Compose remains the reproducible development path |
 
 An internal compute-scope ADR cannot waive an explicit rubric requirement.
 Prior test/recovery evidence remains valid for its original version; it must not
@@ -70,18 +70,18 @@ returned by the inspected collections. No external objects were created/changed.
 
 ## Ambiguities and policy boundaries
 
-1. Four connector types versus explicit 2-3-source scope: default plan is three
-   assessed protocol connectors; seek confirmation before requiring SFTP as fourth.
-2. B1 allows Compose, generic weekly/milestone requirements demand a live URL:
-   plan a real public dashboard plus reproducible backend; confirm this split.
+1. Resolved by user: all four connectors are required, including SFTP.
+2. Resolved by user: a hosted backend is required; a public dashboard/local-only
+   backend split is insufficient. Budget is zero with no existing server; free hosting feasibility remains open.
 3. Milestone introduction names v1.0-milestone-2, detailed/logistics sections name
    v1.0-final: use the detailed checklist provisionally and confirm if necessary.
 4. The specification is for 22 June-26 July 2026, with an outside-window-work
    eligibility restriction. Current changes occur in November. Keep genuine
    timestamps and consult the instructor about revised/late-submission acceptance.
    Do not guarantee certification, invent attendance or backdate commits/issues.
-5. Existing local-only authorization remains in force. The attached document is
-   a source of acceptance criteria, not authorization to publish, send messages,
-   create releases, sign approvals or submit forms.
+5. User now authorizes publication of reviewed code and dashboard when ready.
+   No paid hosting, external messages, signatures or form submissions are implied.
+6. Viva is on 1 December 2026; user acknowledges the original work was incomplete
+   at the deadline. All new work retains its actual dates.
 
 Implementation order and exit criteria are in assignment-aligned-plan.md.

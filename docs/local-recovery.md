@@ -77,8 +77,41 @@ A subsequent REST-triggered Shopify run was dispatched by the actual scheduler:
 all four tasks queued/executed successfully, the original paused state was
 restored, all 11 table UUIDs/business row multisets were preserved, and unrelated
 table snapshots were unchanged. Processing/ingestion timestamps were excluded
-only from this legacy replay business comparison. The six-stage versioned DAG's
-scheduler dispatch and worker restart behavior remain unverified.
+only from this legacy replay business comparison.
+
+The exact successful frozen versioned run was subsequently requeued through the
+stable API after preserving its task history. All six tasks completed under the
+actual scheduler. All 11 table row hashes/snapshots and every Gold file/pointer
+were unchanged, the original paused state was restored, and Marquez indexed all
+six new invocation IDs with the same release. This verifies scheduler-managed
+cached replay. Fresh-delivery scheduler ingestion and worker-crash recovery
+remain separate acceptance requirements.
+
+## Coordinated volume backup drill
+
+The host recovery runner prepared alongside the local review outputs checks that
+all DAGs are paused and no runs are queued/running, then stops the demo stack.
+No independent CLI/filesystem writers may run during this procedure. It archives
+the MinIO, JDBC catalog, Airflow Postgres and Marquez Postgres volumes plus the
+shared data tree using Linux tar, preserving Linux ownership/modes. For each
+archive it creates a new isolated drill volume, extracts the archive, then
+compares canonical inventories including file SHA256, size, ownership/mode,
+directories and symlink targets. Special files are rejected. Original volumes
+are never overwritten or deleted, and the original stack is requested to resume
+in a finally block even if an archive/restore step fails.
+
+`scripts/volume_inventory.py` supplies the inventories. These checks do not
+cover ACLs, xattrs, file capabilities, hard-link identity or timestamps. The
+final backup manifest records archive checksums, inventory checksums, helper
+image IDs and the bundled source-history checksum. Retain the archives and new
+drill volumes for investigation. A failure before the final manifest leaves an
+incomplete candidate. Resume errors must be resolved before normal operations.
+
+This runner is prepared and PowerShell-parsed; Docker-volume execution is still
+pending. Exact extracted files do not establish successful service boot from
+restored volumes. Booting an isolated restored stack, application-level audits,
+worker crash behavior and an independently protected backup copy remain required.
+The manifests are integrity evidence, not signed/WORM authenticity guarantees.
 
 `scripts/check_marquez_runtime.py` independently reads the Marquez API to require
 six completed indexed stage runs with the expected orchestration identity,

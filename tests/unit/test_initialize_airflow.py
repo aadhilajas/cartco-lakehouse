@@ -1,3 +1,4 @@
+"""Initialization checks included in the unit-test CI job."""
 from types import SimpleNamespace
 
 import pytest

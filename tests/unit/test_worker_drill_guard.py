@@ -7,6 +7,14 @@ import pytest
 from scripts import recovery_worker_scenario as drill
 
 
+def test_cli_help_starts_without_entering_a_scenario(monkeypatch,capsys):
+    monkeypatch.setattr(drill.sys,'argv',['recovery_worker_scenario.py','--help'])
+    with pytest.raises(SystemExit) as result:
+        drill.main()
+    assert result.value.code==0
+    assert 'prepare' in capsys.readouterr().out
+
+
 @pytest.mark.parametrize('change', ['run','task','state','pid'])
 def test_signal_refused_for_mismatched_identity_or_pid(tmp_path,monkeypatch,change):
     scenario=dict(run_id='fixture-run',work_root=str(tmp_path))

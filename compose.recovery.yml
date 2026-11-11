@@ -1,0 +1,85 @@
+# Isolated restored-copy acceptance. Never attach original production/demo volumes.
+services:
+  minio:
+    image: cartco/minio:source-7aac2a2c
+    command: server /data
+    environment:
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin
+    volumes: ["minio:/data"]
+    healthcheck:
+      test: ["CMD", "curl", "--fail", "http://localhost:9000/minio/health/live"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+  postgres:
+    image: library/postgres@sha256:834a046089d76edd1d2e81c4741f3ad5d1853646ededc86c2708936aad31c1ed
+    environment: {POSTGRES_USER: airflow, POSTGRES_PASSWORD: airflow, POSTGRES_DB: airflow}
+    volumes: ["airflow-db:/var/lib/postgresql/data"]
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "airflow"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+  marquez-db:
+    image: library/postgres@sha256:834a046089d76edd1d2e81c4741f3ad5d1853646ededc86c2708936aad31c1ed
+    environment: {POSTGRES_USER: marquez, POSTGRES_PASSWORD: marquez, POSTGRES_DB: marquez}
+    volumes: ["marquez-db:/var/lib/postgresql/data"]
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "marquez"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+  iceberg-rest:
+    image: tabulario/iceberg-rest@sha256:3b7d31bdfec626b68e97531c9778a1b9119659e456fe28545a49f6aa6a9ce472
+    environment:
+      AWS_ACCESS_KEY_ID: minioadmin
+      AWS_SECRET_ACCESS_KEY: minioadmin
+      AWS_REGION: us-east-1
+      CATALOG_URI: jdbc:sqlite:/home/iceberg/catalog.db
+      CATALOG_WAREHOUSE: s3://cartco-lakehouse
+      CATALOG_IO__IMPL: org.apache.iceberg.aws.s3.S3FileIO
+      CATALOG_S3_ENDPOINT: http://minio:9000
+      CATALOG_S3_PATH__STYLE__ACCESS: "true"
+    volumes: ["catalog:/home/iceberg"]
+    depends_on:
+      minio: {condition: service_healthy}
+  marquez-api:
+    image: marquezproject/marquez@sha256:0721c976cff17d8b14f7949d85d6dac9c7ea37cb9fe857caa19833730fcb1a50
+    environment:
+      MARQUEZ_PORT: "5000"
+      MARQUEZ_ADMIN_PORT: "5001"
+      POSTGRES_HOST: marquez-db
+      POSTGRES_PORT: "5432"
+      POSTGRES_DB: marquez
+      POSTGRES_USER: marquez
+      POSTGRES_PASSWORD: marquez
+    depends_on:
+      marquez-db: {condition: service_healthy}
+  verifier:
+    image: cartco/airflow:2.9.0
+    entrypoint: ["python"]
+    environment:
+      AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:airflow@postgres/airflow
+      AIRFLOW__CORE__LOAD_EXAMPLES: "false"
+      AIRFLOW__OPENLINEAGE__DISABLED: "true"
+      PYTHONDONTWRITEBYTECODE: "1"
+      ICEBERG_CATALOG_URI: http://iceberg-rest:8181
+      S3_ENDPOINT: http://minio:9000
+      AWS_ACCESS_KEY_ID: minioadmin
+      AWS_SECRET_ACCESS_KEY: minioadmin
+      AWS_REGION: us-east-1
+    volumes:
+      - runtime:/opt/airflow/data:ro
+      - ./scripts:/opt/airflow/scripts:ro
+      - ./pipeline:/opt/airflow/pipeline:ro
+      - ./transforms:/opt/airflow/transforms:ro
+      - ./lineage:/opt/airflow/lineage:ro
+      - ./docs/schemas:/opt/airflow/docs/schemas:ro
+      - ${CARTCO_RECOVERY_EVIDENCE:?Set evidence directory}:/evidence
+volumes:
+  minio: {external: true, name: "${CARTCO_RECOVERY_PREFIX:?Set restored volume prefix}-minio"}
+  catalog: {external: true, name: "${CARTCO_RECOVERY_PREFIX:?Set restored volume prefix}-catalog"}
+  airflow-db: {external: true, name: "${CARTCO_RECOVERY_PREFIX:?Set restored volume prefix}-airflow-db"}
+  marquez-db: {external: true, name: "${CARTCO_RECOVERY_PREFIX:?Set restored volume prefix}-marquez-db"}
+  runtime: {external: true, name: "${CARTCO_RECOVERY_PREFIX:?Set restored volume prefix}-runtime"}

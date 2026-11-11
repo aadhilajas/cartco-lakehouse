@@ -107,10 +107,24 @@ image IDs and the bundled source-history checksum. Retain the archives and new
 drill volumes for investigation. A failure before the final manifest leaves an
 incomplete candidate. Resume errors must be resolved before normal operations.
 
-This runner is prepared and PowerShell-parsed; Docker-volume execution is still
-pending. Exact extracted files do not establish successful service boot from
-restored volumes. Booting an isolated restored stack, application-level audits,
-worker crash behavior and an independently protected backup copy remain required.
+The 2026-11-11 host drill completed all five archives/restores. Independently
+verified inventories covered 20,288 entries: MinIO 17,179, catalog 5, Airflow
+Postgres 1,507, Marquez Postgres 1,446 and shared data 151. All archive/source
+bundle checksums matched, the original scheduler/database resumed healthy, and
+all 11 original catalog checkpoints remained identical after restart.
+
+Exact extracted files do not establish successful service boot from restored
+volumes. `compose.recovery.yml` prepares a separate network/project using only
+the restored external volumes, with no host ports and no scheduler. Its verifier
+checks exact catalog checkpoints, Gold checksums, six successful restored Airflow
+task records and the persisted Marquez graph. Runtime data mounts read-only.
+The host runner checks backup hashes, restored-volume identities and helper
+image IDs, starts only isolated services, records evidence and stops those
+services afterward without deleting their containers/volumes. This restored
+service boot check is prepared/configuration-validated, not executed yet.
+
+Booting the isolated restored stack, worker crash behavior and an independently
+protected backup copy remain required.
 The manifests are integrity evidence, not signed/WORM authenticity guarantees.
 
 `scripts/check_marquez_runtime.py` independently reads the Marquez API to require

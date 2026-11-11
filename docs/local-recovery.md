@@ -136,7 +136,7 @@ Fresh pipeline processing against the restored stack, in-flight worker crash
 behavior and an independently protected backup copy remain required.
 The manifests are integrity evidence, not signed/WORM authenticity guarantees.
 
-## Fresh processing and controlled worker kill (prepared)
+## Fresh processing and controlled worker kill
 
 The host restored-stack runner's `-WorkerDrill` mode creates five new isolated
 volumes from the verified archives for every attempt. It does not reuse or
@@ -168,7 +168,8 @@ Local evidence must contain the retry callback without a terminal alert.
 Expected retry alerts remain part of history rather than being labelled clean.
 
 This mode is implemented, Compose/PowerShell/Python checked, with fourteen focused
-unit checks of comparison and signal guards. It has not run against Docker yet.
+unit checks of comparison and signal guards. Its Docker acceptance passed as
+recorded below.
 The host command captures diagnostics and stops only its isolated project in a
 finally block. A successful result would cover one post-commit POS task kill;
 arbitrary mid-commit crashes, scheduler/container loss and source outages remain
@@ -182,8 +183,26 @@ validates delete/append history, parent chain, batch IDs and receipt snapshot ID
 plus a changed worker PID and increased attempt count. Fourteen focused unit
 checks and the real-file overwrite regression passed. A completion runner can
 boot only those retained data services and rerun read-only verification without
-starting the scheduler, restaging data or killing another task. Full final
-application/journal verification remains pending that completion command.
+starting the scheduler, restaging data or killing another task.
+
+Completion verification passed on the retained copies. Fresh delivered fixtures
+added 25 rows per channel, producing 225 active state rows (75 per channel),
+three new Bronze snapshots and six state snapshots from three atomic channel
+overwrite transactions. Snapshot ancestry/operations/batch IDs reconciled to
+completion receipts. The exact pre-kill and post-retry catalog checkpoints were
+identical; the restarted POS task used a new PID and completed its second
+attempt. All six scheduler tasks succeeded. The separate four-artifact Gold
+publication passed checksum/state pin checks, and all original five-artifact
+Gold files remained byte-identical.
+
+The journal retained 14 paired events across seven invocations (POS invoked
+twice), all client calls completed, one expected retry callback alert, no terminal
+alerts and zero schema/evidence errors. `clean_history=false` correctly preserves
+the retry incident. This journal check does not independently prove indexing of
+the new drill's events in Marquez. All six isolated services stopped cleanly;
+the original stack and prior restored copies were untouched. The evidence is
+retained in host run `20261111172001-20261111175354`. Coverage remains limited to
+the explicitly post-commit task-process SIGKILL described above.
 
 `scripts/check_marquez_runtime.py` independently reads the Marquez API to require
 six completed indexed stage runs with the expected orchestration identity,

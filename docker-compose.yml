@@ -123,9 +123,13 @@ services:
       AWS_SECRET_ACCESS_KEY: minioadmin
       AWS_REGION: us-east-1
       CATALOG_WAREHOUSE: s3://cartco-lakehouse
+      # Persist JDBC catalog pointers independently of the container layer.
+      CATALOG_URI: jdbc:sqlite:/home/iceberg/catalog.db
       CATALOG_IO__IMPL: org.apache.iceberg.aws.s3.S3FileIO
       CATALOG_S3_ENDPOINT: http://minio:9000
       CATALOG_S3_PATH__STYLE__ACCESS: "true"
+    volumes:
+      - iceberg-catalog-data:/home/iceberg
 
   postgres:
     image: library/postgres@sha256:834a046089d76edd1d2e81c4741f3ad5d1853646ededc86c2708936aad31c1ed
@@ -147,15 +151,7 @@ services:
   airflow-init:
     <<: *airflow-common
     container_name: cartco-airflow-init
-    entrypoint: >
-      /bin/bash -c "
-      airflow db init &&
-      airflow users create
-      --username airflow --password airflow
-      --firstname CartCo --lastname Admin
-      --role Admin --email admin@cartco.local
-      || true
-      "
+    command: ["python", "/opt/airflow/scripts/initialize_airflow.py"]
     restart: "no"
 
   airflow-webserver:
@@ -251,5 +247,6 @@ services:
 
 volumes:
   minio-data:
+  iceberg-catalog-data:
   postgres-data:
   marquez-db-data:

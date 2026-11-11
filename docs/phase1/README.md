@@ -1,3 +1,5 @@
+> Current acceptance is summarized in the repository README, docs/test_report.md and deliverables/week4/status_one_pager.md. Earlier pending statements below describe implementation history; later local Docker/scheduler/recovery/GE/column-lineage checks have completed. Remote CI/cloud/video milestones remain open.
+
 # Phase 1: reproducible baseline
 
 Use Python 3.11 for local tests. Airflow itself runs in Linux containers.

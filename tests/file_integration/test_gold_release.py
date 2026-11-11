@@ -73,6 +73,30 @@ def test_publish_reads_complete_decimal_marts_from_one_snapshot(environment):
     assert manifest["quality"]["completed_orders"] == 2
     assert sum(tables["daily_revenue"]["total_revenue"].to_pylist()) == Decimal("0.20")
     assert "category_unit_sales" in tables
+    assert manifest['quality']['great_expectations']['success']
+    assert manifest['quality_suite_version']=='cartco.ge.outputs.v1'
+
+
+def test_ge_rejection_retains_pointer_and_failure_report(environment,monkeypatch):
+    import pyarrow as pa
+    from pipeline import gold_release
+    from pipeline.output_quality import OutputQualityError
+    catalog,root=environment
+    receipts=seed(catalog,root)
+    publish(catalog,root,receipts)
+    pointer=(root/'gold/CURRENT.json').read_bytes()
+    original=gold_release.build_marts
+    def broken(*args,**kwargs):
+        marts,report=original(*args,**kwargs)
+        table=marts['daily_revenue']
+        marts['daily_revenue']=pa.concat_tables([table,table])
+        return marts,report
+    monkeypatch.setattr(gold_release,'build_marts',broken)
+    with pytest.raises(OutputQualityError):publish(catalog,root,receipts)
+    assert (root/'gold/CURRENT.json').read_bytes()==pointer
+    import json
+    failures=list((root/'gold/quality-failures').glob('*.json'))
+    assert len(failures)==1 and not json.loads(failures[0].read_text())['success']
 
 
 def test_same_snapshot_and_receipts_are_idempotent(environment):

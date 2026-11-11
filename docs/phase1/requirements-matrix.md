@@ -1,23 +1,21 @@
-# Requirements and evidence matrix
+# Original-plan requirements and current evidence
 
-Baseline commit: a4b3406. Phase 1 establishes reproducible execution, not new
-business behavior. Status means implemented/evidenced here, not planned success.
+Updated 2026-11-11. Historical baseline: a4b3406. Current scope follows ADR-012.
 
-| Requirement | Existing evidence | Remaining work / acceptance |
+| Requirement | Current evidence | Remaining boundary |
 |---|---|---|
-| Three synthetic sources | Shopify/Amazon generators and pipelines | Third source end to end; POS batch proposed |
-| Bronze source fidelity | Explicit source schemas, daily loads | Immutable input manifests, extension fields, replay contracts |
-| Canonical Silver | Shared silver.orders and status mappings | Safe updates, batch dates, stable update ordering |
-| Business Gold | Four transform modules and unit tests | Correct status/money rules and inventory inputs |
-| Airflow orchestration | Three DAG definitions | Real DAG import check added; scheduling/readiness later |
-| Quality on Silver/Gold | Bronze GE gates only | Output gates and persisted results |
-| Lineage | Source and Gold event emission | Live all-source proof, facets and failure-path coverage |
-| Reproducible environment | Clean hash-checked install, Python 3.11, fixed-source MinIO build | Docker build and live verification pending |
-| CI | Unit job and full-stack baseline job | Remote run pending; both-source seeding, status scope and fresh-snapshot checks prepared |
-| Durability and recovery | Compose storage volumes | Catalog recreation and restore tests |
-| Deployment | Local Compose configuration | Cloud deployment not executed |
-| Final delivery | Historical screenshots/demos and six ADRs | Current architecture/test report and final-week evidence |
+| Three synthetic sources | Shopify, Amazon and POS, delivered contracts and versioned ingestion | Live APIs/Kafka/additional sources are extensions |
+| Source-faithful Bronze | Immutable bytes/manifests/receipts and raw event tables | Offsite protection needs deployment configuration |
+| Canonical Silver | Decimal INR, source-version merges, tombstones and migrations | Original compute selection changed to PyArrow/PyIceberg by ADR |
+| Business Gold | Four reconciled commerce artifacts and optional standard-cost inventory ratio | Expanded business contracts are future scope |
+| Airflow | Four normal DAGs; actual scheduler replay and isolated fresh/retry run | Arbitrary scheduler loss not demonstrated |
+| Silver/Gold GE | Seven live suites; mandatory gate on new releases with persisted results | Older retained releases validated retrospectively |
+| Lineage | Source/Gold column facets; five-artifact derived edges checked in Marquez | Legacy DAGs remain table-level; no row-level claim |
+| Alerts | Real callback plus local retry/failure outbox | External notification destination/authorization not supplied |
+| Reproducibility and CI | Locked deps, digest-pinned images, successful local builds/tests | Final remote CI awaits authorized publication |
+| Durability/recovery | Catalog recreation, five-volume restore, restored application boot and controlled task kill | Protected/offsite backup and other failure cases remain |
+| Local deployment | Working Compose stack and current acceptance evidence | Original cloud milestone not executed |
+| Final written delivery | Updated architecture/test report, walkthrough, thinking artifact and resume bullets | Newly recorded/published final video not claimed |
 
-Phase 1 gate: clean Python 3.11 install + dependency check + unit discovery/run,
-actual DAG import/graph check in the built image, reviewed contracts, reproducible
-image references and documented bootstrap. Every unexecuted check stays pending.
+No production or remote deployment result is inferred from a local test. See the
+current README, docs/test_report.md and deliverables/week4 evidence summary.

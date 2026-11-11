@@ -1,0 +1,694 @@
+{
+  "suite_version": "cartco.ge.outputs.v1",
+  "engine": "great_expectations",
+  "engine_version": "0.18.19",
+  "success": true,
+  "suites": {
+    "silver_state": {
+      "rows": 150,
+      "success": true,
+      "checks": [
+        {
+          "expectation": "expect_column_values_to_not_be_null",
+          "kwargs": {
+            "column": "channel"
+          },
+          "success": true
+        },
+        {
+          "expectation": "expect_column_values_to_not_be_null",
+          "kwargs": {
+            "column": "order_id"
+          },
+          "success": true
+        },
+        {
+          "expectation": "expect_compound_columns_to_be_unique",
+          "kwargs": {
+            "column_list": [
+              "channel",
+              "order_id"
+            ]
+          },
+          "success": true
+        },
+        {
+          "expectation": "expect_column_values_to_not_be_null",
+          "kwargs": {
+            "column": "source_updated_at"
+          },
+          "success": true
+        },
+        {
+          "expectation": "expect_column_values_to_not_be_null",
+          "kwargs": {
+            "column": "is_deleted"
+          },
+          "success": true
+        }
+      ]
+    },
+    "silver_active": {
+      "rows": 150,
+      "success": true,
+      "checks": [
+        {
+          "expectation": "expect_column_values_to_not_be_null",
+          "kwargs": {
+            "column": "channel"
+          },
+          "success": true
+        },
+        {
+          "expectation": "expect_column_values_to_not_be_null",
+          "kwargs": {
+            "column": "order_id"
+          },
+          "success": true
+        },
+        {
+          "expectation": "expect_compound_columns_to_be_unique",
+          "kwargs": {
+            "column_list": [
+              "channel",
+              "order_id"
+            ]
+          },
+          "success": true
+        },
+        {
+          "expectation": "expect_column_values_to_not_be_null",
+          "kwargs": {
+            "column": "customer_id"
+          },
+          "success": true
+        },
+        {
+          "expectation": "expect_column_values_to_not_be_null",
+          "kwargs": {
+            "column": "order_date"
+          },
+          "success": true
+        },
+        {
+          "expectation": "expect_column_values_to_not_be_null",
+          "kwargs": {
+            "column": "product_category"
+          },
+          "success": true
+        },
+        {
+          "expectation": "expect_column_values_to_not_be_null",
+          "kwargs": {
+            "column": "quantity"
+          },
+          "success": true
+        },
+        {
+          "expectation": "expect_column_values_to_not_be_null",
+          "kwargs": {
+            "column": "unit_price"
+          },
+          "success": true
+        },
+        {
+          "expectation": "expect_column_values_to_not_be_null",
+          "kwargs": {
+            "column": "order_total"
+          },
+          "success": true
+        },
+        {
+          "expectation": "expect_column_values_to_not_be_null",
+          "kwargs": {
+            "column": "order_status"
+          },
+          "success": true
+        },
+        {
+          "expectation": "expect_column_values_to_not_be_null",
+          "kwargs": {
+            "column": "currency"
+          },
+          "success": true
+        },
+        {
+          "expectation": "expect_column_values_to_be_in_set",
+          "kwargs": {
+            "column": "channel",
+            "value_set": [
+              "shopify",
+              "amazon",
+              "pos"
+            ]
+          },
+          "success": true
+        },
+        {
+          "expectation": "expect_column_values_to_be_in_set",
+          "kwargs": {
+            "column": "currency",
+            "value_set": [
+              "INR"
+            ]
+          },
+          "success": true
+        },
+        {
+          "expectation": "expect_column_values_to_be_in_set",
+          "kwargs": {
+            "column": "order_status",
+            "value_set": [
+              "completed",
+              "cancelled",
+              "refunded",
+              "pending"
+            ]
+          },
+          "success": true
+        },
+        {
+          "expectation": "expect_column_values_to_be_between",
+          "kwargs": {
+            "column": "quantity",
+            "min_value": 0
+          },
+          "success": true
+        },
+        {
+          "expectation": "expect_column_values_to_be_between",
+          "kwargs": {
+            "column": "unit_price",
+            "min_value": 0
+          },
+          "success": true
+        },
+        {
+          "expectation": "expect_column_values_to_be_between",
+          "kwargs": {
+            "column": "order_total",
+            "min_value": 0
+          },
+          "success": true
+        }
+      ]
+    },
+    "category_unit_sales": {
+      "rows": 24,
+      "success": true,
+      "checks": [
+        {
+          "expectation": "expect_column_values_to_not_be_null",
+          "kwargs": {
+            "column": "product_category"
+          },
+          "success": true
+        },
+        {
+          "expectation": "expect_column_values_to_not_be_null",
+          "kwargs": {
+            "column": "channel"
+          },
+          "success": true
+        },
+        {
+          "expectation": "expect_compound_columns_to_be_unique",
+          "kwargs": {
+            "column_list": [
+              "product_category",
+              "channel"
+            ]
+          },
+          "success": true
+        },
+        {
+          "expectation": "expect_column_values_to_not_be_null",
+          "kwargs": {
+            "column": "units_sold"
+          },
+          "success": true
+        },
+        {
+          "expectation": "expect_column_values_to_be_between",
+          "kwargs": {
+            "column": "units_sold",
+            "min_value": 0
+          },
+          "success": true
+        }
+      ]
+    },
+    "channel_performance": {
+      "rows": 3,
+      "success": true,
+      "checks": [
+        {
+          "expectation": "expect_column_values_to_not_be_null",
+          "kwargs": {
+            "column": "channel"
+          },
+          "success": true
+        },
+        {
+          "expectation": "expect_column_values_to_be_unique",
+          "kwargs": {
+            "column": "channel"
+          },
+          "success": true
+        },
+        {
+          "expectation": "expect_column_values_to_not_be_null",
+          "kwargs": {
+            "column": "total_revenue"
+          },
+          "success": true
+        },
+        {
+          "expectation": "expect_column_values_to_be_between",
+          "kwargs": {
+            "column": "total_revenue",
+            "min_value": 0
+          },
+          "success": true
+        },
+        {
+          "expectation": "expect_column_values_to_not_be_null",
+          "kwargs": {
+            "column": "total_orders"
+          },
+          "success": true
+        },
+        {
+          "expectation": "expect_column_values_to_be_between",
+          "kwargs": {
+            "column": "total_orders",
+            "min_value": 0
+          },
+          "success": true
+        },
+        {
+          "expectation": "expect_column_values_to_not_be_null",
+          "kwargs": {
+            "column": "placed_order_value"
+          },
+          "success": true
+        },
+        {
+          "expectation": "expect_column_values_to_be_between",
+          "kwargs": {
+            "column": "placed_order_value",
+            "min_value": 0
+          },
+          "success": true
+        },
+        {
+          "expectation": "expect_column_values_to_not_be_null",
+          "kwargs": {
+            "column": "cancelled_order_value"
+          },
+          "success": true
+        },
+        {
+          "expectation": "expect_column_values_to_be_between",
+          "kwargs": {
+            "column": "cancelled_order_value",
+            "min_value": 0
+          },
+          "success": true
+        },
+        {
+          "expectation": "expect_column_values_to_not_be_null",
+          "kwargs": {
+            "column": "refunded_order_value"
+          },
+          "success": true
+        },
+        {
+          "expectation": "expect_column_values_to_be_between",
+          "kwargs": {
+            "column": "refunded_order_value",
+            "min_value": 0
+          },
+          "success": true
+        },
+        {
+          "expectation": "expect_column_values_to_not_be_null",
+          "kwargs": {
+            "column": "pending_order_value"
+          },
+          "success": true
+        },
+        {
+          "expectation": "expect_column_values_to_be_between",
+          "kwargs": {
+            "column": "pending_order_value",
+            "min_value": 0
+          },
+          "success": true
+        },
+        {
+          "expectation": "expect_column_values_to_not_be_null",
+          "kwargs": {
+            "column": "currency"
+          },
+          "success": true
+        },
+        {
+          "expectation": "expect_column_values_to_be_in_set",
+          "kwargs": {
+            "column": "currency",
+            "value_set": [
+              "INR"
+            ]
+          },
+          "success": true
+        },
+        {
+          "expectation": "expect_column_values_to_be_between",
+          "kwargs": {
+            "column": "cancellation_rate",
+            "min_value": 0,
+            "max_value": 1
+          },
+          "success": true
+        },
+        {
+          "expectation": "expect_column_values_to_be_between",
+          "kwargs": {
+            "column": "refund_rate",
+            "min_value": 0,
+            "max_value": 1
+          },
+          "success": true
+        }
+      ]
+    },
+    "customer_360": {
+      "rows": 118,
+      "success": true,
+      "checks": [
+        {
+          "expectation": "expect_column_values_to_not_be_null",
+          "kwargs": {
+            "column": "customer_id"
+          },
+          "success": true
+        },
+        {
+          "expectation": "expect_column_values_to_not_be_null",
+          "kwargs": {
+            "column": "channel"
+          },
+          "success": true
+        },
+        {
+          "expectation": "expect_compound_columns_to_be_unique",
+          "kwargs": {
+            "column_list": [
+              "customer_id",
+              "channel"
+            ]
+          },
+          "success": true
+        },
+        {
+          "expectation": "expect_column_values_to_not_be_null",
+          "kwargs": {
+            "column": "total_spend"
+          },
+          "success": true
+        },
+        {
+          "expectation": "expect_column_values_to_be_between",
+          "kwargs": {
+            "column": "total_spend",
+            "min_value": 0
+          },
+          "success": true
+        },
+        {
+          "expectation": "expect_column_values_to_not_be_null",
+          "kwargs": {
+            "column": "total_orders"
+          },
+          "success": true
+        },
+        {
+          "expectation": "expect_column_values_to_be_between",
+          "kwargs": {
+            "column": "total_orders",
+            "min_value": 0
+          },
+          "success": true
+        },
+        {
+          "expectation": "expect_column_values_to_not_be_null",
+          "kwargs": {
+            "column": "currency"
+          },
+          "success": true
+        },
+        {
+          "expectation": "expect_column_values_to_be_in_set",
+          "kwargs": {
+            "column": "currency",
+            "value_set": [
+              "INR"
+            ]
+          },
+          "success": true
+        }
+      ]
+    },
+    "daily_revenue": {
+      "rows": 115,
+      "success": true,
+      "checks": [
+        {
+          "expectation": "expect_column_values_to_not_be_null",
+          "kwargs": {
+            "column": "order_date"
+          },
+          "success": true
+        },
+        {
+          "expectation": "expect_column_values_to_not_be_null",
+          "kwargs": {
+            "column": "channel"
+          },
+          "success": true
+        },
+        {
+          "expectation": "expect_compound_columns_to_be_unique",
+          "kwargs": {
+            "column_list": [
+              "order_date",
+              "channel"
+            ]
+          },
+          "success": true
+        },
+        {
+          "expectation": "expect_column_values_to_not_be_null",
+          "kwargs": {
+            "column": "total_revenue"
+          },
+          "success": true
+        },
+        {
+          "expectation": "expect_column_values_to_be_between",
+          "kwargs": {
+            "column": "total_revenue",
+            "min_value": 0
+          },
+          "success": true
+        },
+        {
+          "expectation": "expect_column_values_to_not_be_null",
+          "kwargs": {
+            "column": "avg_order_value"
+          },
+          "success": true
+        },
+        {
+          "expectation": "expect_column_values_to_be_between",
+          "kwargs": {
+            "column": "avg_order_value",
+            "min_value": 0
+          },
+          "success": true
+        },
+        {
+          "expectation": "expect_column_values_to_not_be_null",
+          "kwargs": {
+            "column": "order_count"
+          },
+          "success": true
+        },
+        {
+          "expectation": "expect_column_values_to_be_between",
+          "kwargs": {
+            "column": "order_count",
+            "min_value": 0
+          },
+          "success": true
+        },
+        {
+          "expectation": "expect_column_values_to_not_be_null",
+          "kwargs": {
+            "column": "currency"
+          },
+          "success": true
+        },
+        {
+          "expectation": "expect_column_values_to_be_in_set",
+          "kwargs": {
+            "column": "currency",
+            "value_set": [
+              "INR"
+            ]
+          },
+          "success": true
+        }
+      ]
+    },
+    "inventory_turnover": {
+      "rows": 1,
+      "success": true,
+      "checks": [
+        {
+          "expectation": "expect_column_values_to_not_be_null",
+          "kwargs": {
+            "column": "sku"
+          },
+          "success": true
+        },
+        {
+          "expectation": "expect_column_values_to_not_be_null",
+          "kwargs": {
+            "column": "location_id"
+          },
+          "success": true
+        },
+        {
+          "expectation": "expect_column_values_to_not_be_null",
+          "kwargs": {
+            "column": "period_start"
+          },
+          "success": true
+        },
+        {
+          "expectation": "expect_column_values_to_not_be_null",
+          "kwargs": {
+            "column": "period_end"
+          },
+          "success": true
+        },
+        {
+          "expectation": "expect_compound_columns_to_be_unique",
+          "kwargs": {
+            "column_list": [
+              "sku",
+              "location_id",
+              "period_start",
+              "period_end"
+            ]
+          },
+          "success": true
+        },
+        {
+          "expectation": "expect_column_values_to_not_be_null",
+          "kwargs": {
+            "column": "cogs"
+          },
+          "success": true
+        },
+        {
+          "expectation": "expect_column_values_to_be_between",
+          "kwargs": {
+            "column": "cogs",
+            "min_value": 0
+          },
+          "success": true
+        },
+        {
+          "expectation": "expect_column_values_to_not_be_null",
+          "kwargs": {
+            "column": "inventory_value_days"
+          },
+          "success": true
+        },
+        {
+          "expectation": "expect_column_values_to_be_between",
+          "kwargs": {
+            "column": "inventory_value_days",
+            "min_value": 0
+          },
+          "success": true
+        },
+        {
+          "expectation": "expect_column_values_to_not_be_null",
+          "kwargs": {
+            "column": "observed_days"
+          },
+          "success": true
+        },
+        {
+          "expectation": "expect_column_values_to_be_between",
+          "kwargs": {
+            "column": "observed_days",
+            "min_value": 0
+          },
+          "success": true
+        },
+        {
+          "expectation": "expect_column_values_to_not_be_null",
+          "kwargs": {
+            "column": "expected_days"
+          },
+          "success": true
+        },
+        {
+          "expectation": "expect_column_values_to_be_between",
+          "kwargs": {
+            "column": "expected_days",
+            "min_value": 0
+          },
+          "success": true
+        },
+        {
+          "expectation": "expect_column_values_to_not_be_null",
+          "kwargs": {
+            "column": "currency"
+          },
+          "success": true
+        },
+        {
+          "expectation": "expect_column_values_to_be_in_set",
+          "kwargs": {
+            "column": "currency",
+            "value_set": [
+              "INR"
+            ]
+          },
+          "success": true
+        },
+        {
+          "expectation": "expect_column_values_to_be_in_set",
+          "kwargs": {
+            "column": "quality_status",
+            "value_set": [
+              "complete",
+              "incomplete_daily_coverage",
+              "zero_inventory_value"
+            ]
+          },
+          "success": true
+        }
+      ]
+    }
+  },
+  "release_id": "04aa736ebb8a34497d7472c8cedbc85bd4d94d20c1d84fdb1f8ebeb861729f50",
+  "state_snapshot_id": 4668388625262197654,
+  "verification": "Read-only retrospective check; existing release bytes and pointer unchanged"
+}

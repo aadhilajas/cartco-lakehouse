@@ -1,21 +1,43 @@
-# Lineage and runtime observability
+# Current lineage and observability
 
-The pinned client is openlineage-python 1.11.3. Compose targets the local Marquez
-services; live backend acceptance has not been re-established on this host.
+The coordinated versioned runtime emits paired START/COMPLETE/FAIL events via
+OpenLineage 1.11.3 to local Marquez. Each invocation has its own UUID; business
+batch date and orchestration run identity are separate facets. A local intended
+journal and checksum-linked client-delivery status retain what was attempted.
+Instrumentation remains fail-open and never changes business results/exceptions.
 
-The [versioned runtime observability guide](phase5/runtime-observability.md)
-defines the current three-source journal, custom run/schema/snapshot facets,
-publication evidence, fail-safe client handling and local failure-alert outbox.
-Tests exercise the actual client/FileTransport and validate local custom schemas.
-They do not establish Marquez HTTP/graph persistence or Airflow scheduler dispatch.
+Source events declare CSV field schemas and input row counts, raw JSON field
+preservation, source normalization and versioned merge dependencies. Silver
+fields include prior-state dependencies to represent retained rows and tombstones.
+Gold outputs declare schema, actual artifact row counts and columnLineage facets.
+Maps include grouping keys, completed-sales/status controls, exact quantity/price
+arithmetic and explicit cost/stock dependencies for turnover. Constants such as
+INR and unavailable fulfillment time are labelled; no fictitious input edge is
+invented for a constant null.
 
-Legacy Shopify/Amazon ingestion and Gold scripts retain their existing manual
-START/COMPLETE/FAIL emitter calls. The emitter now catches construction as well
-as client errors and logs actual disabled/unavailable/client outcome states.
-These older jobs do not automatically get the versioned runtime's journal or
-alert outbox. Automatic provider lineage remains disabled in Compose to avoid
-duplicate dataset-less task events.
+The five-artifact live event exposes 44 output fields. Three source-stage events
+add 57 checks across raw/Silver output fields, for 101 verified field checks. Direct dependency edges
+for every derived output were checked against Marquez's column-lineage API;
+input-free constants were checked against their event schema/declaration because
+the backend need not create a lineage node for a constant. Unit tests also cover
+POS native keys, source product/status normalization and prior state. This is
+field dependency tracing, not exhaustive per-row or historical-version provenance.
+Legacy DAG lineage remains table-level; no blanket claim is made for those paths.
 
-Use OPENLINEAGE_URL and OPENLINEAGE_NAMESPACE only for the intended lineage
-service. Client completion means emit() returned, not proof of backend indexing.
-No email, Slack or webhook alert consumer is implemented or triggered.
+Inventory input schemas must be declared as well as output schemas: without
+input field metadata, Marquez can accept an event while omitting the requested
+stock/cost edges. Live backend verification caught this and the input schemas
+were added before acceptance. Consumer checks distinguish backend indexing from
+a successful client call.
+
+```text
+python scripts/check_column_lineage.py --event <completed-event.json> --output <column-report.json>
+python scripts/check_marquez_runtime.py --expected <versioned-runtime.json> --orchestration-run-id <run-id> --output <runtime-report.json>
+python scripts/check_runtime_observability.py --help
+```
+
+Retry/failure callbacks write local alert records. The controlled task-kill drill
+produced one real retry_scheduled alert and no terminal alert. The incident stays
+visible as clean_history=false. No email, Slack, webhook, acknowledgement or
+external paging consumer is configured or invoked. Retention/backup covers the
+local runtime files, with their documented integrity/authenticity boundaries.

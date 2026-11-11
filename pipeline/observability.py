@@ -1,5 +1,6 @@
 """Best-effort runtime lineage, immutable local event journal and local-only alerts."""
 from datetime import datetime, timezone
+import csv
 import hashlib
 import json
 import logging
@@ -7,13 +8,14 @@ from pathlib import Path
 from uuid import uuid4
 
 import attr
-from openlineage.client.facet import BaseFacet, SchemaDatasetFacet, SchemaField
-from openlineage.client.run import Dataset, Job, Run, RunEvent, RunState
+from openlineage.client.facet import BaseFacet, SchemaDatasetFacet, SchemaField, OutputStatisticsOutputDatasetFacet, DataQualityMetricsInputDatasetFacet
+from openlineage.client.run import Dataset, InputDataset, OutputDataset, Job, Run, RunEvent, RunState
 from openlineage.client.serde import Serde
 
 from lineage import emitter
 from pipeline.order_state import STATE_SCHEMA
 from pipeline.raw_batches import _write_once
+from pipeline import column_lineage
 
 logger = logging.getLogger(__name__)
 SCHEMA_URI = "urn:cartco:observability:v1"
@@ -104,6 +106,21 @@ def _evidence(token, result, error):
             from pipeline.versioned_ingestion import RAW_SCHEMA
             outputs = [_table(f"bronze.{stage}_order_events", RAW_SCHEMA, receipt.get("bronze_snapshot_id")),
                        _table("silver.order_state_v2", STATE_SCHEMA, receipt.get("state_snapshot_id"), receipt.get("state_table_uuid"))]
+            with (path / f'inputs/{stage}.csv').open(encoding='utf-8',newline='') as stream:
+                headers=next(csv.reader(stream))
+            inputs[0]=InputDataset(namespace=inputs[0].namespace,name=inputs[0].name,
+                facets={'schema':SchemaDatasetFacet(fields=[SchemaField(name=name,type='string') for name in headers])},
+                inputFacets={'dataQualityMetrics':DataQualityMetricsInputDatasetFacet(rowCount=receipt['counts']['input_rows'])})
+            contract_input=_file(path,f'inputs/{stage}.csv.contract.json')
+            run_input=_file(path,'run.json')
+            contract_input.facets['schema']=SchemaDatasetFacet(fields=[SchemaField(name=name,type='json') for name in sorted(receipt['delivery_contract'])])
+            run_input.facets['schema']=SchemaDatasetFacet(fields=[SchemaField(name=name,type='json') for name in sorted(manifest)])
+            previous=_table('silver.order_state_v2',STATE_SCHEMA)
+            inputs.extend([contract_input,run_input,previous])
+            outputs[0].facets['columnLineage']=column_lineage.facet({field.name:
+                (([(inputs[0],name) for name in headers]+([(contract_input,name) for name in receipt['delivery_contract']]+[(run_input,'batch_date')] if field.name=='batch_id' else [])) if field.name in {'batch_id','raw_payload','source_row_number'} else [(run_input,'batch_date' if field.name=='ingestion_date' else 'sources')],
+                 'Preserve source values in raw JSON' if field.name=='raw_payload' else 'Content-addressed batch/row ordinal or declared source/batch context') for field in RAW_SCHEMA.fields})
+            outputs[1].facets['columnLineage']=column_lineage.silver(stage,inputs[0],previous)
         else:
             outputs = [_table(f"bronze.{stage}_order_events"), _table("silver.order_state_v2")]
     elif stage == "inventory":
@@ -125,7 +142,7 @@ def _evidence(token, result, error):
         outputs = [_file(token["work_root"], "gold/CURRENT.json")]
         if (Path(token["work_root"]) / "gold/CURRENT.json").exists():
             from pipeline.gold_release import read_gold_release
-            _, released = read_gold_release(Path(token["work_root"]) / "gold")
+            released_tables, released = read_gold_release(Path(token["work_root"]) / "gold")
             if (path / "run.json").exists() and released.get("publication_id") == _hash((path / "run.json").read_bytes()):
                 details.update(releaseId=released["release_id"], publicationId=released["publication_id"],
                     receiptStateSnapshotId=released["state_snapshot_id"], stateTableUuid=released["state_table_uuid"],
@@ -133,6 +150,23 @@ def _evidence(token, result, error):
                     publicationOutcome="committed_before_task_failure" if error is not None else "completed_or_recovered")
                 inputs[0] = _table("silver.order_state_v2", STATE_SCHEMA, released["state_snapshot_id"], released["state_table_uuid"])
                 outputs = [_file(token["work_root"], f"gold/releases/{released['release_id']}/{name}") for name in released["artifacts"]]
+                inventory_inputs={}
+                if 'inventory' in released:
+                    from pipeline.inventory import FILES
+                    for filename in released['inventory']['files']:
+                        inventory_inputs[filename]=_file(path,'inventory/'+filename)
+                        names=released['inventory']['contract'].keys() if filename=='manifest.json' else FILES[filename]
+                        inventory_inputs[filename].facets['schema']=SchemaDatasetFacet(fields=[SchemaField(name=name,type='string') for name in sorted(names)])
+                    inputs=[inputs[0],*inventory_inputs.values()]
+                typed=[]
+                for dataset in outputs:
+                    name=Path(dataset.name).stem
+                    table=released_tables[name]
+                    typed.append(OutputDataset(namespace=dataset.namespace,name=dataset.name,
+                        facets={'schema':SchemaDatasetFacet(fields=[SchemaField(name=f.name,type=str(f.type)) for f in table.schema]),
+                                'columnLineage':column_lineage.gold(name,table.column_names,inputs[0],inventory_inputs)},
+                        outputFacets={'outputStatistics':OutputStatisticsOutputDatasetFacet(rowCount=table.num_rows)}))
+                outputs=typed
                 if "inventory" in released["quality"]:
                     quality = released["quality"]["inventory"]
                     details["inventoryQuality"] = {key: quality[key] for key in ("pools", "allocated_orders", "incomplete_pools", "zero_inventory_pools")}

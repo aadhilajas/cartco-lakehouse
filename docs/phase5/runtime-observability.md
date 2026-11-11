@@ -1,3 +1,5 @@
+> Current acceptance is summarized in the repository README, docs/test_report.md and deliverables/week4/status_one_pager.md. Earlier pending statements below describe implementation history; later local Docker/scheduler/recovery/GE/column-lineage checks have completed. Remote CI/cloud/video milestones remain open.
+
 # Runtime lineage and local failure-alert outbox
 
 The versioned runtime now journals OpenLineage events and records local failure

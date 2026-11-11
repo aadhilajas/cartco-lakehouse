@@ -9,6 +9,7 @@ import os
 from pathlib import Path
 import re
 import tempfile
+from uuid import uuid4
 
 import pyarrow as pa
 import pyarrow.parquet as pq
@@ -150,6 +151,13 @@ def publish_gold_release(catalog, output_root, receipt_paths, *, batch_date, exp
             quality["mart_rows"]["inventory_turnover"] = inventory_table.num_rows
             contract["inventory"] = dict(contract=inventory_manifest, files={name: hashlib.sha256(data).hexdigest()
                 for name, data in inventory_content.items()})
+        from pipeline.output_quality import VERSION, OutputQualityError, validate_outputs
+        try:
+            quality['great_expectations'] = validate_outputs(orders, marts)
+        except OutputQualityError as error:
+            _write_once(root / 'quality-failures' / (uuid4().hex + '.json'), _json(error.report))
+            raise
+        contract['quality_suite_version'] = VERSION
         release_id = hashlib.sha256(_json(contract)).hexdigest()
         directory = root / "releases" / release_id
         for filename, content in inventory_content.items():

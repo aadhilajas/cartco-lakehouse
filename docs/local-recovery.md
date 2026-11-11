@@ -136,6 +136,40 @@ Fresh pipeline processing against the restored stack, in-flight worker crash
 behavior and an independently protected backup copy remain required.
 The manifests are integrity evidence, not signed/WORM authenticity guarantees.
 
+## Fresh processing and controlled worker kill (prepared)
+
+The host restored-stack runner's `-WorkerDrill` mode creates five new isolated
+volumes from the verified archives for every attempt. It does not reuse or
+overwrite the previous restored-service drill volumes. The regular demo Compose
+file does not mount the acceptance DAG. `compose.worker-drill.yml` adds only an
+isolated scheduler and makes that fresh copy of runtime data writable.
+
+The controller first verifies the restored baseline, then stages 25 explicitly
+synthetic CSV rows per source with delivery contracts for the day following the
+backed-up batch. The runtime uses delivered mode: the scheduler must freeze and
+process these new files. Expected business state is prepared independently of
+catalog writes using the canonical merge, excluding only processing timestamps
+from that expected-state hash. The new run uses a separate work/Gold directory
+and no inventory input, so it must publish four artifacts. The original backed-up
+five-artifact release is retained byte-for-byte.
+
+The acceptance-only POS task calls the real ingestion callback, writes a marker
+after its commit/receipt completes and waits. The controller verifies DAG/run/task
+identity, running state, matching Airflow PID and `/proc` start time before
+sending one SIGKILL to that task process. It refuses mismatched or reused PIDs
+and repeat signals. Airflow must retry the task and complete all six stages.
+The post-commit checkpoint must remain exactly unchanged by that retry, the fresh
+batch must add exactly three state snapshots and one Bronze snapshot per source,
+and local evidence must contain the retry callback without a terminal alert.
+Expected retry alerts remain part of history rather than being labelled clean.
+
+This mode is implemented, Compose/PowerShell/Python checked, with seven focused
+unit checks of comparison and signal guards. It has not run against Docker yet.
+The host command captures diagnostics and stops only its isolated project in a
+finally block. A successful result would cover one post-commit POS task kill;
+arbitrary mid-commit crashes, scheduler/container loss and source outages remain
+separate requirements. Archives, fresh drill volumes and reports are retained.
+
 `scripts/check_marquez_runtime.py` independently reads the Marquez API to require
 six completed indexed stage runs with the expected orchestration identity,
 release/snapshot/count run facets, dataset versions, state schema fields and

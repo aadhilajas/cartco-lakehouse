@@ -54,6 +54,16 @@ removing volumes, then compare through fresh catalog handles. Separately test
 coordinated recovery of the JDBC database, MinIO objects, runtime data and service
 databases. The local backup tool cannot substitute for this check.
 
+`scripts/catalog_checkpoint.py capture --check-airflow-quiescent --output <new-file>`
+records exact current row multiset hashes (including processing timestamps),
+table UUIDs, schema, properties, metadata locations and retained snapshot IDs.
+It checks for queued/running DAG runs and unpaused active DAGs before and after
+capture. Standalone writers still require operator quiescence. `compare
+--before <file> --after <file>` requires exact equality; equality alone does not
+establish that a container was recreated. Preserve separate container-ID evidence.
+Two fresh live captures matched across all 11 tables, and a deliberately changed
+snapshot was rejected. These smoke checks did not restart the service.
+
 ## Live acceptance evidence
 
 The 2026-11-11 host acceptance run passed all four live integration tests against
@@ -62,6 +72,13 @@ three state snapshots, one Bronze snapshot per source and the same five-artifact
 release. Legacy DAGs retained 90,000 Shopify/Amazon rows. These executions used
 `airflow dags test`; healthy scheduler status is not evidence of scheduler
 dispatch, worker restart behavior or recovery.
+
+A subsequent REST-triggered Shopify run was dispatched by the actual scheduler:
+all four tasks queued/executed successfully, the original paused state was
+restored, all 11 table UUIDs/business row multisets were preserved, and unrelated
+table snapshots were unchanged. Processing/ingestion timestamps were excluded
+only from this legacy replay business comparison. The six-stage versioned DAG's
+scheduler dispatch and worker restart behavior remain unverified.
 
 `scripts/check_marquez_runtime.py` independently reads the Marquez API to require
 six completed indexed stage runs with the expected orchestration identity,

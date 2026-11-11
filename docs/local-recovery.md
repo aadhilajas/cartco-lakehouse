@@ -120,11 +120,20 @@ checks exact catalog checkpoints, Gold checksums, six successful restored Airflo
 task records and the persisted Marquez graph. Runtime data mounts read-only.
 The host runner checks backup hashes, restored-volume identities and helper
 image IDs, starts only isolated services, records evidence and stops those
-services afterward without deleting their containers/volumes. This restored
-service boot check is prepared/configuration-validated, not executed yet.
+services afterward without deleting their containers/volumes.
 
-Booting the isolated restored stack, worker crash behavior and an independently
-protected backup copy remain required.
+The restored service boot check passed on 2026-11-11 for backup
+`20261111172001`. Isolated restored MinIO, JDBC REST catalog, Airflow Postgres
+and Marquez services booted successfully. Application verification preserved all
+11 exact catalog checkpoints, the five-artifact Gold release, all six successful
+versioned Airflow task records and the 18-node/18-edge persisted Marquez graph.
+The saved Compose configuration confirmed restored external volumes only and no
+host ports. All five isolated services stopped cleanly after the verification;
+their volumes and archives remain preserved. The original stack was not stopped
+or reconfigured by this boot drill.
+
+Fresh pipeline processing against the restored stack, in-flight worker crash
+behavior and an independently protected backup copy remain required.
 The manifests are integrity evidence, not signed/WORM authenticity guarantees.
 
 `scripts/check_marquez_runtime.py` independently reads the Marquez API to require

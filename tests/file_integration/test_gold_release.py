@@ -60,8 +60,8 @@ def seed(catalog, root):
     return [ingest(catalog, root, source) for source in ("shopify", "amazon")]
 
 
-def publish(catalog, root, receipts):
-    return publish_gold_release(catalog, root / "gold", receipts, batch_date=DAY, expected_channels=("shopify", "amazon"))
+def publish(catalog, root, receipts, **kwargs):
+    return publish_gold_release(catalog, root / "gold", receipts, batch_date=DAY, expected_channels=("shopify", "amazon"), **kwargs)
 
 
 def test_publish_reads_complete_decimal_marts_from_one_snapshot(environment):
@@ -232,4 +232,114 @@ def test_contract_tampering_blocks_gold_and_keeps_pointer(environment):
     path.write_text(json.dumps(manifest), encoding="utf-8")
     with pytest.raises(ValueError, match="Delivery contract"):
         publish(catalog, root, receipts)
+    assert (root / "gold/CURRENT.json").read_bytes() == pointer
+
+
+def inventory_bundle(catalog, root, name="inventory"):
+    from pipeline.versioned_ingestion import STATE_TABLE
+    from scripts.generate_inventory_bundle import generate_bundle
+    table = catalog.load_table(STATE_TABLE)
+    path = root / name
+    generate_bundle(table.scan().to_arrow(), path, state_uuid=str(table.metadata.table_uuid),
+        snapshot_id=table.current_snapshot().snapshot_id, business_timezone="UTC",
+        period_start="2026-01-01", period_end="2026-01-03")
+    return path
+
+
+def test_inventory_artifact_is_pinned_reconciled_and_idempotent(environment):
+    catalog, root = environment
+    receipts = seed(catalog, root)
+    path = inventory_bundle(catalog, root)
+    first = publish(catalog, root, receipts, inventory_bundle=path)
+    marts, manifest = read_gold_release(root / "gold")
+    assert manifest == first and len(marts) == 5
+    assert first["quality"]["inventory"]["allocated_orders"] == 2
+    assert first["inventory"]["contract"]["is_synthetic"] is True
+    assert first["quality"]["inventory"]["incomplete_pools"] == 0
+    assert all(row["quality_status"] == "complete" for row in marts["inventory_turnover"].to_pylist())
+    pointer = (root / "gold/CURRENT.json").read_bytes()
+    assert publish(catalog, root, receipts, inventory_bundle=path) == first
+    assert (root / "gold/CURRENT.json").read_bytes() == pointer
+
+
+def test_inventory_source_tampering_blocks_new_release_but_published_copy_survives(environment):
+    catalog, root = environment
+    receipts = seed(catalog, root)
+    path = inventory_bundle(catalog, root)
+    publish(catalog, root, receipts, inventory_bundle=path)
+    pointer = (root / "gold/CURRENT.json").read_bytes()
+    (path / "scope.csv").write_bytes(b"tampered")
+    with pytest.raises(ValueError, match="checksum"):
+        publish(catalog, root, receipts, inventory_bundle=path)
+    assert (root / "gold/CURRENT.json").read_bytes() == pointer
+    assert "inventory_turnover" in read_gold_release(root / "gold")[0]
+
+
+def test_published_inventory_evidence_tampering_is_detected(environment):
+    catalog, root = environment
+    receipts = seed(catalog, root)
+    path = inventory_bundle(catalog, root)
+    release = publish(catalog, root, receipts, inventory_bundle=path)
+    copied = root / "gold/releases" / release["release_id"] / "inventory-inputs/scope.csv"
+    copied.write_bytes(b"tampered")
+    with pytest.raises(ValueError, match="Inventory evidence checksum"):
+        read_gold_release(root / "gold")
+
+
+def test_stale_inventory_snapshot_cannot_follow_source_state_changes(environment):
+    catalog, root = environment
+    receipts = seed(catalog, root)
+    path = inventory_bundle(catalog, root)
+    publish(catalog, root, receipts, inventory_bundle=path)
+    pointer = (root / "gold/CURRENT.json").read_bytes()
+    fresh = ingest(catalog, root, "amazon", updated=True)
+    with pytest.raises(ValueError, match="another state snapshot"):
+        publish(catalog, root, [receipts[0], fresh], inventory_bundle=path)
+    assert (root / "gold/CURRENT.json").read_bytes() == pointer
+
+
+@pytest.mark.parametrize("missing", [True, False])
+def test_incomplete_or_zero_inventory_is_published_with_null_ratio_and_reason(environment, missing):
+    import json
+    from pipeline.inventory import read_bundle
+    from inventory_helpers import write_bundle
+    catalog, root = environment
+    receipts = seed(catalog, root)
+    path = inventory_bundle(catalog, root)
+    meta = json.loads((path / "manifest.json").read_text())
+    contract, data, _ = read_bundle(path, state_uuid=meta["state_table_uuid"], snapshot_id=meta["state_snapshot_id"],
+                                   business_timezone="UTC", batch_date=DAY)
+    data = {name: [dict(row) for row in rows] for name, rows in data.items()}
+    if missing:
+        data["snapshots.csv"].pop(0)
+    else:
+        for row in data["snapshots.csv"]:
+            if row["sku"] == "DEMO-UNSOLD":
+                row.update(on_hand="0", inventory_value="0.00")
+    changed = write_bundle(root / "changed-inventory", contract, data)
+    release = publish(catalog, root, receipts, inventory_bundle=changed)
+    table = read_gold_release(root / "gold")[0]["inventory_turnover"]
+    row = next(row for row in table.to_pylist() if row["sku"] == "DEMO-UNSOLD")
+    assert row["turnover"] is None
+    assert row["quality_status"] == ("incomplete_daily_coverage" if missing else "zero_inventory_value")
+    assert release["quality"]["inventory"]["incomplete_pools" if missing else "zero_inventory_pools"] == 1
+
+
+def test_independent_inventory_output_gate_keeps_old_pointer_on_corrupt_metric(environment, monkeypatch):
+    import pyarrow as pa
+    from pipeline import gold_release as module
+    catalog, root = environment
+    receipts = seed(catalog, root)
+    publish(catalog, root, receipts)
+    pointer = (root / "gold/CURRENT.json").read_bytes()
+    path = inventory_bundle(catalog, root)
+    original = module.build_turnover
+    def corrupt(*args):
+        table, report = original(*args)
+        table = table.set_column(table.schema.get_field_index("turnover"), "turnover",
+            pa.array([Decimal("99.0")] * table.num_rows, pa.decimal128(38, 12)))
+        return table, report
+    monkeypatch.setattr(module, "build_turnover", corrupt)
+    with pytest.raises(ValueError, match="does not reconcile"):
+        publish(catalog, root, receipts, inventory_bundle=path)
     assert (root / "gold/CURRENT.json").read_bytes() == pointer

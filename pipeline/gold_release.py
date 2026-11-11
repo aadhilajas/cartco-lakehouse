@@ -17,6 +17,7 @@ from pyiceberg.expressions import EqualTo
 from pipeline.batch import resolve_batch_date
 from pipeline.source_contracts import SOURCES, TIMEZONE_PROPERTY, validate_contract, batch_identity, timestamp
 from pipeline.gold_quality import MARTS, build_marts
+from pipeline.inventory import FILES as INVENTORY_FILES, read_bundle, build_turnover, validate_turnover
 from pipeline.raw_batches import _write_once
 from pipeline.versioned_ingestion import STATE_TABLE
 from pipeline.order_state import ARROW_SCHEMA
@@ -100,7 +101,7 @@ def _source_evidence(catalog, state, receipt_paths, required, day):
     return current_id, receipts
 
 
-def publish_gold_release(catalog, output_root, receipt_paths, *, batch_date, expected_channels=("shopify", "amazon", "pos"), currency="INR"):
+def publish_gold_release(catalog, output_root, receipt_paths, *, batch_date, expected_channels=("shopify", "amazon", "pos"), currency="INR", inventory_bundle=None):
     root = Path(output_root).resolve()
     root.mkdir(parents=True, exist_ok=True)
     lock = root / ".publication.lock"
@@ -126,8 +127,22 @@ def publish_gold_release(catalog, output_root, receipt_paths, *, batch_date, exp
                         state_snapshot_id=snapshot_id, batch_date=day, required_sources=sorted(required),
                         source_evidence=evidence, currency=currency, business_timezone=state.properties[TIMEZONE_PROPERTY],
                         currency_basis="Persisted INR source contract or explicit migration declaration")
+        inventory_content = {}
+        if inventory_bundle is not None:
+            inventory_manifest, inventory_inputs, inventory_content = read_bundle(inventory_bundle,
+                state_uuid=str(state.metadata.table_uuid), snapshot_id=snapshot_id,
+                business_timezone=state.properties[TIMEZONE_PROPERTY], batch_date=day)
+            inventory_table, inventory_report = build_turnover(orders, inventory_manifest, inventory_inputs)
+            validate_turnover(inventory_table, inventory_inputs, inventory_manifest)
+            marts["inventory_turnover"] = inventory_table
+            quality["inventory"] = inventory_report
+            quality["mart_rows"]["inventory_turnover"] = inventory_table.num_rows
+            contract["inventory"] = dict(contract=inventory_manifest, files={name: hashlib.sha256(data).hexdigest()
+                for name, data in inventory_content.items()})
         release_id = hashlib.sha256(_json(contract)).hexdigest()
         directory = root / "releases" / release_id
+        for filename, content in inventory_content.items():
+            _write_once(directory / "inventory-inputs" / filename, content)
         artifacts = {}
         for name, table in marts.items():
             buffer = pa.BufferOutputStream()
@@ -172,7 +187,16 @@ def read_gold_release(output_root):
     if hashlib.sha256(content).hexdigest() != pointer["manifest_sha256"]:
         raise ValueError("Gold manifest checksum differs")
     manifest = json.loads(content)
-    if manifest.get("release_id") != release_id or set(manifest["artifacts"]) != {name + ".parquet" for name in MARTS}:
+    expected_artifacts = {name + ".parquet" for name in MARTS}
+    if "inventory" in manifest:
+        expected_artifacts.add("inventory_turnover.parquet")
+        expected_files = {"manifest.json", *INVENTORY_FILES}
+        if set(manifest["inventory"]["files"]) != expected_files:
+            raise ValueError("Inventory evidence file inventory differs")
+        for filename, checksum in manifest["inventory"]["files"].items():
+            if hashlib.sha256((directory / "inventory-inputs" / filename).read_bytes()).hexdigest() != checksum:
+                raise ValueError("Inventory evidence checksum differs")
+    if manifest.get("release_id") != release_id or set(manifest["artifacts"]) != expected_artifacts:
         raise ValueError("Gold release artifact inventory differs")
     tables = {}
     for filename, metadata in manifest["artifacts"].items():

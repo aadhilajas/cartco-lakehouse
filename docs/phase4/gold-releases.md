@@ -15,7 +15,10 @@ it does not switch the legacy Airflow DAG or overwrite its independent Gold tabl
 
 The legacy inventory_turnover function/table name is retained for compatibility,
 but new releases use category_unit_sales and reporting_period. Actual turnover
-requires cost-of-goods and inventory balances with matching coverage.
+requires cost-of-goods and inventory balances with matching coverage. The optional
+[standard-cost inventory path](inventory-turnover.md) now adds a fifth artifact
+with those explicitly supplied inputs, pinned to the same state snapshot.
+The legacy SQL table remains unchanged.
 
 These are latest-state retained sales under the existing canonical source status
 mapping, not accounting recognition, partial-refund history or cash-flow reporting.
@@ -110,3 +113,5 @@ uses all 120,000 records across Shopify, Amazon and POS and verifies consumer ch
 REST/MinIO, real Airflow execution, container builds and the four Docker tests
 remain unexecuted on this host. New local release files do not establish those
 checks or complete the project. No remote push, PR, CI or deployment is performed.
+
+Add `--inventory-bundle DIRECTORY` to publication for the optional inventory artifact and retained input evidence. Four-artifact releases remain readable; see the inventory guide for required coverage, provenance and cost/period definitions.

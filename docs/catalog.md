@@ -22,7 +22,11 @@ identity and customer mappings. This table is separate from legacy silver.orders
 
 Coordinated local Gold artifacts are daily_revenue, channel_performance,
 customer_360 and category_unit_sales under a checksum-verified release manifest
-and CURRENT.json. These are local Parquet release artifacts, not the legacy SQL
+and CURRENT.json. Optional inventory_turnover.parquet adds a fixed-standard-cost
+COGS/average-daily-inventory ratio with SKU/location coverage and explicit quality
+reasons. Its cost/stock CSVs and manifest are checksum-retained within the release;
+see [inventory inputs and turnover](phase4/inventory-turnover.md).
+These are local Parquet release artifacts, not the legacy SQL
 Gold tables below. See [Gold releases](phase4/gold-releases.md). Kafka and live
 REST/MinIO/Airflow integration are not established by the local proof.
 

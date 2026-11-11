@@ -16,6 +16,8 @@
 
 > **Third source:** [POS v1](docs/phase3/pos-source.md) now supports deterministic receipts, immutable ingestion and three-source Gold reconciliation. Kafka transport and Airflow activation remain pending.
 
+> **Inventory ratio:** [the standard-cost inventory guide](docs/phase4/inventory-turnover.md) adds pinned cost/stock inputs and an optional fifth Gold artifact, with explicit nulls for missing coverage or zero inventory. Fixture inputs are labelled synthetic.
+
 **One trusted source of truth for revenue across CartCo's sales channels.**
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
@@ -248,7 +250,7 @@ Planned sources (not yet implemented) and schema notes are documented in [`docs/
 - The tested versioned path uses local SQLite/Iceberg/Parquet. Docker image builds, REST/MinIO/Airflow execution and the four live integration checks remain unverified on this host.
 - Shopify, Amazon and POS have local batch adapters. Kafka transport, SFTP ingestion and versioned Airflow activation remain pending.
 - POS v1 supports single-product receipts; multi-product receipts, partial refunds and separate taxes/discounts need expanded contracts and metrics.
-- The legacy inventory_turnover table measures category unit sales. Real inventory turnover requires inventory balances, product/location coverage and COGS.
+- The legacy inventory_turnover table still measures category unit sales. The optional local inventory artifact now computes scoped fixed-standard-cost turnover; actual cost-method, physical stock/movement and expense-date accounting integrations remain pending.
 - Scheduling, independent source watermarks, operational recovery, retention, security hardening and cloud deployment remain pending.
 - Local tests and demonstrations do not establish production readiness. Follow the current phase guides; older milestone deliverables describe earlier revisions.
 

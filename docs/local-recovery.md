@@ -40,7 +40,8 @@ Compose now mounts `iceberg-catalog-data` at the pinned image user's existing
 home and sets `CATALOG_URI=jdbc:sqlite:/home/iceberg/catalog.db`. MinIO object
 files alone are insufficient to recover JDBC catalog table pointers. The pinned
 amd64 image config confirms `JdbcCatalog`, the SQLite default, and user
-`iceberg:iceberg`. This change is prepared, not live-container verified.
+`iceberg:iceberg`. The catalog served the live pipeline successfully; persistence
+across container recreation still requires the check below.
 
 **Existing installations:** preserve/export the catalog database from the old
 container writable layer before switching URI. Starting with an empty named
@@ -53,7 +54,33 @@ removing volumes, then compare through fresh catalog handles. Separately test
 coordinated recovery of the JDBC database, MinIO objects, runtime data and service
 databases. The local backup tool cannot substitute for this check.
 
-## Airflow initialization
+## Live acceptance evidence
+
+The 2026-11-11 host acceptance run passed all four live integration tests against
+REST/MinIO. The versioned DAG processed 50 records per source and replayed with
+three state snapshots, one Bronze snapshot per source and the same five-artifact
+release. Legacy DAGs retained 90,000 Shopify/Amazon rows. These executions used
+`airflow dags test`; healthy scheduler status is not evidence of scheduler
+dispatch, worker restart behavior or recovery.
+
+`scripts/check_marquez_runtime.py` independently reads the Marquez API to require
+six completed indexed stage runs with the expected orchestration identity,
+release/snapshot/count run facets, dataset versions, state schema fields and
+source-to-state-to-publication graph edges. It passed against the live backend
+with 18 graph nodes and 18 edges. It does not verify custom dataset facets or
+backend persistence across restarts. For repeat verification, provide the exact
+runtime acceptance summary and orchestration run ID:
+
+```text
+python scripts/check_marquez_runtime.py --expected <versioned-runtime.json> --orchestration-run-id <exact-run-id> --output <report.json>
+```
+
+This check is read-only, assumes the local demo namespace/storage names, and
+fails if latest indexed jobs refer to a different orchestration run. Preserve
+the report with its raw API responses for review. It does not rewrite historical
+client delivery journals to claim that every historical event was indexed.
+
+## Airflow initialization behavior
 
 The initializer now runs `airflow db migrate`, requires a valid JSON user list,
 preserves an existing user and propagates migration/list/create failures. It no
@@ -62,5 +89,7 @@ for arbitrary Airflow UID setup. Defaults remain local demo credentials; the
 script accepts `CARTCO_AIRFLOW_ADMIN_USERNAME`, `_PASSWORD` and `_EMAIL` in its
 container environment. Existing users are preserved without changing roles or
 passwords. A name match does not verify administrator privilege. No password
-argument or captured CLI output is printed on failure. Actual pinned Airflow CLI
-and container-entrypoint acceptance still require Docker.
+argument or captured CLI output is printed on failure. The initial live container
+setup exited successfully and both Airflow services became healthy. Existing-user
+restart and failure paths have function tests; repeat live initialization remains
+a separate check.

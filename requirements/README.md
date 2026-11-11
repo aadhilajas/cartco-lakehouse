@@ -13,8 +13,15 @@ python -m pip check
 ```
 
 Airflow runs on Linux in Docker, not natively on Windows. The Docker image uses
-airflow.txt and a pinned Python 3.11 base image. Other packages inherited from
-the base image are covered by its digest and checked with pip check during build.
+airflow.txt and the digest-pinned slim Airflow Python 3.11 image. The full image
+bundles unused cloud providers whose dependency bounds conflict with this lock
+(observed during the first host build). The slim image avoids those extras;
+application dependencies remain unchanged. Other inherited packages are covered
+by its digest and checked with pip check during build. Do not suppress pip check
+or install the local-file SQLAlchemy 2 lock into the Airflow image.
+The metadata database driver `psycopg2-binary==2.9.10` is now explicit in
+airflow.in and its hash-locked output; it is not inherited from an unused
+Postgres provider. No pre-existing locked versions were changed for this fix.
 APT build dependencies still use the base distribution repositories; this is
 not a bit-for-bit reproducible OS package build.
 

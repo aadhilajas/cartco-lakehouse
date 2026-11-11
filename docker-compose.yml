@@ -41,15 +41,15 @@ x-airflow-common: &airflow-common
     # failing the task -- see lineage/emitter.py's module docstring.
     OPENLINEAGE_URL: http://marquez-api:5000
     OPENLINEAGE_NAMESPACE: cartco-lakehouse
-    # apache/airflow:2.9.0 bundles apache-airflow-providers-openlineage,
+    # The full upstream image bundled apache-airflow-providers-openlineage,
     # which auto-emits its own (dataset-less) run events for every task via
     # an Airflow listener. Verified live: it produced empty
     # inputDatasetVersions/outputDatasetVersions for these BashOperator/
     # PythonOperator tasks (it has no generic extractor for arbitrary
     # scripts), duplicating the job/run rows this project's manual
     # lineage/emitter.py already emits with real dataset lineage attached.
-    # Disabled here so cartco-lakehouse has exactly one lineage source of
-    # truth instead of two overlapping, differently-populated ones.
+    # Keep disabled defensively if that provider is added to the slim image;
+    # the versioned runtime supplies the dataset-aware lineage events.
     AIRFLOW__OPENLINEAGE__DISABLED: "true"
   volumes:
     - ./dags:/opt/airflow/dags

@@ -1,6 +1,7 @@
 # Python minor version is shared with .python-version and CI.
-# Registry manifest verified 2026-11-09; application build still needs live CI.
-FROM apache/airflow:2.9.0-python3.11@sha256:72e367209f7d75fd4c9a93129f3df083feef5923b2690a52b5db205f7cd7890b
+# Slim registry manifest verified 2026-11-11; live build acceptance is pending.
+# Full image's unused cloud-provider dependencies conflict with our locked set.
+FROM apache/airflow:slim-2.9.0-python3.11@sha256:103e76e19c242adc88feb92b80b999cc6232481def05c944647f55e21898eed3
 USER root
 RUN apt-get update \
     && apt-get install -y --no-install-recommends build-essential \
@@ -11,4 +12,5 @@ COPY requirements/airflow.txt /tmp/cartco-airflow.txt
 # One resolved install; explicit Airflow pin in the lock prevents silent upgrades.
 # Unused Spark/JVM were removed: all implemented jobs use PyArrow/PyIceberg.
 RUN pip install --no-cache-dir --require-hashes -r /tmp/cartco-airflow.txt \
-    && pip check
+    && pip check \
+    && python -c "import airflow, psycopg2, pyiceberg; assert airflow.__version__ == '2.9.0'"

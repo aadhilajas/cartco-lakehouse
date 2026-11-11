@@ -21,6 +21,14 @@ for attempt in range(60):
         time.sleep(2)
 PY
 run_date=$(date -u +%Y-%m-%dT00:00:00+00:00)
+# Explicit fixtures/new-catalog permission only in the disposable CI stack.
+for pass in first replay; do
+  docker compose exec -T -e CARTCO_RUNTIME_MODE=synthetic -e CARTCO_RUNTIME_INVENTORY_MODE=synthetic \
+    -e CARTCO_RUNTIME_ALLOW_EMPTY_INIT=true -e CARTCO_RUNTIME_ROWS_PER_SOURCE=50 airflow-scheduler \
+    airflow dags test versioned_commerce_release "$run_date" 2>&1 | tee "test-results/versioned-${pass}.log"
+done
+docker compose exec -T airflow-scheduler python /opt/airflow/scripts/check_versioned_runtime.py --rows-per-source 50 \
+  | tee test-results/versioned-runtime.json
 for dag in shopify_bronze_ingestion amazon_bronze_ingestion gold_marts_ingestion; do
   docker compose exec -T airflow-scheduler airflow dags test "$dag" "$run_date" 2>&1 | tee "test-results/${dag}.log"
 done

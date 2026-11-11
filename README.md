@@ -18,6 +18,8 @@
 
 > **Inventory ratio:** [the standard-cost inventory guide](docs/phase4/inventory-turnover.md) adds pinned cost/stock inputs and an optional fifth Gold artifact, with explicit nulls for missing coverage or zero inventory. Fixture inputs are labelled synthetic.
 
+> **Airflow wiring:** [the versioned runtime guide](docs/phase5/versioned-airflow-runtime.md) defines a paused/manual three-source DAG with frozen inputs, retry-safe receipts and coordinated publication. Its exact callbacks are locally tested; real DagBag/container/scheduler acceptance remains pending.
+
 **One trusted source of truth for revenue across CartCo's sales channels.**
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
@@ -248,7 +250,7 @@ Planned sources (not yet implemented) and schema notes are documented in [`docs/
 ## Known Limitations
 
 - The tested versioned path uses local SQLite/Iceberg/Parquet. Docker image builds, REST/MinIO/Airflow execution and the four live integration checks remain unverified on this host.
-- Shopify, Amazon and POS have local batch adapters. Kafka transport, SFTP ingestion and versioned Airflow activation remain pending.
+- Shopify, Amazon and POS have local batch adapters. Kafka transport and SFTP ingestion remain pending. The versioned Airflow definition/callbacks are provided; actual DagBag and scheduler activation remain unverified.
 - POS v1 supports single-product receipts; multi-product receipts, partial refunds and separate taxes/discounts need expanded contracts and metrics.
 - The legacy inventory_turnover table still measures category unit sales. The optional local inventory artifact now computes scoped fixed-standard-cost turnover; actual cost-method, physical stock/movement and expense-date accounting integrations remain pending.
 - Scheduling, independent source watermarks, operational recovery, retention, security hardening and cloud deployment remain pending.

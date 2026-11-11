@@ -51,3 +51,5 @@ Read requirements-matrix.md, baseline.md, ../../requirements/README.md and
 ../adr/ADR-007-data-contracts-and-replay.md before interpreting test results.
 The old README/test report contains historical counts and stale scope claims;
 this folder records the current Phase 1 evidence.
+
+The new [versioned runtime guide](../phase5/versioned-airflow-runtime.md) supersedes the old three-DAG inventory for import acceptance: scripts/check_dags.py now expects four DAGs, including versioned_commerce_release. Live CI additionally exercises all three versioned sources and optional inventory before the legacy baseline. These steps are prepared locally, not executed.

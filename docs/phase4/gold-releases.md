@@ -115,3 +115,5 @@ remain unexecuted on this host. New local release files do not establish those
 checks or complete the project. No remote push, PR, CI or deployment is performed.
 
 Add `--inventory-bundle DIRECTORY` to publication for the optional inventory artifact and retained input evidence. Four-artifact releases remain readable; see the inventory guide for required coverage, provenance and cost/period definitions.
+
+The [versioned Airflow runtime](../phase5/versioned-airflow-runtime.md) now transports frozen deliveries and receipt references through a manual DAG. Runtime publication includes a per-run identity and lock-checked prior-pointer precondition; real Airflow/live-stack proof remains pending.

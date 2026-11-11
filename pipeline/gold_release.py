@@ -101,7 +101,7 @@ def _source_evidence(catalog, state, receipt_paths, required, day):
     return current_id, receipts
 
 
-def publish_gold_release(catalog, output_root, receipt_paths, *, batch_date, expected_channels=("shopify", "amazon", "pos"), currency="INR", inventory_bundle=None):
+def publish_gold_release(catalog, output_root, receipt_paths, *, batch_date, expected_channels=("shopify", "amazon", "pos"), currency="INR", inventory_bundle=None, publication_id=None, publication_precondition=None):
     root = Path(output_root).resolve()
     root.mkdir(parents=True, exist_ok=True)
     lock = root / ".publication.lock"
@@ -109,6 +109,15 @@ def publish_gold_release(catalog, output_root, receipt_paths, *, batch_date, exp
     with lock.open("x", encoding="utf-8") as stream:
         stream.write(str(os.getpid()))
     try:
+        if publication_id is not None and not re.fullmatch(r"[0-9a-f]{64}", publication_id):
+            raise ValueError("Invalid publication identity")
+        if publication_precondition is not None:
+            if not isinstance(publication_precondition, dict) or set(publication_precondition) != {"pointer_sha256"}:
+                raise ValueError("Invalid publication precondition")
+            pointer_path = root / "CURRENT.json"
+            current_hash = hashlib.sha256(pointer_path.read_bytes()).hexdigest() if pointer_path.exists() else None
+            if current_hash != publication_precondition["pointer_sha256"]:
+                raise ValueError("Gold pointer changed since this run's publication intent")
         required = set(expected_channels)
         if not required or required - SOURCES:
             raise ValueError("Declare supported required sources explicitly")
@@ -127,6 +136,8 @@ def publish_gold_release(catalog, output_root, receipt_paths, *, batch_date, exp
                         state_snapshot_id=snapshot_id, batch_date=day, required_sources=sorted(required),
                         source_evidence=evidence, currency=currency, business_timezone=state.properties[TIMEZONE_PROPERTY],
                         currency_basis="Persisted INR source contract or explicit migration declaration")
+        if publication_id is not None:
+            contract["publication_id"] = publication_id
         inventory_content = {}
         if inventory_bundle is not None:
             inventory_manifest, inventory_inputs, inventory_content = read_bundle(inventory_bundle,

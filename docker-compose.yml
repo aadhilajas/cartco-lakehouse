@@ -22,6 +22,15 @@ x-airflow-common: &airflow-common
     AIRFLOW__WEBSERVER__EXPOSE_CONFIG: "true"
     # Expose the scheduler's HTTP health endpoint on :8974 for the container healthcheck.
     AIRFLOW__SCHEDULER__ENABLE_HEALTH_CHECK: "true"
+    # New DAG is paused/manual; fixture generation and empty initialization are opt-in.
+    CARTCO_RUNTIME_MODE: "${CARTCO_RUNTIME_MODE:-delivered}"
+    CARTCO_RUNTIME_INVENTORY_MODE: "${CARTCO_RUNTIME_INVENTORY_MODE:-none}"
+    CARTCO_RUNTIME_ALLOW_EMPTY_INIT: "${CARTCO_RUNTIME_ALLOW_EMPTY_INIT:-false}"
+    CARTCO_RUNTIME_ROWS_PER_SOURCE: "${CARTCO_RUNTIME_ROWS_PER_SOURCE:-}"
+    CARTCO_RUNTIME_WORK_ROOT: "${CARTCO_RUNTIME_WORK_ROOT:-/opt/airflow/data/versioned}"
+    CARTCO_RUNTIME_INPUT_ROOT: "${CARTCO_RUNTIME_INPUT_ROOT:-/opt/airflow/data/deliveries}"
+    ICEBERG_CATALOG_URI: http://iceberg-rest:8181
+    S3_ENDPOINT: http://minio:9000
     # S3 / MinIO credentials for PyIceberg object storage.
     AWS_ACCESS_KEY_ID: minioadmin
     AWS_SECRET_ACCESS_KEY: minioadmin

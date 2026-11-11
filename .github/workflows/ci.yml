@@ -78,7 +78,7 @@ jobs:
           --entrypoint python airflow-scheduler /opt/airflow/scripts/check_dags.py
       - name: Start a fresh stack
         run: docker compose up -d
-      - name: Exercise both source DAGs, Gold, and integration tests
+      - name: Exercise versioned three-source replay, legacy DAGs and integration tests
         run: bash scripts/ci_baseline.sh
       - name: Capture stack diagnostics
         if: always()

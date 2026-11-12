@@ -150,3 +150,24 @@ The report uses simultaneous samples, not a sum of unrelated per-container
 maximums. It excludes OS memory and unsampled peaks. The first host run started
 before the sampler was added; its post-job stats alone cannot prove peak usage.
 A cached repeat with the updated runner can gather this evidence.
+
+## First live run and configuration correction
+
+Run 20261112-184728 built MinIO, Spark and Airflow images successfully, with
+pip check and both Iceberg JAR checksums passing. Nessie JDBC2 and all three
+PostgreSQL stores started; Airflow's diagnostic task succeeded. The run correctly
+failed before Spark execution because Marquez could not authenticate to its DB.
+The upstream development YAML hard-codes marquez/marquez and ignores the supplied
+POSTGRES_PASSWORD. No data reset is needed.
+
+The fix adds an explicit environment-backed Marquez configuration in a small
+derived image. Its database credentials match the already-initialized store;
+unused OpenSearch integration is disabled. To rebuild only that layer and rerun:
+
+```powershell
+& 'C:\Users\abiaf\Documents\Codex\2026-11-09\i-x20\cartco-lakehouse\scripts\Start-CartcoInfrastructure.ps1' -SkipBuild -RepairMarquez
+```
+
+Cached acceptance requires 2 GB free; full image builds require 10 GB. This retry
+also uses the updated memory sampler. The failed run is retained as diagnostic
+evidence and is not counted as Spark or complete-stack acceptance.

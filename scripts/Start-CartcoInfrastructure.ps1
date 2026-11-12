@@ -1,6 +1,7 @@
 param(
     [string]$ResultRoot = '',
-    [switch]$SkipBuild
+    [switch]$SkipBuild,
+    [switch]$RepairMarquez
 )
 $ErrorActionPreference = 'Stop'
 $repoRoot = Split-Path -Parent $PSScriptRoot
@@ -27,7 +28,10 @@ function Invoke-Docker([string]$LogName, [string[]]$DockerArgs) {
     $oldPreference = $ErrorActionPreference
     try {
         $ErrorActionPreference = 'Continue'
-        & $docker @DockerArgs 2>&1 | ForEach-Object { $_.ToString() } | Tee-Object -FilePath (Join-Path $ResultRoot $LogName)
+        & $docker @DockerArgs 2>&1 | ForEach-Object {
+            $line = if ($_ -is [System.Management.Automation.ErrorRecord]) { $_.Exception.Message } else { $_.ToString() }
+            if (-not [string]::IsNullOrWhiteSpace($line)) { $line }
+        } | Tee-Object -FilePath (Join-Path $ResultRoot $LogName)
         $code = $LASTEXITCODE
     }
     finally { $ErrorActionPreference = $oldPreference }
@@ -66,11 +70,15 @@ function Baseline-Identity {
 
 try {
     $driveInfo = [IO.DriveInfo]::new([IO.Path]::GetPathRoot($repoRoot))
-    if ($driveInfo.AvailableFreeSpace -lt 10GB) { throw 'Free at least 10 GB on the repository drive before building. Keep existing CartCo data and Docker volumes.' }
+    $requiredFree = if ($SkipBuild) { 2GB } else { 10GB }
+    if ($driveInfo.AvailableFreeSpace -lt $requiredFree) { throw 'Insufficient disk space: full builds need 10 GB; cached acceptance needs 2 GB. Keep existing CartCo data and Docker volumes.' }
     Invoke-Docker 'version.log' @('version')
     $before = Baseline-Identity
     $before | Set-Content -LiteralPath (Join-Path $ResultRoot 'baseline-before.txt')
     Invoke-Docker 'compose-config.log' ($compose + @('config', '--quiet'))
+    if ($RepairMarquez) {
+        Invoke-Docker 'marquez-config-build.log' ($compose + @('build', 'marquez-api'))
+    }
     if (-not $SkipBuild) {
         Invoke-Docker 'airflow-base-build.log' @('build', '-t', 'cartco/airflow:infra-p1-base', '-f', (Join-Path $repoRoot 'Dockerfile.airflow'), $repoRoot)
         Invoke-Docker 'build.log' ($compose + @('--profile', 'acceptance', 'build'))

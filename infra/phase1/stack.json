@@ -294,7 +294,7 @@
       ]
     },
     "marquez-api": {
-      "image": "marquezproject/marquez@sha256:0721c976cff17d8b14f7949d85d6dac9c7ea37cb9fe857caa19833730fcb1a50",
+      "image": "cartco/marquez:infra-p1",
       "mem_limit": "1024m",
       "restart": "unless-stopped",
       "environment": {
@@ -314,6 +314,10 @@
         "marquez-db": {
           "condition": "service_healthy"
         }
+      },
+      "build": {
+        "context": "../..",
+        "dockerfile": "infra/phase1/Dockerfile.marquez"
       }
     },
     "marquez-web": {

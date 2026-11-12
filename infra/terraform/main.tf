@@ -41,8 +41,9 @@ resource "docker_image" "airflow_base" {
   }
   build {
     context    = local.repo_root
-    dockerfile = local.spec["x-base-build"].dockerfile
+    dockerfile = "${local.repo_root}/${local.spec["x-base-build"].dockerfile}"
     builder    = var.buildx_builder
+    platform   = "linux/amd64"
   }
 }
 
@@ -53,13 +54,14 @@ resource "docker_image" "built" {
   triggers = {
     source = sha256(join("", concat(
       [filesha256("${local.repo_root}/${each.value.dockerfile}"), filesha256("${local.repo_root}/scripts/phase1_spark_smoke.py"), filesha256("${local.repo_root}/scripts/initialize_airflow.py")],
-      [for name in sort(tolist(fileset("${local.repo_root}/infra/phase1", "**"))) : filesha256("${local.repo_root}/infra/phase1/${name}")]
+      [for name in sort(tolist(fileset("${local.repo_root}/infra/phase1", "**"))) : filesha256("${local.repo_root}/infra/phase1/${name}") if !strcontains(name, "__pycache__/") && !endswith(name, ".pyc")]
     )))
   }
   build {
     context    = local.repo_root
-    dockerfile = each.value.dockerfile
+    dockerfile = "${local.repo_root}/${each.value.dockerfile}"
     builder    = var.buildx_builder
+    platform   = "linux/amd64"
   }
   depends_on = [docker_image.airflow_base]
 }

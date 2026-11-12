@@ -4,8 +4,8 @@ Reviewed: 2026-11-11
 Authority: user-supplied B1 assignment and 03_Deliverables_Specification.md.
 This supersedes the earlier dashboard-first plan and optional-compute/IaC assumptions.
 Implementation update, 2026-11-12: the isolated Phase 1 foundation, Terraform
-configuration and compatibility harness are prepared; live acceptance is in
-progress. See [Phase 1 evidence](../phase1-infrastructure.md). Later phases remain
+configuration and compatibility harness passed local Compose and Terraform
+apply/recreation acceptance. Hosting/account availability and ARM execution remain open. See [Phase 1 evidence](../phase1-infrastructure.md). Later phases remain
 planned, not implemented.
 
 ## Goal and scope

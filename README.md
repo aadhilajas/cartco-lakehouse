@@ -91,9 +91,10 @@ passed; four strict live integration tests passed in the Docker acceptance run.
 
 ## Phase 1 infrastructure
 
-The isolated Spark/Nessie/Terraform foundation and real compatibility harness are
-prepared. Live build/restart acceptance is in progress; it is not yet a completed
-Spark commerce pipeline. See the [runbook and evidence ledger](docs/phase1-infrastructure.md).
+The isolated Spark/Nessie foundation passed local Compose and real Terraform
+apply/recreation acceptance on 12 November 2026. All nine Spark compatibility
+checks and exact persistence comparisons passed. Hosted deployment and ARM
+execution remain unverified; commerce Spark transformations belong to later phases. See the [runbook and evidence ledger](docs/phase1-infrastructure.md).
 The original stack and retained data remain the regression baseline.
 
 ## Plan alignment and remaining boundaries

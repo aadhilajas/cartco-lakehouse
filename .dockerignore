@@ -13,3 +13,5 @@ test-results
 **/*.tfplan
 **/*.tfvars
 **/*.tfvars.json
+**/__pycache__
+**/*.pyc

@@ -1,6 +1,6 @@
 # Phase 1 infrastructure and compatibility
 
-Updated: 2026-11-12. Status: implementation prepared, live acceptance pending.
+Updated: 2026-11-12. Status: local amd64 Compose and Terraform acceptance passed; hosting/ARM pending.
 
 This foundation closes infrastructure gaps identified in the assignment review.
 It preserves the original `docker-compose.yml`, its containers, catalog, data and
@@ -74,8 +74,8 @@ terraform -chdir=infra/terraform init -backend=false
 terraform -chdir=infra/terraform fmt -check -recursive
 terraform -chdir=infra/terraform validate
 terraform -chdir=infra/terraform test
-terraform -chdir=infra/terraform plan -var='docker_host=npipe:////./pipe/dockerDesktopLinuxEngine' -var='buildx_builder=desktop-linux'
-terraform -chdir=infra/terraform apply -var='docker_host=npipe:////./pipe/dockerDesktopLinuxEngine' -var='buildx_builder=desktop-linux'
+terraform -chdir=infra/terraform plan -var='docker_host=npipe:////./pipe/dockerDesktopLinuxEngine' -var='buildx_builder=default'
+terraform -chdir=infra/terraform apply -var='docker_host=npipe:////./pipe/dockerDesktopLinuxEngine' -var='buildx_builder=default'
 ```
 
 On Linux, omit the Windows endpoint/builder arguments for the local Docker
@@ -94,8 +94,9 @@ explicit dependency health conditions. Verify service health after apply. The
 default Terraform deployment does not execute the optional Spark job. To request
 that one-shot probe, set `enable_acceptance=true`; keep its evidence volume.
 Do not use the Compose runner against Terraform-owned resources. A real Terraform
-apply, successful probe and Terraform-controlled recreation proof are still
-required before declaring that deployment path accepted. The prepared
+apply, successful probe and Terraform-controlled recreation proof passed locally
+on 12 November 2026. To repeat on a prepared Windows host, run
+`scripts/Start-CartcoTerraformValidation.ps1`; it retains logs and reuses state. The prepared
 `terraform-live` CI job provisions this path, then runs:
 
 ```bash
@@ -104,7 +105,7 @@ python scripts/phase1_terraform_acceptance.py
 
 The host validator needs Python 3.11+ (stdlib only). On Windows, pass the same
 `--docker-host npipe:////./pipe/dockerDesktopLinuxEngine` and
-`--buildx-builder desktop-linux` used for apply, plus explicit executable paths
+`--buildx-builder default` used for apply, plus explicit executable paths
 if Docker/Terraform are not on PATH. It refuses baseline project names, uses
 Terraform to recreate only the new storage/catalog containers and preserves their
 named volumes. The workflow has not run remotely yet.
@@ -120,13 +121,22 @@ named volumes. The workflow has not run remotely yet.
 - PowerShell host runner parsed successfully.
 - Image registry digests/platform manifests audited in
   [image-platforms.json](../infra/phase1/image-platforms.json).
-- Container build, real Spark queries, JDBC2 persistence/recreation, peak memory,
-  Terraform apply and ARM execution are pending until actual evidence is retained.
-
-The agent cannot access the host Docker engine from this sandbox. On 12 November,
-about 19 GB free disk was confirmed after the user freed space. Docker Desktop
-was not running; a host-side launch/run was requested. Earlier incomplete native
-dependency downloads are not treated as installed runtimes or acceptance proof.
+- Compose run `test-results/infrastructure/20261112-191429`: nine Spark checks
+  passed, followed by exact checkpoint preservation across MinIO, catalog DB and
+  Nessie recreation. Final collection and DAG imports passed; SUCCESS.txt retained.
+- Terraform run `test-results/terraform-live/20261112-193056`: real saved plan and
+  apply completed the 26-resource foundation (10 resources from the earlier
+  partial apply, 16 added on retry). Terraform then replaced all three storage/
+  catalog containers; a fresh Spark session verified the identical checkpoint.
+  All nine checks passed, DAG imports had no errors, and baseline IDs were unchanged.
+- Accepted runtime: Spark 3.5.6, Python 3.11.14, Java 17.0.21, Scala 2.12.18,
+  Iceberg 1.12.0, x86_64. The fixture has five rows totaling INR 1924.70 and three
+  retained snapshots. Table UUID, metadata location, snapshot numbers, schema,
+  partition spec, properties and row SHA-256 matched after recreation.
+- Agent independently compared both saved checkpoints, source SHA-256, all three
+  replaced IDs and baseline IDs. Host commands ran in the user's normal PowerShell
+  because the sandbox cannot access Docker's Windows named pipe.
+- ARM execution, cloud provisioning and remote CI remain unverified.
 
 ## Hosting gate
 
@@ -149,7 +159,10 @@ python scripts/summarize_infrastructure_resources.py PATH/resource-samples.jsonl
 The report uses simultaneous samples, not a sum of unrelated per-container
 maximums. It excludes OS memory and unsampled peaks. The first host run started
 before the sampler was added; its post-job stats alone cannot prove peak usage.
-A cached repeat with the updated runner can gather this evidence.
+Run 20261112-191429 retained 13 sample times (124 container records), including
+Spark creation and verification. Maximum concurrent sampled container memory was
+2,409,522,791 bytes (about 2.24 GiB). This tiny synthetic workload does not qualify
+a production workload or prove that a free VM can host the complete application.
 
 ## First live run and configuration correction
 
@@ -171,3 +184,17 @@ unused OpenSearch integration is disabled. To rebuild only that layer and rerun:
 Cached acceptance requires 2 GB free; full image builds require 10 GB. This retry
 also uses the updated memory sampler. The failed run is retained as diagnostic
 evidence and is not counted as Spark or complete-stack acceptance.
+
+The first Windows Terraform apply created isolated volumes/network, then failed
+because its named desktop-linux Buildx builder conflicted with the provider's
+host-based CLI context. Provider 3.6.2 initializes the build client with an
+explicit Docker host; the host runner now uses its default builder with the
+explicit Linux engine endpoint. Existing state/volumes are reused on retry.
+
+The subsequent retry exposed relative Dockerfile resolution from Terraform's
+working folder. All Dockerfile paths now use the absolute repository root, and
+all builds explicitly target linux/amd64. Run 20261112-193056 passed after those
+corrections; earlier failures remain retained diagnostic evidence. Windows JSON
+collection now separates progress stderr from stdout and preserves exact 64-bit
+snapshot numbers. A collection-only resume recovered the completed Compose proof
+without repeating writes or recreation.

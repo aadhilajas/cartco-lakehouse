@@ -4,8 +4,8 @@ Reviewed 2026-11-11 against the B1 text supplied by the user and the attached
 03_Deliverables_Specification.md. This assessment supersedes the earlier claim
 that the local written/implementation package closes all assessed requirements.
 The original review changed no application code. On 12 November the isolated
-Phase 1 foundation and acceptance harness were added; live validation is in
-progress. See ../phase1-infrastructure.md for the current evidence boundary.
+Phase 1 foundation passed local Compose and Terraform apply/recreation
+acceptance; hosting and ARM execution remain open. See ../phase1-infrastructure.md for the current evidence boundary.
 
 ## Technical requirements
 
@@ -21,9 +21,9 @@ progress. See ../phase1-infrastructure.md for the current evidence boundary.
 | GE output quality | Seven retained-live suites and publication gate | Carry forward and test Spark outputs |
 | Column lineage | Marquez verified 101 output-field checks | Update mappings/proof for changed stack, retain evidence |
 | Basic Grafana health dashboard | No Grafana service/panels in current stack | Add small real-data Airflow health dashboard |
-| Hive/Glue/Nessie catalog | Baseline REST/JDBC SQLite; isolated Nessie/JDBC2 foundation prepared | Prove actual Spark/Nessie/MinIO compatibility and persistence, then integrate assessed models |
+| Hive/Glue/Nessie catalog | Baseline REST/JDBC SQLite; isolated Spark/Nessie/JDBC2 compatibility and recreation accepted | Integrate assessed commerce models with the accepted catalog |
 | Description/types/ownership | Catalog Markdown exists but contains stale layout/type/currency details | Register metadata in actual catalog and regenerate truthful docs |
-| Terraform/Pulumi whole-stack IaC | Shared service specification and Terraform Docker implementation; validate and 2 mock plans pass | Complete real apply/recreation evidence; Compose live acceptance in progress |
+| Terraform/Pulumi whole-stack IaC | Shared service specification; real isolated apply and controlled recreation passed, plus 2 mock plans | Extend the spec as later required services arrive; qualify chosen hosted target |
 | Performance/open-table working depth | Existing snapshots/replay/decimal correctness proof | Demonstrate Spark explain/shuffle/broadcast, time travel, schema evolution and one bounded file/compaction example |
 | At least one stretch | Versioned delivery contracts exist | Complete schema-as-code plus real owner approval; choose this over Feast/Flink |
 | Backend deployment | Working local Compose | User requires hosted backend; local Compose remains the reproducible development path |

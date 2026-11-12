@@ -1,7 +1,7 @@
 # ADR-013: Isolated Spark and persistent Nessie foundation
 
 Date: 2026-11-12
-Status: implementation prepared; live compatibility and deployment acceptance pending
+Status: accepted for local amd64 Compose and Terraform; hosting/ARM qualification pending
 
 ## Context
 
@@ -17,14 +17,15 @@ Use a separate Spark image with Spark 3.5.6, Scala 2.12, Python 3.11 and Java 17
 Pin Iceberg 1.12.0 runtime/AWS jars with SHA-512 checksums, and keep this runtime
 separate from Airflow's hash-locked Python/SQLAlchemy environment. Use local[2]
 for bounded batch demonstrations; no standalone Spark cluster is necessary.
-Spark 3.5 supports Java 17 and Python 3.11; the specific image combination still
-requires the real acceptance run, not merely documentation compatibility.
+The specific image combination passed all nine real compatibility checks under
+both Compose and Terraform on 12 November 2026; see the infrastructure ledger.
 
-Select Nessie 0.110.0 as the first listed-catalog candidate. Store its version
+Select Nessie 0.110.0 as the locally accepted listed catalog. Store its version
 history in a dedicated PostgreSQL database through JDBC2. Spark uses Iceberg's
 NessieCatalog and S3FileIO with MinIO. Nessie's optional SQL extensions are not
 needed for this basic table path. Iceberg's packaged Nessie client version is
-0.108.8; API v2 interoperability with the selected server must be exercised.
+0.108.8; API v2 interoperability with the selected server passed the real probe
+and exact checkpoint comparison after storage/catalog container recreation.
 
 Use one JSON service specification for both Compose and Terraform. Terraform
 provisions images, network, named volumes and containers on an existing Docker

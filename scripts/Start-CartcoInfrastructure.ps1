@@ -1,10 +1,13 @@
 param(
     [string]$ResultRoot = '',
     [switch]$SkipBuild,
-    [switch]$RepairMarquez
+    [switch]$RepairMarquez,
+    [switch]$CollectOnly
 )
 $ErrorActionPreference = 'Stop'
 $repoRoot = Split-Path -Parent $PSScriptRoot
+if ($CollectOnly -and -not $ResultRoot) { throw 'CollectOnly requires the original run ResultRoot.' }
+if ($CollectOnly) { $SkipBuild = $true }
 if (-not $ResultRoot) {
     $ResultRoot = Join-Path $repoRoot ('test-results\infrastructure\' + (Get-Date -Format 'yyyyMMdd-HHmmss'))
 }
@@ -68,26 +71,55 @@ function Baseline-Identity {
     finally { $ErrorActionPreference = $oldPreference }
 }
 
+function Read-VolumeJson([string]$FileName) {
+    Write-Host ('Collecting: ' + $FileName)
+    $oldPreference = $ErrorActionPreference
+    try {
+        $ErrorActionPreference = 'Continue'
+        # Compose progress is stderr. Keep it separate from the artifact's stdout.
+        $output = & $docker @compose run --rm --no-deps --entrypoint cat spark-smoke ('/evidence/' + $FileName) 2> (Join-Path $ResultRoot ($FileName + '.stderr.log'))
+        $code = $LASTEXITCODE
+    }
+    finally { $ErrorActionPreference = $oldPreference }
+    if ($code -ne 0) { throw "Artifact copy failed: $FileName" }
+    $payload = $output -join "`n"
+    $parsed = ConvertFrom-Json -InputObject $payload
+    # Retain literal JSON integer digits; avoid a serializer round trip.
+    [IO.File]::WriteAllText((Join-Path $ResultRoot $FileName), $payload, [Text.UTF8Encoding]::new($false))
+    return $parsed
+}
+
 try {
     $driveInfo = [IO.DriveInfo]::new([IO.Path]::GetPathRoot($repoRoot))
     $requiredFree = if ($SkipBuild) { 2GB } else { 10GB }
     if ($driveInfo.AvailableFreeSpace -lt $requiredFree) { throw 'Insufficient disk space: full builds need 10 GB; cached acceptance needs 2 GB. Keep existing CartCo data and Docker volumes.' }
     Invoke-Docker 'version.log' @('version')
-    $before = Baseline-Identity
-    $before | Set-Content -LiteralPath (Join-Path $ResultRoot 'baseline-before.txt')
+    if ($CollectOnly) {
+        $before = (Get-Content -LiteralPath (Join-Path $ResultRoot 'baseline-before.txt') -Raw).TrimEnd([char[]]"`r`n")
+        $catalogBefore = @(Get-Content -LiteralPath (Join-Path $ResultRoot 'catalog-before.log') | Where-Object { $_ -match '^[0-9a-f]{64}$' })
+        $catalogAfter = @(Get-Content -LiteralPath (Join-Path $ResultRoot 'catalog-after.txt') | Where-Object { $_ -match '^[0-9a-f]{64}$' })
+        if ($catalogBefore.Count -ne 3 -or $catalogAfter.Count -ne 3 -or @($catalogAfter | Where-Object { $catalogBefore -contains $_ }).Count -ne 0) {
+            throw 'Original run has no valid three-container recreation proof.'
+        }
+    }
+    else {
+        $before = Baseline-Identity
+        $before | Set-Content -LiteralPath (Join-Path $ResultRoot 'baseline-before.txt')
+    }
     Invoke-Docker 'compose-config.log' ($compose + @('config', '--quiet'))
-    if ($RepairMarquez) {
+    if ($RepairMarquez -and -not $CollectOnly) {
         Invoke-Docker 'marquez-config-build.log' ($compose + @('build', 'marquez-api'))
     }
     if (-not $SkipBuild) {
         Invoke-Docker 'airflow-base-build.log' @('build', '-t', 'cartco/airflow:infra-p1-base', '-f', (Join-Path $repoRoot 'Dockerfile.airflow'), $repoRoot)
         Invoke-Docker 'build.log' ($compose + @('--profile', 'acceptance', 'build'))
     }
-    Invoke-Docker 'up.log' ($compose + @('up', '-d'))
+    if (-not $CollectOnly) { Invoke-Docker 'up.log' ($compose + @('up', '-d')) }
     Wait-Endpoint 'http://127.0.0.1:19120/api/v2/config' 'nessie'
     Wait-Endpoint 'http://127.0.0.1:18080/health' 'airflow'
     Wait-Endpoint 'http://127.0.0.1:15000/api/v1/namespaces' 'marquez'
-    $statsJob = Start-Job -ArgumentList $docker, (Join-Path $ResultRoot 'resource-samples.jsonl') -ScriptBlock {
+    if (-not $CollectOnly) {
+      $statsJob = Start-Job -ArgumentList $docker, (Join-Path $ResultRoot 'resource-samples.jsonl') -ScriptBlock {
         param($EnginePath, $SamplesPath)
         while ($true) {
             $samples = & $EnginePath stats --no-stream --format '{{json .}}' 2>$null
@@ -118,12 +150,14 @@ try {
     if (@($catalogAfter | Where-Object { $catalogBefore -contains $_ }).Count -ne 0) { throw 'Container recreation not proven' }
     $catalogAfter | Set-Content -LiteralPath (Join-Path $ResultRoot 'catalog-after.txt')
     Invoke-Docker 'spark-restart-verify.log' ($compose + @('run', '--rm', 'spark-smoke', '--verify'))
-    Invoke-Docker 'copy-evidence.log' ($compose + @('run', '--rm', '--no-deps', '--entrypoint', 'cat', 'spark-smoke', '/evidence/compatibility.json'))
-    Get-Content -LiteralPath (Join-Path $ResultRoot 'copy-evidence.log') -Raw | ConvertFrom-Json | ConvertTo-Json -Depth 100 |
-        Set-Content -LiteralPath (Join-Path $ResultRoot 'compatibility.json') -Encoding UTF8
-    Invoke-Docker 'copy-restart.log' ($compose + @('run', '--rm', '--no-deps', '--entrypoint', 'cat', 'spark-smoke', '/evidence/restart-verification.json'))
-    Get-Content -LiteralPath (Join-Path $ResultRoot 'copy-restart.log') -Raw | ConvertFrom-Json | ConvertTo-Json -Depth 100 |
-        Set-Content -LiteralPath (Join-Path $ResultRoot 'restart-verification.json') -Encoding UTF8
+    }
+    $created = Read-VolumeJson 'compatibility.json'
+    $verified = Read-VolumeJson 'restart-verification.json'
+    if (-not $verified.checkpoint_match -or $created.checkpoint.uuid -cne $verified.checkpoint.uuid -or $created.checkpoint.row_sha256 -cne $verified.checkpoint.row_sha256) {
+        throw 'Copied creation/restart artifacts do not match.'
+    }
+    $sourceHash = (Get-FileHash -LiteralPath (Join-Path $repoRoot 'scripts/phase1_spark_smoke.py') -Algorithm SHA256).Hash.ToLowerInvariant()
+    if ($sourceHash -cne $created.acceptance_source_sha256) { throw 'Acceptance image does not match current source.' }
     Invoke-Docker 'dag-imports.log' ($compose + @('exec', '-T', 'airflow-scheduler', 'python', '/opt/airflow/scripts/check_dags.py'))
     $after = Baseline-Identity
     $after | Set-Content -LiteralPath (Join-Path $ResultRoot 'baseline-after.txt')

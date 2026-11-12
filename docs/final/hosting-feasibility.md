@@ -51,3 +51,12 @@ ARM execution proof. See ../../infra/phase1/image-platforms.json. An ARM Marquez
 build/repack and actual testing are required before selecting Oracle A1; no
 emulation performance or full-stack fit is assumed. The x86 local compatibility
 run is independent and does not close this hosting gate.
+
+## Local measurement update, 2026-11-12
+
+Compose and Terraform both passed real amd64 Spark/MinIO/Nessie compatibility and
+storage/catalog recreation. Thirteen concurrent sample times during the Compose
+probe recorded a peak container sum of 2,409,522,791 bytes (about 2.24 GiB),
+excluding host OS/cache and unsampled peaks. The five-row fixture is compatibility
+evidence, not whole-application capacity qualification. Account, regional free
+capacity, ARM Marquez/runtime execution and secure hosted deployment remain open.

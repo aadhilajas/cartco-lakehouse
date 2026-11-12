@@ -21,7 +21,7 @@ variable "enable_acceptance" {
 }
 
 variable "buildx_builder" {
-  description = "Existing Buildx builder for this Docker host. Linux commonly uses default; Docker Desktop commonly uses desktop-linux. Must target the same engine as docker_host."
+  description = "Buildx builder for the provider Docker host. Keep default for the host-based provider client on Linux and Windows; named Docker context builders can conflict with the provider CLI context."
   type        = string
   default     = "default"
 }

@@ -3,7 +3,10 @@
 Reviewed: 2026-11-11
 Authority: user-supplied B1 assignment and 03_Deliverables_Specification.md.
 This supersedes the earlier dashboard-first plan and optional-compute/IaC assumptions.
-It is a plan review, not a claim that the missing components are implemented.
+Implementation update, 2026-11-12: the isolated Phase 1 foundation, Terraform
+configuration and compatibility harness are prepared; live acceptance is in
+progress. See [Phase 1 evidence](../phase1-infrastructure.md). Later phases remain
+planned, not implemented.
 
 ## Goal and scope
 
@@ -82,7 +85,8 @@ end. No new optional features are added after feature freeze.
 5. Keep a reproducible Compose entrypoint and select the smallest compatible hosted
    backend target after zero-budget feasibility and account availability checks. Terraform and Compose must not manage
    the same resources concurrently; isolate their names/state and share pinned
-   build/config definitions. Do not run terraform apply in this planning turn.
+   build/config definitions. Review a real Terraform plan before an isolated apply;
+   preserve the existing baseline and its volumes.
 
 Exit: Spark query + Iceberg write/read through a listed catalog work on isolated
 storage; Terraform/Compose entrypoints and hosting feasibility are verified.

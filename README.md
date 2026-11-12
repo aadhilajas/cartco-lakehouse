@@ -86,8 +86,15 @@ Use a separate environment with `requirements/file-integration.txt` for the
 real-file suite. Airflow requires SQLAlchemy 1.4; do not upgrade that environment
 to run SQLite catalog tests. Container acceptance is in `scripts/ci_baseline.sh`.
 Dependencies, Python version and image digests are pinned. Latest verification:
-278 unit tests passed (one Windows platform skip), 99 file-integration tests
+287 unit tests passed (one Windows platform skip), 99 file-integration tests
 passed; four strict live integration tests passed in the Docker acceptance run.
+
+## Phase 1 infrastructure
+
+The isolated Spark/Nessie/Terraform foundation and real compatibility harness are
+prepared. Live build/restart acceptance is in progress; it is not yet a completed
+Spark commerce pipeline. See the [runbook and evidence ledger](docs/phase1-infrastructure.md).
+The original stack and retained data remain the regression baseline.
 
 ## Plan alignment and remaining boundaries
 

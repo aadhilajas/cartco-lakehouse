@@ -3,7 +3,9 @@
 Reviewed 2026-11-11 against the B1 text supplied by the user and the attached
 03_Deliverables_Specification.md. This assessment supersedes the earlier claim
 that the local written/implementation package closes all assessed requirements.
-No application code was changed as part of this planning review.
+The original review changed no application code. On 12 November the isolated
+Phase 1 foundation and acceptance harness were added; live validation is in
+progress. See ../phase1-infrastructure.md for the current evidence boundary.
 
 ## Technical requirements
 
@@ -19,9 +21,9 @@ No application code was changed as part of this planning review.
 | GE output quality | Seven retained-live suites and publication gate | Carry forward and test Spark outputs |
 | Column lineage | Marquez verified 101 output-field checks | Update mappings/proof for changed stack, retain evidence |
 | Basic Grafana health dashboard | No Grafana service/panels in current stack | Add small real-data Airflow health dashboard |
-| Hive/Glue/Nessie catalog | Generic Iceberg REST backed by JDBC SQLite | Integrate one listed catalog and verify metadata; REST protocol alone is not that selection |
+| Hive/Glue/Nessie catalog | Baseline REST/JDBC SQLite; isolated Nessie/JDBC2 foundation prepared | Prove actual Spark/Nessie/MinIO compatibility and persistence, then integrate assessed models |
 | Description/types/ownership | Catalog Markdown exists but contains stale layout/type/currency details | Register metadata in actual catalog and regenerate truthful docs |
-| Terraform/Pulumi whole-stack IaC | Compose exists; no IaC implementation | Add local Terraform Docker provisioning and reproducible Compose entrypoint |
+| Terraform/Pulumi whole-stack IaC | Shared service specification and Terraform Docker implementation; validate and 2 mock plans pass | Complete real apply/recreation evidence; Compose live acceptance in progress |
 | Performance/open-table working depth | Existing snapshots/replay/decimal correctness proof | Demonstrate Spark explain/shuffle/broadcast, time travel, schema evolution and one bounded file/compaction example |
 | At least one stretch | Versioned delivery contracts exist | Complete schema-as-code plus real owner approval; choose this over Feast/Flink |
 | Backend deployment | Working local Compose | User requires hosted backend; local Compose remains the reproducible development path |

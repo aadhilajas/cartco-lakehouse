@@ -42,3 +42,12 @@ and no existing server. No paid account upgrade or billable overage is authorize
 
 No cloud account, VM, public endpoint or provider compatibility has been verified
 by this research. The November schedule is a target, not a hosting guarantee.
+
+## Registry audit update, 2026-11-12
+
+The pinned Marquez API and web images have amd64 manifests only. Nessie,
+PostgreSQL, Python/Airflow and MinIO build bases advertise arm64, which is not
+ARM execution proof. See ../../infra/phase1/image-platforms.json. An ARM Marquez
+build/repack and actual testing are required before selecting Oracle A1; no
+emulation performance or full-stack fit is assumed. The x86 local compatibility
+run is independent and does not close this hosting gate.

@@ -1,0 +1,66 @@
+name: Phase 1 infrastructure
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - 'infra/**'
+      - 'scripts/phase1_spark_smoke.py'
+      - 'scripts/Start-CartcoInfrastructure.ps1'
+      - 'scripts/phase1_terraform_acceptance.py'
+      - 'scripts/summarize_infrastructure_resources.py'
+      - 'Dockerfile*'
+      - 'requirements/**'
+      - '.github/workflows/infrastructure.yml'
+permissions:
+  contents: read
+jobs:
+  terraform:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.13.5
+      - run: terraform -chdir=infra/terraform fmt -check -recursive
+      - run: terraform -chdir=infra/terraform init -backend=false -input=false
+      - run: terraform -chdir=infra/terraform validate
+      - run: terraform -chdir=infra/terraform test
+      - run: docker compose -f infra/phase1/stack.json config --quiet
+  compatibility:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - name: Real Spark and persistent catalog acceptance
+        shell: pwsh
+        run: ./scripts/Start-CartcoInfrastructure.ps1 -ResultRoot ./test-results/infrastructure
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: phase1-infrastructure-evidence
+          path: test-results/infrastructure/
+          if-no-files-found: warn
+  terraform-live:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.13.5
+          terraform_wrapper: false
+      - run: terraform -chdir=infra/terraform init -backend=false -input=false
+      - name: Provision isolated Docker foundation through Terraform
+        run: |
+          mkdir -p test-results/terraform-live
+          set -o pipefail
+          terraform -chdir=infra/terraform apply -input=false -auto-approve 2>&1 | tee test-results/terraform-live/initial-apply.log
+      - name: Verify actual Spark writes and Terraform-controlled recreation
+        run: python scripts/phase1_terraform_acceptance.py
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: phase1-terraform-live-evidence
+          path: test-results/terraform-live/
+          if-no-files-found: warn

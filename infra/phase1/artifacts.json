@@ -1,0 +1,18 @@
+{
+  "iceberg_version": "1.12.0",
+  "spark_version": "3.5.6",
+  "scala_binary": "2.12",
+  "nessie_server_version": "0.110.0",
+  "jars": [
+    {
+      "name": "iceberg-spark-runtime-3.5_2.12-1.12.0.jar",
+      "url": "https://repo.maven.apache.org/maven2/org/apache/iceberg/iceberg-spark-runtime-3.5_2.12/1.12.0/iceberg-spark-runtime-3.5_2.12-1.12.0.jar",
+      "sha512": "dcf9e77768d6d635725f76c314d94eb561c2068ecd0dad6318688ee0893435a26d6705bdb5bc2fedbcaa61909eff4e8beed35eb5f743b0292125c8341c44672e"
+    },
+    {
+      "name": "iceberg-aws-bundle-1.12.0.jar",
+      "url": "https://repo.maven.apache.org/maven2/org/apache/iceberg/iceberg-aws-bundle/1.12.0/iceberg-aws-bundle-1.12.0.jar",
+      "sha512": "b01456f80142c8837004e31329a0f40db8a9d44917a4a694cb7d8d6d3a68cb20c61e6f7788fa1bdcb95c0edf724322b49667d6f9ef60fc9cc46da5c24ce5c7de"
+    }
+  ]
+}

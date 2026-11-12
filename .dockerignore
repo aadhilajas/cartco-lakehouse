@@ -8,3 +8,8 @@ work
 test-results
 .env
 .env.*
+**/.terraform
+**/*.tfstate*
+**/*.tfplan
+**/*.tfvars
+**/*.tfvars.json

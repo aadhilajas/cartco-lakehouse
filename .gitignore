@@ -235,3 +235,13 @@ airflow/logs/
 .venv/
 .venv-*/
 work/
+
+# Terraform providers/state/plans; commit the provider lock file.
+**/.terraform/
+*.tfstate
+*.tfstate.*
+*.tfplan
+*.tfvars
+*.tfvars.json
+crash.log
+crash.*.log

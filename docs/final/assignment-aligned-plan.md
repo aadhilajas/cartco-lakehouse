@@ -1,12 +1,18 @@
 # CartCo revised assignment-aligned completion plan
 
-Reviewed: 2026-11-11
+Original review: 2026-11-11; scope/status reconciliation: 2026-11-13
 Authority: user-supplied B1 assignment and 03_Deliverables_Specification.md.
 This supersedes the earlier dashboard-first plan and optional-compute/IaC assumptions.
 Implementation update, 2026-11-12: the isolated Phase 1 foundation, Terraform
 configuration and compatibility harness passed local Compose and Terraform
-apply/recreation acceptance. Hosting/account availability and ARM execution remain open. See [Phase 1 evidence](../phase1-infrastructure.md). Later phases remain
-planned, not implemented.
+apply/recreation acceptance. Hosting/account availability and ARM execution remain open. See [Phase 1 evidence](../phase1-infrastructure.md). The project advanced beyond this checkpoint on 13 November; the current
+implementation and acceptance ledger is [local completion](../local-completion-checklist.md).
+Native protocol/Spark/quality/lineage/browser checks are verified; expanded
+scheduled-container, recovery and hosted checks retain separate pending gates.
+
+Latest user direction: complete project work locally, then guide manual GitHub
+integration and hosting. Do not publish automatically. Personal resume/interview
+materials are excluded from this project scope.
 
 ## Goal and scope
 
@@ -27,9 +33,8 @@ User clarification, 2026-11-11:
 - Viva: 1 December 2026. The user did not finish in the original submission window;
   this is a truthful completion/preparation effort for the viva, not a backdated
   on-time submission.
-- Reviewed code and the dashboard may be published when ready. This supersedes
-  the earlier local-only restriction. Nothing has been published under this new
-  permission yet. Budget is zero and no existing server/account resource is available. No paid
+- The latest user instruction defers publication to a manual walkthrough after
+  local completion. Nothing has been published. Budget is zero and no existing server/account resource is available. No paid
   resources, paid upgrades or billable overages are authorized.
 
 Use all four bounded synthetic connectors. Kafka is a finite microbatch connector;

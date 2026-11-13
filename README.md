@@ -1,5 +1,163 @@
 # CartCo Unified Commerce Lakehouse
 
+> Current project update, 13 November 2026: the assessed implementation adds all
+> four local protocol connectors and actual Spark/Iceberg/Nessie commerce compute.
+> Native protocol, catalog, exact reconciliation/GE, backend lineage and dashboard
+> browser checks passed. The expanded Airflow/Grafana container acceptance is the
+> next host-side check. Hosting and remote CI have not been claimed complete.
+
+**Commerce, reconciled.** A synthetic data platform that makes business results
+traceable from source delivery to a coherent, validated Iceberg release.
+
+## Demo and business problem
+
+Different source systems describe orders, versions, statuses and inventory in
+different ways. CartCo preserves the original evidence, applies explicit source
+contracts, and publishes one reconciled release instead of mixing independently
+changing marts. The sample is deliberately synthetic; no seller accounts or
+customer data are required.
+
+The new React dashboard has Business, Engineering and Lineage views. It uses the
+actual privacy-safe release export, exact INR cents, date/channel filters and
+visible unavailable/stale states. Refresh reads published data; it cannot run
+the pipeline. The verified local sample has seven completed orders and INR
+921.75 in completed sales. It is a historical fixture, not live merchant revenue.
+
+After local acceptance, open http://127.0.0.1:18100. There is no verified public
+deployment URL yet. See the [project runbook](docs/assessed-runbook.md) and
+[current worklist](docs/local-completion-checklist.md).
+
+![Verified local dashboard using the actual synthetic release](docs/assets/dashboard-business.png)
+
+## Assessed architecture and stack
+
+```mermaid
+flowchart LR
+  A[Shopify GraphQL + Amazon Orders/OrderItems] --> B[Durable raw evidence + date-partitioned Bronze]
+  K[Kafka POS microbatch] --> B
+  I[Verified SFTP inventory] --> B
+  B --> S[Spark canonical state + source-version windows]
+  S --> G[Spark Gold aggregates + cost/stock joins]
+  G --> Q[Independent exact reconciliation + seven GE suites]
+  Q --> R[Immutable Iceberg Gold tables + atomic release pointer]
+  R --> E[Safe snapshot export]
+  E --> W[Read-only API + React dashboard]
+  G --> L[OpenLineage + Marquez column verification]
+  F[Airflow scheduled task records] --> O[Read-only PG health view + Grafana]
+```
+
+| Component | Choice | Purpose |
+|---|---|---|
+| Compute | Spark 3.5.6, Python 3.11, Java 17 | Real DataFrames, windows, joins and batch SQL |
+| Table/catalog | Iceberg 1.12.0, Nessie 0.110.0/JDBC2 | Typed, versioned tables with persistent catalog history |
+| Storage | MinIO | S3-compatible object storage on named volumes |
+| Sources | Synthetic GraphQL/SP-API, Kafka, SSH/SFTP | Bounded real protocol behavior and raw preservation |
+| Orchestration | Airflow 2.9.0 | Four meaningful assessed DAGs, retries and readiness sensor |
+| Quality | Exact reference reconciliation + GE 0.18.19 | Persisted output gates before publication |
+| Lineage | OpenLineage/Marquez | Actual backend schema and column-derivation verification |
+| Operations | Grafana + read-only PostgreSQL view | Real DAG states, counts and timing |
+| Serving | React 19.3.1/Vite 8.3.8 + stdlib read-only API | Coherent synthetic release dashboard |
+| IaC | Terraform 1.13.5, Docker provider 3.6.2 | Shared isolated service specification and protected volumes |
+
+Airflow and Spark use separate Python environments. The assessed task container
+has a bounded local Spark runtime; it has no mounted Docker socket. Only one
+heavy task runs at once. Source and data/admin services stay private; published
+host ports bind loopback.
+
+[C4 Container SVG](docs/architecture/assessed-containers.svg) ·
+[C4 Component SVG](docs/architecture/assessed-components.svg) ·
+[Architecture narrative](docs/architecture/assessed-narrative.md)
+
+## Prerequisites, install and run
+
+Use Git, Python 3.11+, a running Linux Docker engine/Compose, sufficient RAM and
+at least 8 GiB free build space. Dependencies, image digests and jar checksums
+are locked. A cold clone-to-run time below 15 minutes is a target requiring a
+measured run, not an asserted result.
+
+```bash
+git clone https://github.com/aadhilajas/cartco-lakehouse.git
+cd cartco-lakehouse
+# Select the actual reviewed branch/commit after manual GitHub integration.
+python scripts/run_assessed_stack.py
+```
+
+On Windows, use normal PowerShell and
+`& .\scripts\Start-CartcoAssessedStack.ps1`. Full logs are retained in
+`test-results/assessed/`. The script checks actual scheduled DAGs, Grafana and the
+dashboard. It preserves the original baseline and prior Phase 1 volumes. A
+`SUCCESS.txt` is produced only for a completed acceptance run.
+
+The [runbook](docs/assessed-runbook.md) lists ports, fixture credentials, repeat
+runs, Terraform isolation and preservation rules. Do not delete volumes or reset
+Kafka offsets to repair a failed run.
+
+## Test
+
+```bash
+python -m pip install --require-hashes -r requirements/test.txt
+python -m pytest tests/unit
+npm --prefix dashboard ci
+npm --prefix dashboard test
+npm --prefix dashboard run build
+```
+
+Real Spark/reference tests are under `tests/spark` and require the separate
+locked Spark dependencies and Java 17. Live scheduled-stack tests use the host
+runner. The prepared assessed GitHub workflow covers dashboard, Spark reference
+and the actual scheduled container path; it has not run remotely yet.
+
+Current evidence is scoped: 296 unit tests passed with one Windows FIFO skip;
+three native Spark comparisons passed; the real protocol and catalogued candidate
+passed exact/GE gates. Backend Marquez checks verified 44 schema fields and 34
+nonconstant derivations. The browser checked filters, mobile layout, failed-refresh
+retention and read-only routes. New ratio-edge, expanded container, recovery and
+remote checks must pass separately before those claims are added.
+
+## Data and contracts
+
+The frozen demonstration date is 12 November 2026. Shopify and Amazon each
+deliver three bounded single-line orders. POS contributes duplicate, late,
+updated and deleted events across two Kafka partitions. SFTP contributes daily
+stock and fixed standard cost for eight source-qualified SKU/location pools.
+Raw evidence, broker offsets and source/batch IDs stay traceable.
+
+Silver keeps channel-qualified keys, exact decimal INR, canonical business dates,
+source versions and tombstones. Five catalogued Gold outputs cover daily revenue,
+channel performance, customer 360, inventory turnover and retained category unit
+sales. Inventory uses actual declared cost/stock; customer matching is not
+fabricated across channels. Public exports omit customer IDs and raw/private data.
+See [protocol contracts](docs/protocol-connectors.md).
+
+## Decisions, limitations and roadmap
+
+See [ADR-013](docs/adr/ADR-013-spark-nessie-infrastructure.md),
+[ADR-014](docs/adr/ADR-014-bounded-protocol-ingestion.md) and
+[ADR-015](docs/adr/ADR-015-spark-state-and-release-publication.md), alongside the
+preserved earlier ADRs.
+
+This is a bounded synthetic project, not production merchant onboarding, HA or
+sub-second streaming. The pinned Marquez images are amd64-only; an ARM host needs
+separate qualification. Free account/capacity and secure hosted operation remain
+open. No paid resources or fabricated public links are included.
+
+Finish the [local checklist](docs/local-completion-checklist.md), then follow
+[manual GitHub integration](docs/manual-github-integration.md) and
+[manual hosting](docs/manual-hosting.md). Personal resume/interview work is outside
+the user's current requested scope. New work keeps its genuine November dates.
+
+## License and acknowledgements
+
+MIT; see [LICENSE](LICENSE). Built by Aadhil A Kareem for Problem B1, Data Platform
+& Pipeline Engineering. The repository acknowledges the open-source projects
+listed in the stack and links primary protocol documentation in the runbook.
+
+## Preserved baseline documentation
+
+The sections below describe the earlier PyArrow/PyIceberg application and its
+historical evidence. It remains a regression reference. It is not the new
+assessed Spark entrypoint described above.
+
 > Assignment alignment review, 2026-11-11: the verified implementation below is
 > not yet the complete assessed B1 stack. Spark batch compute, local IaC, basic
 > Grafana and a listed catalog are now confirmed requirements. See the

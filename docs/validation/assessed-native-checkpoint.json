@@ -1,0 +1,94 @@
+{
+  "scope": "Retained native acceptance evidence; not expanded scheduled-container or hosting acceptance",
+  "fixture_date": "2026-11-12",
+  "candidate_release": "r71096df55eda4c8297ab35958bf80e7c",
+  "candidate_computed_at": "2026-11-12T14:48:13.781374+00:00",
+  "candidate_artifact": {
+    "file": "candidate.json",
+    "sha256": "525f9cbf2356ddf26393714e50799df5370299bc7cb10312ae9d071f431592cb"
+  },
+  "candidate_has_current_source_bundle_fence": false,
+  "tests": {
+    "unit": {
+      "file": "assessed-unit.xml",
+      "sha256": "84f56d6521c375bcd7c58520895fe14457f4c4e1159995e10dc4ecfc11098134",
+      "tests": 297,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 1
+    },
+    "spark_reference": {
+      "file": "spark-commerce.xml",
+      "sha256": "46b6a7522efd5e3dab2750e9c4c87749866cee81a2d3474a7098df9889aefe54",
+      "tests": 3,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "spark_exact_inventory_edge": {
+      "file": "spark-inventory-edge.xml",
+      "sha256": "08e1ddf5db47612e501c90604a18248dfa436a8894e3a604d2c065cda1b8de0c",
+      "tests": 1,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    }
+  },
+  "protocols": {
+    "sources": [
+      "amazon",
+      "pos",
+      "sftp",
+      "shopify"
+    ],
+    "kafka": {
+      "broker": "127.0.0.1:49692",
+      "missing_landing_refused": true,
+      "offsets_committed_after_landing": true,
+      "partitions": 2,
+      "records": 6,
+      "replay_identical": true,
+      "resume_receipt_verified": true,
+      "topic": "cartco-pos-acceptance-d13ea55aec9b48d8821f6620f0c0a86b"
+    },
+    "artifact": {
+      "file": "protocol-acceptance.json",
+      "sha256": "784a2b079869ddb20bea043e2466221d9f24b44e33f12f2d83f315edf16f4bf2"
+    }
+  },
+  "quality_failure_retention": {
+    "reconciliation_rejected": true,
+    "actual_ge_failure_rejected": true,
+    "prior_release_pointer_preserved": true,
+    "bad_export_kept_valid_snapshot": true
+  },
+  "lineage": {
+    "verified_at": "2026-11-12T15:00:12.951788+00:00",
+    "fields": 44,
+    "nonconstant_derivations": 34,
+    "artifact": {
+      "file": "lineage.json",
+      "sha256": "3da7aaac5085d49390eb2adaca8b0124688954befcdcfdbae88ddf8c7666acb7"
+    }
+  },
+  "browser": {
+    "business_total_inr": "921.75",
+    "shopify_filter_inr": "301.50",
+    "quality_suites": 7,
+    "lineage_fields": 44,
+    "mobile_no_page_overflow": true,
+    "bad_refresh_retains_snapshot": true,
+    "write_endpoint_refused": true,
+    "traversal_refused": true,
+    "browser_errors": []
+  },
+  "pending": [
+    "Expanded Compose scheduled DAG and Grafana live acceptance",
+    "Expanded Terraform live acceptance",
+    "Recreation/replay and compaction for expanded stack",
+    "Coordinated backup and separate restore",
+    "ARM qualification",
+    "Public HTTPS backend/dashboard",
+    "Remote GitHub CI"
+  ]
+}

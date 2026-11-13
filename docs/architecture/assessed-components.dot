@@ -1,0 +1,29 @@
+digraph CartCoComponents {
+  graph [label="CartCo · C4 Component view\nAssessed ingestion, computation and publication boundary", labelloc=t, fontsize=22, fontname="Arial", rankdir=TB, bgcolor="#fafbf7", pad=0.35, nodesep=0.4, ranksep=0.65];
+  node [shape=box, style="rounded,filled", fontname="Arial", fontsize=11, color="#81977c", fillcolor="#edf3e8", margin=0.16];
+  edge [fontname="Arial", fontsize=9, color="#75866b", arrowsize=0.7];
+  api [label="GraphQL / SP-API clients\nPagination, windows, bounded retry"];
+  pos [label="Kafka POS consumer\nFinite offsets; no auto-commit"];
+  stock [label="SFTP inventory client\nHost key, size/hash, completion marker"];
+  raw [label="Immutable raw landing\nOriginal bytes + accepted contracts\nSHA-256 identities / durable receipts", shape=cylinder];
+  bronze [label="Spark Bronze append\nNew ingestion-date partitions\nWire objects + source-shaped records"];
+  normalize [label="Spark canonical normalization\nExact INR, business dates, statuses\nSource-qualified order/customer keys"];
+  state [label="Spark source-version window\nConflict refusal / stable replay\nRetained tombstones / state UUID fence"];
+  gold [label="Spark Gold aggregates and joins\nRevenue / channel / customer / category\nFixed-cost + daily-stock turnover"];
+  reference [label="Independent reference oracle\nExisting Python/PyArrow semantics", fillcolor="#f9eddd"];
+  candidate [label="Immutable Gold candidate\nNessie table UUIDs / snapshot identities"];
+  gate [label="Exact reconciliation + seven GE suites\nPersist failures; refuse publication", fillcolor="#264a34", fontcolor=white];
+  pointer [label="Coherent release publisher\nImmutable manifest + atomic CURRENT", shape=cylinder];
+  lineage [label="Column lineage verifier\nEmit actual field dependencies\nRead Marquez backend graph/schema"];
+  export [label="Atomic public snapshot exporter\nNo raw/customer IDs/credentials\nExact decimal strings + timestamps"];
+  serving [label="Read-only API + React views\nBusiness / Engineering / Lineage\nInvalid refresh keeps last valid snapshot"];
+  api -> raw; pos -> raw; stock -> raw;
+  raw -> pos [label="Acknowledge before offset commit", style=dashed];
+  raw -> bronze;
+  bronze -> normalize -> state -> gold -> candidate -> gate;
+  bronze -> gold [label="Typed inventory observations"];
+  reference -> gate [label="Compare, not hidden main compute", style=dashed];
+  gate -> pointer [label="Only after success"];
+  pointer -> lineage -> export -> serving;
+  gate -> raw [label="Failure report; prior pointer retained", style=dashed];
+}

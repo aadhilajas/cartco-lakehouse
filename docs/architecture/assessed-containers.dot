@@ -1,0 +1,40 @@
+digraph CartCoContainers {
+  graph [label="CartCo · C4 Container view\nAssessed deployment specification; see acceptance ledger for verified status", labelloc=t, fontsize=22, fontname="Arial", rankdir=LR, bgcolor="#fafbf7", pad=0.4, nodesep=0.4, ranksep=0.8];
+  node [shape=box, style="rounded,filled", color="#81977c", fillcolor="#edf3e8", fontname="Arial", fontsize=11, margin=0.18];
+  edge [fontname="Arial", fontsize=9, color="#75866b", arrowsize=0.7];
+  operator [label="Project operator\n[Person]", shape=ellipse, fillcolor="#f9eddd"];
+  browser [label="Dashboard visitor\n[Web browser]", shape=ellipse, fillcolor="#f9eddd"];
+  subgraph cluster_host {
+    label="One isolated Linux Docker host · cartco-assessed"; color="#c9d5c2"; style=rounded; fontname="Arial";
+    sources [label="Synthetic source API\n[Container: Python HTTP]\nGraphQL + Orders/OrderItems"];
+    kafka [label="POS event broker\n[Container: Apache Kafka]\nFinite partition high-water marks"];
+    sftp [label="Completed inventory delivery\n[Container: SSH/SFTP]\nPinned host key + ready marker"];
+    airflow [label="Airflow web\n[Container: Python]\nPrivate operator controls"];
+    worker [label="Airflow scheduler / task workers\n[Container: Python + Java 17]\nSeparate Spark virtual environment\nContracts, Spark, exact/GE gate, lineage", fillcolor="#264a34", fontcolor=white, color="#264a34"];
+    afdb [label="Airflow metadata\n[Container: PostgreSQL]\nReal DAG/task run records"];
+    nessie [label="Nessie catalog API\n[Container: Java]\nJDBC2 persistent version history"];
+    catalogdb [label="Catalog metadata\n[Container: PostgreSQL]\nDedicated persistent store"];
+    minio [label="MinIO object store\n[Container: Go]\nIceberg metadata / Parquet / raw bytes"];
+    runtime [label="Runtime / publication volume\n[Persistent filesystem]\nRaw landing, checkpoint receipts,\ncandidates, CURRENT, public snapshot", shape=cylinder];
+    marquez [label="Marquez API / UI\n[Containers: Java / web]\nSchema and column derivations"];
+    marqdb [label="Lineage metadata\n[Container: PostgreSQL]"];
+    grafana [label="Grafana health dashboard\n[Container: Grafana]\nPrivate read-only operations view"];
+    dashboard [label="Public dashboard / snapshot API\n[Container: React assets + Python]\nGET / HEAD only; no job trigger"];
+  }
+  operator -> airflow [label="Authenticated private UI"];
+  operator -> grafana [label="Authenticated private UI"];
+  airflow -> afdb [label="SQL"];
+  worker -> afdb [label="Run/task state"];
+  worker -> sources [label="Paginated HTTP", dir=both];
+  worker -> kafka [label="Poll, durable landing, commit", dir=both];
+  worker -> sftp [label="Verified SSH / SFTP", dir=both];
+  worker -> nessie [label="Catalog API v2"];
+  nessie -> catalogdb [label="JDBC2"];
+  worker -> minio [label="S3FileIO"];
+  worker -> runtime [label="Durable writes / atomic pointer"];
+  worker -> marquez [label="OpenLineage + backend verification"];
+  marquez -> marqdb [label="SQL"];
+  grafana -> afdb [label="SELECT minimal health view only", color="#b18a54"];
+  dashboard -> runtime [label="Read-only snapshot mount"];
+  browser -> dashboard [label="Read-only HTTPS at deployment"];
+}

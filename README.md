@@ -2,9 +2,10 @@
 
 > Current project update, 13 November 2026: the assessed implementation adds all
 > four local protocol connectors and actual Spark/Iceberg/Nessie commerce compute.
-> Native protocol, catalog, exact reconciliation/GE, backend lineage and dashboard
-> browser checks passed. The expanded Airflow/Grafana container acceptance is the
-> next host-side check. Hosting and remote CI have not been claimed complete.
+> Native protocol, Spark/reference and dashboard browser checks passed. Expanded
+> Airflow/GE/Marquez/Grafana Compose acceptance also passed, including exact
+> recreation, replay and Iceberg compaction. Recovery, expanded Terraform, hosting
+> and remote CI retain their own acceptance gates.
 
 **Commerce, reconciled.** A synthetic data platform that makes business results
 traceable from source delivery to a coherent, validated Iceberg release.
@@ -27,7 +28,10 @@ After local acceptance, open http://127.0.0.1:18100. There is no verified public
 deployment URL yet. See the [project runbook](docs/assessed-runbook.md) and
 [current worklist](docs/local-completion-checklist.md).
 
-![Verified local dashboard using the actual synthetic release](docs/assets/dashboard-business.png)
+![Actual browser demonstration of the accepted synthetic release](docs/assets/demo.gif)
+
+[Static dashboard screenshot](docs/assets/dashboard-business.png) ·
+[Demo provenance and limits](docs/presence_artifact.md)
 
 ## Assessed architecture and stack
 

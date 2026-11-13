@@ -7,7 +7,7 @@ and hosting. Publication is deferred to that manual walkthrough.
 - [x] Isolated Spark/Iceberg/Nessie compatibility and Compose/Terraform recreation.
 - [x] Four bounded protocol connectors, immutable evidence and failure/replay proof.
 - [x] Actual Spark Silver/Gold, date-partitioned Bronze and catalog metadata (native runtime).
-- [ ] Meaningful DAGs, DQ/lineage integration and Grafana health panels.
+- [x] Meaningful DAGs, DQ/lineage integration and Grafana health panels (real Compose run).
 - [x] Coherent snapshot exporter and locally built/tested dashboard.
 - [ ] Local deployment/recovery/acceptance runner and retained results.
 - [x] Current README, diagrams, ADRs and project walkthrough/postmortem (verification limits explicit).
@@ -58,3 +58,20 @@ The repeating-decimal inventory regression passed in actual Spark (including
 acceptance against stale code. The recreated-catalog and coordinated cold restore
 checks are implemented and await host execution. Native compaction was interrupted
 by unavailable local catalog service; no successful compaction result is claimed.
+
+Expanded Compose acceptance passed in `test-results/assessed/20261113-203545`.
+All four DAGs succeeded; the actual Spark task took 39.26 seconds on this tiny
+fixture. Grafana queried real records and its limited role refused raw conf and
+writes. Catalog recreation and immutable-input replay retained exact identities
+and rows. Compaction reduced five files to two with an unchanged row hash; time
+travel, additive/incompatible evolution and date-file pruning passed. The browser
+suite passed again using this real Airflow-produced snapshot. See
+`validation/assessed-compose-checkpoint.json`. Recovery and expanded live Terraform
+remain pending until their separate host runs complete.
+
+Coordinated cold recovery passed in
+`test-results/assessed-recovery/20261113-205004`. Eight active volume archives
+were checksum-verified and restored into a distinct recovery project. The same
+public snapshot, all table identities and exact Silver/Gold rows matched, then
+the original assessed services restarted. Archives and restored copies remain.
+The inactive optional smoke volume is not part of the active state.

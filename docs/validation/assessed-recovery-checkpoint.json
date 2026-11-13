@@ -1,0 +1,70 @@
+{
+  "evidence_directory": "test-results/assessed-recovery/20261113-205004",
+  "success_marker": "Coordinated cold backup restored into separate volumes; published snapshot, catalog identities and exact rows verified; original service availability restored.",
+  "method": "coordinated cold volume archive",
+  "recovery_project": "cartco-assessed-recovery-20261113152004",
+  "active_volumes": 8,
+  "archives": {
+    "airflow-data": {
+      "source": "cartco-assessed_airflow-data",
+      "archive": "airflow-data.tar.gz",
+      "bytes": 7000804,
+      "payload_bytes": 55099000,
+      "sha256": "c13f9f7079f621fe184909f1dc6e431d940ef779e8c63b013a62210fb83f6c16"
+    },
+    "airflow-logs": {
+      "source": "cartco-assessed_airflow-logs",
+      "archive": "airflow-logs.tar.gz",
+      "bytes": 30858,
+      "payload_bytes": 471398,
+      "sha256": "19e9541647b025e5c466c1c4ca41a899b45ad17442c4bbbeb23f754a6e00b99e"
+    },
+    "assessed-runtime": {
+      "source": "cartco-assessed_assessed-runtime",
+      "archive": "assessed-runtime.tar.gz",
+      "bytes": 60101,
+      "payload_bytes": 1018984,
+      "sha256": "2a97c4dd8346ea7e8a0c29336c1e948fafab39299de22d26e05f2b9e17655d8f"
+    },
+    "grafana-data": {
+      "source": "cartco-assessed_grafana-data",
+      "archive": "grafana-data.tar.gz",
+      "bytes": 63105789,
+      "payload_bytes": 183928664,
+      "sha256": "25d87373c826cc26bbbbb2807f931b4b37637cad80f3df16904858d5ce1f6ae2"
+    },
+    "kafka-data": {
+      "source": "cartco-assessed_kafka-data",
+      "archive": "kafka-data.tar.gz",
+      "bytes": 28099,
+      "payload_bytes": 95263,
+      "sha256": "0c91601a457086492093b79a4e6d8e002491452f99433fe4d04bcb671e3bbed3"
+    },
+    "marquez-data": {
+      "source": "cartco-assessed_marquez-data",
+      "archive": "marquez-data.tar.gz",
+      "bytes": 7347620,
+      "payload_bytes": 55313524,
+      "sha256": "86ce24ca81e8265125b909549731853568fb3117e0cf4c2c2df2581ac5c377f6"
+    },
+    "nessie-data": {
+      "source": "cartco-assessed_nessie-data",
+      "archive": "nessie-data.tar.gz",
+      "bytes": 6372377,
+      "payload_bytes": 52591531,
+      "sha256": "b7c34cb5f11a26cf0a388236859a26f743b2df2746e930c36ba1e6af5d58ebe1"
+    },
+    "objects-data": {
+      "source": "cartco-assessed_objects-data",
+      "archive": "objects-data.tar.gz",
+      "bytes": 111898,
+      "payload_bytes": 514955,
+      "sha256": "f43a637e8023349609c280ccab7e945697e7ed3026ee60450d355eb4bf859a7b"
+    }
+  },
+  "exact_publication_and_table_identities": true,
+  "exact_silver_and_gold_rows": true,
+  "original_assessed_stack_restarted": true,
+  "archives_and_restored_volumes_retained": true,
+  "failed_preflight_retained": "test-results/assessed-recovery/20261113-204717"
+}

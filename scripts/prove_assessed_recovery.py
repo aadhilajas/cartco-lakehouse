@@ -10,6 +10,7 @@ import json
 from pathlib import Path
 import shutil
 import subprocess
+import tarfile
 import time
 from urllib.request import urlopen
 
@@ -53,7 +54,12 @@ def main():
     if not accepted.get("quality", {}).get("success") or accepted.get("lineage_transport", {}).get("status") != "verified":
         raise ValueError("Recovery requires a previously quality/lineage-verified publication")
     run(source + verifier, "original-catalog.log")
-    names = json.loads(spec.read_text())["volumes"]
+    specification = json.loads(spec.read_text())
+    # Compose does not create volumes used only by an inactive optional profile.
+    # Every volume used by an active service is mandatory; missing ones fail.
+    names = sorted({mount.split(":")[0]
+                    for service in specification["services"].values() if not service.get("profiles")
+                    for mount in service.get("volumes", [])})
     volumes = {}
     for key in names:
         name = "cartco-assessed_" + key
@@ -80,10 +86,12 @@ def main():
                     "-v", name + ":/volume:ro", helper, "-c", code], stdout=stream, stderr=errors, check=True)
             with archive.open("rb") as stream:
                 checksum = hashlib.file_digest(stream, "sha256").hexdigest()
+            with tarfile.open(archive, "r:gz") as contents:
+                payload_bytes = sum(member.size for member in contents if member.isfile())
             manifest["volumes"][key] = {"source": name, "archive": archive.name,
-                "bytes": archive.stat().st_size, "sha256": checksum}
+                "bytes": archive.stat().st_size, "payload_bytes": payload_bytes, "sha256": checksum}
         (output / "backup-manifest.json").write_text(json.dumps(manifest, indent=2), encoding="utf-8")
-        if shutil.disk_usage(output).free < sum(item["bytes"] for item in manifest["volumes"].values()) * 3 + 1024**3:
+        if shutil.disk_usage(output).free < sum(item["payload_bytes"] for item in manifest["volumes"].values()) + 1024**3:
             raise RuntimeError("Insufficient recovery headroom; archives and original volumes retained")
         # Create empty labelled volumes directly: creating service containers
         # first could copy image defaults into these destinations.

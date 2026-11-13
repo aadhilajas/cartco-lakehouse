@@ -71,8 +71,30 @@ heavy work. The tiny earlier memory sample is not a full-stack sizing guarantee.
 ## What remains a boundary
 
 The original baseline remains preserved. A prepared container specification,
-diagram or workflow is not runtime acceptance. Expanded scheduled DAG/Grafana,
+diagram or workflow is not runtime acceptance. Expanded scheduled DAG/Grafana acceptance has now passed; separate
 coordinated recovery, hosted architecture, account capacity and remote CI must
 each have their own actual evidence. No free-host promise, fake public URL,
 merchant onboarding or retrospective on-time submission claim follows from a
 successful local compatibility probe.
+
+## Recovery preflight correction
+
+The first cold recovery preflight assumed every declared Compose volume exists.
+The optional smoke profile's evidence volume had never been created. The command
+failed before stopping services or modifying data. Recovery now requires every
+volume mounted by the active services and excludes inactive-profile-only volumes.
+It still refuses missing active volumes. The rerun uses a new evidence directory;
+the failed preflight is retained rather than reported as a successful recovery.
+
+## Terraform reconciliation and Airflow sessions
+
+During the first expanded Terraform acceptance, source updates between the
+initial and recreation plans caused image rebuilds and Airflow web replacement
+in addition to the requested storage replacements. Exact persisted data survived,
+but the host runner reused a session cookie signed by the previous webserver and
+received HTTP 401 before replay. It now waits for Airflow health and signs in
+again after recreation. Deployment sources stay fixed during the final run.
+Docker's implicit total RAM/swap value also produced repeated null-versus-2x-RAM
+plan changes; Terraform now declares the same value explicitly, and acceptance
+requires a final detailed-exitcode plan with no changes. The failed run remains
+at `test-results/assessed/20261113-205319` and is not labelled a full success.

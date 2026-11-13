@@ -11,7 +11,7 @@ on:
       - 'requirements/**'
       - 'scripts/*assessed*'
       - 'scripts/*dashboard*'
-      - 'scripts/Start-CartcoAssessedStack.ps1'
+      - 'scripts/*CartcoAssessed*.ps1'
       - 'tests/spark/**'
       - '.github/workflows/assessed.yml'
 permissions:

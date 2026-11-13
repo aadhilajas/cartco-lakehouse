@@ -137,9 +137,11 @@ wiring; they do not count as a live assessed Terraform apply.
 ## Validation boundary
 
 Native protocol, Spark/catalog, GE, backend lineage and dashboard browser checks
-have passed. The expanded scheduled container/Grafana runner was prepared next
-and needs its own retained successful host result before deployment acceptance
-is claimed. See `local-completion-checklist.md` for outstanding checks.
+have passed. Expanded scheduled-container/Grafana Compose acceptance passed in
+`test-results/assessed/20261113-203545`, with four successful DAGs, real Grafana
+queries, limited-role refusal checks, exact recreation/replay and compaction.
+See `local-completion-checklist.md` for the separate recovery, Terraform and
+external hosting gates.
 
 ## Controlled recreation and coordinated recovery
 
@@ -147,7 +149,7 @@ The host acceptance runner now checks all published catalog UUIDs, metadata
 locations, schemas and snapshots plus exact Silver/Gold rows before and after
 recreating only assessed catalog/storage containers. It then schedules the same
 immutable deliveries again and requires unchanged business outputs and retained
-Bronze/Silver identities. These checks remain pending until the host run passes.
+Bronze/Silver identities. These checks passed in the retained Compose host result above.
 
 After that run succeeds, a separate cold recovery proof can be run from the repo:
 
@@ -157,12 +159,13 @@ After that run succeeds, a separate cold recovery proof can be run from the repo
 
 Docker must be on PATH; otherwise add `--docker` with its executable path. Choose
 a new empty output directory each time. This stops only `cartco-assessed`, archives
-all nine coordinated volumes, verifies archive hashes, restores into a fresh
+all eight active coordinated volumes (the optional smoke-only volume is excluded), verifies archive hashes, restores into a fresh
 separate recovery project, and verifies the same publication, catalog identities
 and exact data. It stops the recovery copy and restarts the original stack. Both
 copies and archives remain available. It never deletes or overwrites existing
-volumes. Plan disk space for the additional copy. A written recovery tool is not
-a successful recovery result; require its retained `SUCCESS.txt`.
+volumes. Plan disk space for the additional copy. Require a retained `SUCCESS.txt`: the coordinated Compose recovery proof passed
+in `test-results/assessed-recovery/20261113-205004`. This proves the tested
+local cold-copy method; it does not prove offsite/cloud disaster recovery.
 
 To execute the same scheduled/data/recreation acceptance through the real
 Terraform provider, use the same PowerShell wrapper with the pinned executable:
@@ -176,3 +179,14 @@ uses its own container/volume prefix, and restores the previously selected
 workspace afterward. It stops competing new Compose/Phase 1 services to free
 their ports. No original baseline resource is managed or deleted. Its live result
 is still pending; the earlier Phase 1 Terraform success does not qualify it.
+
+The Windows checkout also includes no-flag wrappers for these two follow-up
+checks. Run the recovery proof while the Compose stack is active, before
+switching to Terraform:
+
+```powershell
+& '.\scripts\Start-CartcoAssessedRecovery.ps1'
+& '.\scripts\Start-CartcoAssessedTerraformValidation.ps1'
+```
+
+Each wrapper saves a separate dated result directory and retains volumes.

@@ -97,7 +97,9 @@ def main():
                 result = request(url + "/dagRuns/" + quote(run_id, safe=""))
                 if result["state"] in {"success", "failed"}:
                     tasks = request(url + "/dagRuns/" + quote(run_id, safe="") + "/taskInstances")
-                    (evidence / (name + ".json")).write_text(json.dumps({"run": result, "tasks": tasks}, indent=2), encoding="utf-8")
+                    content = json.dumps({"run": result, "tasks": tasks}, indent=2)
+                    (evidence / (name + "-" + run_id + ".json")).write_text(content, encoding="utf-8")
+                    (evidence / (name + ".json")).write_text(content, encoding="utf-8")
                     if result["state"] != "success": raise RuntimeError("Scheduled DAG failed: " + name)
                     print("Scheduled DAG passed:", name, flush=True)
                     return result
@@ -151,6 +153,10 @@ def main():
         if snapshot != after_snapshot:
             raise ValueError("Published snapshot changed during storage recreation")
         # Replay the same immutable deliveries through a real scheduled release.
+        # A provider reconciliation may restart the webserver too. Its signed
+        # session cookie is ephemeral, so reacquire it rather than reusing it.
+        wait(api + "/health", airflow=True)
+        login()
         dag_run("assessed_commerce_release")
         replay = request("http://127.0.0.1:18100/api/snapshot")
         for key in ["daily_revenue", "channels", "inventory", "source_bundle_sha256"]:
@@ -165,10 +171,17 @@ def main():
         behavior = json.loads(run(deployment.execute("airflow-scheduler", "cat", behavior_path), "table-behaviors.json"))
         if behavior["before"]["rows_sha256"] != behavior["after"]["rows_sha256"] or behavior["after"]["files"] >= behavior["before"]["files"]:
             raise ValueError("Compaction did not retain exact rows and reduce files")
-        run(compose + ["ps", "-a"], "status.log")
+        deployment.convergence()
+        run([args.docker, "ps", "-a", "--filter", "name=" + deployment.project + "-"], "status.log")
         if baseline(inventory("containers-after.jsonl")) != before: raise ValueError("Original baseline container identities changed")
     except Exception:
-        try: run(compose + ["logs", "--tail", "100"], "failure-logs.log")
+        try:
+            if args.terraform:
+                for row in inventory("failure-containers.jsonl"):
+                    if row["Names"].startswith(deployment.project + "-"):
+                        run([args.docker, "logs", "--tail", "100", row["ID"]], "failure-" + row["Names"] + ".log")
+            else:
+                run(compose + ["logs", "--tail", "100"], "failure-logs.log")
         except Exception: pass
         raise
     finally:

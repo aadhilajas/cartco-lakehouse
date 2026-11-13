@@ -88,7 +88,10 @@ resource "docker_container" "service" {
   entrypoint = try(each.value.entrypoint, null)
   user       = try(each.value.user, null)
   memory     = tonumber(trimsuffix(each.value.mem_limit, "m"))
-  restart    = each.value.restart
+  # Match Docker's default total RAM+swap limit explicitly; otherwise provider
+  # refresh returns 2x RAM while null plans a perpetual in-place change.
+  memory_swap = 2 * tonumber(trimsuffix(each.value.mem_limit, "m"))
+  restart     = each.value.restart
   # Initializers and the acceptance job are successful when they exit zero.
   must_run       = !contains(["bucket-init", "airflow-init", "spark-smoke", "runtime-init", "fixture-seed", "grafana-init"], each.key)
   remove_volumes = false

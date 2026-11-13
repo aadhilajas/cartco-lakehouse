@@ -1,7 +1,7 @@
 # ADR-015: Spark state and coherent release publication
 
 Date: 12 November 2026
-Status: local compute/catalog/quality path accepted; scheduled-image qualification pending
+Status: native and scheduled Compose compute/catalog/quality path accepted; recovery and Terraform tracked separately
 
 ## Context
 
@@ -56,3 +56,6 @@ five Gold output comparisons and seven GE suites. A real GE null-version failure
 a financial mismatch and a bad export preserved good publication. Backend Marquez
 verification covered 44 schema fields and 34 nonconstant derivations. Expanded
 scheduled-container and recovery evidence remains separate from native results.
+
+Expanded Compose acceptance subsequently passed all four DAGs, exact state after
+recreation/replay and genuine file compaction (five to two, same row hash).

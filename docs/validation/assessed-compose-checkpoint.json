@@ -1,0 +1,111 @@
+{
+  "evidence_directory": "test-results/assessed/20261113-203545",
+  "success_marker": "Assessed scheduled ingestion, Spark medallion, GE, Marquez, Grafana, recreation, replay and dashboard acceptance passed.",
+  "release_id": "rd78890a225a54207a0acc01638ae7f67",
+  "source_bundle_sha256": "45f8173cfe76b962e64fc45e42ea422c7f04f771a7b079edb71bc5428048c29d",
+  "execution": {
+    "mode": "Airflow task",
+    "duration_seconds": 39.26
+  },
+  "quality": {
+    "success": true,
+    "engine": "great_expectations",
+    "engine_version": "0.18.19",
+    "suites": [
+      {
+        "name": "category_unit_sales",
+        "success": true,
+        "rows": 3,
+        "checks": 5
+      },
+      {
+        "name": "channel_performance",
+        "success": true,
+        "rows": 3,
+        "checks": 18
+      },
+      {
+        "name": "customer_360",
+        "success": true,
+        "rows": 6,
+        "checks": 9
+      },
+      {
+        "name": "daily_revenue",
+        "success": true,
+        "rows": 3,
+        "checks": 11
+      },
+      {
+        "name": "inventory_turnover",
+        "success": true,
+        "rows": 8,
+        "checks": 16
+      },
+      {
+        "name": "silver_active",
+        "success": true,
+        "rows": 7,
+        "checks": 17
+      },
+      {
+        "name": "silver_state",
+        "success": true,
+        "rows": 8,
+        "checks": 5
+      }
+    ]
+  },
+  "lineage": {
+    "status": "verified",
+    "verified_at": "2026-11-13T15:13:53.977275+00:00",
+    "fields_verified": 44
+  },
+  "dags": {
+    "assessed_commerce_release-initial": "success",
+    "assessed_commerce_release": "success",
+    "assessed_inventory_ingestion": "success",
+    "assessed_orders_ingestion": "success",
+    "assessed_system_health": "success"
+  },
+  "grafana_role": {
+    "health_rows": 4,
+    "raw_conf_denied": true,
+    "write_denied": true
+  },
+  "recreation": "Exact catalog metadata, UUIDs, snapshots and Silver/Gold rows matched",
+  "replay": "Business values and retained Bronze/Silver identities unchanged",
+  "compaction": {
+    "before": {
+      "files": 5,
+      "rows_sha256": "62ddaa137449a17283edef079a8a67b61624d41ac3fb36d6ec6571d6180a3e81"
+    },
+    "after": {
+      "files": 2,
+      "rows_sha256": "62ddaa137449a17283edef079a8a67b61624d41ac3fb36d6ec6571d6180a3e81"
+    },
+    "time_travel_rows": 120,
+    "additive_evolution": true,
+    "incompatible_evolution_refused": true,
+    "pruned_rows": 90
+  },
+  "browser": {
+    "business_total_inr": "921.75",
+    "shopify_filter_inr": "301.50",
+    "quality_suites": 7,
+    "lineage_fields": 44,
+    "mobile_no_page_overflow": true,
+    "bad_refresh_retains_snapshot": true,
+    "write_endpoint_refused": true,
+    "traversal_refused": true,
+    "browser_errors": []
+  },
+  "baseline": "Original container identity comparison passed",
+  "pending": [
+    "Coordinated cold restore proof",
+    "Expanded Terraform live acceptance",
+    "Hosted backend/public HTTPS",
+    "ARM qualification",
+    "Remote CI"
+  ]
+}

@@ -1,5 +1,8 @@
 """Host deployment commands shared by real assessed acceptance modes."""
 import os
+import json
+import subprocess
+import time
 
 
 class Deployment:
@@ -36,10 +39,29 @@ class Deployment:
         plan = str(self.evidence / "assessed.tfplan")
         self.run(self.tf("plan", *self.variables(), "-out=" + plan), "terraform-plan.log")
         self.run(self.tf("apply", "-auto-approve", plan), "terraform-apply.log")
+        # Terraform creates services concurrently; wait for the same finite
+        # initializers that Compose gates with completed-successfully dependencies.
+        deadline = time.monotonic() + 300
+        pending = {name for name in ["runtime-init", "fixture-seed", "airflow-init", "grafana-init"]}
+        states = {}
+        while pending and time.monotonic() < deadline:
+            for name in list(pending):
+                result = subprocess.run([self.docker, "inspect", "--format", "{{json .State}}", self.project + "-" + name],
+                                        check=True, capture_output=True, text=True)
+                states[name] = json.loads(result.stdout)
+                if states[name]["Status"] == "exited" and states[name]["ExitCode"] == 0: pending.remove(name)
+            if pending: time.sleep(2)
+        (self.evidence / "terraform-initializer-states.json").write_text(json.dumps(states, indent=2), encoding="utf-8")
+        if pending: raise TimeoutError("Terraform initializers did not complete: " + ", ".join(sorted(pending)))
 
     def finish(self):
         if self.terraform and self.previous_workspace and self.previous_workspace != "assessed":
             self.run(self.tf("workspace", "select", self.previous_workspace), "terraform-restore-workspace.log")
+
+    def convergence(self):
+        if self.terraform:
+            # Exit 2 means unresolved drift and must not receive SUCCESS.txt.
+            self.run(self.tf("plan", "-detailed-exitcode", *self.variables()), "terraform-convergence.log")
 
     def recreate(self):
         if self.terraform:

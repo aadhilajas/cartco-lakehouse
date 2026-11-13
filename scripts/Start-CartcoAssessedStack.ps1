@@ -1,4 +1,4 @@
-param([string]$PythonPath = '', [switch]$SkipBuild, [string]$TerraformPath = '')
+param([string]$PythonPath = '', [switch]$SkipBuild, [string]$TerraformPath = '', [string]$ResumeResultRoot = '')
 $ErrorActionPreference = 'Stop'
 $repoRoot = Split-Path -Parent $PSScriptRoot
 if (-not $PythonPath) {
@@ -12,5 +12,6 @@ if (-not (Test-Path -LiteralPath $docker)) { throw 'Docker CLI not found. Start 
 $arguments = @('-X','utf8',(Join-Path $PSScriptRoot 'run_assessed_stack.py'),'--docker',$docker)
 if ($SkipBuild) { $arguments += '--skip-build' }
 if ($TerraformPath) { $arguments += @('--terraform',$TerraformPath) }
+if ($ResumeResultRoot) { $arguments += @('--result-root',$ResumeResultRoot,'--resume-after-recreation') }
 & $PythonPath @arguments
 if ($LASTEXITCODE -ne 0) { throw 'Assessed stack acceptance failed; full logs are retained in test-results/assessed.' }

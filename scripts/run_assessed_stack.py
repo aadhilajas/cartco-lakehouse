@@ -27,12 +27,24 @@ class CSRF(HTMLParser):
         if tag == "input" and values.get("name") == "csrf_token": self.token = values.get("value")
 
 
+def airflow_login(opener, cookies, api):
+    # An authenticated GET /login redirects home; start with an empty session
+    # so both valid and expired prior cookies receive a real CSRF login form.
+    cookies.clear()
+    with opener.open(api + "/login/", timeout=15) as response: html = response.read().decode()
+    csrf = CSRF(); csrf.feed(html)
+    if not csrf.token: raise RuntimeError("Airflow login CSRF token missing")
+    body = urlencode({"username": "airflow", "password": "airflow", "csrf_token": csrf.token}).encode()
+    with opener.open(Request(api + "/login/", data=body), timeout=15) as response: response.read()
+
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--docker", default="docker")
     parser.add_argument("--result-root", type=Path)
     parser.add_argument("--skip-build", action="store_true")
     parser.add_argument("--terraform", help="Terraform executable; deploy into its isolated assessed workspace")
+    parser.add_argument("--resume-after-recreation", action="store_true")
     args = parser.parse_args()
     repo = Path(__file__).resolve().parents[1]
     sys.path.insert(0, str(repo))
@@ -40,10 +52,13 @@ def main():
     evidence = args.result_root or repo / "test-results/assessed" / datetime.now().strftime("%Y%m%d-%H%M%S")
     evidence = evidence.resolve()
     evidence.mkdir(parents=True, exist_ok=True)
+    if args.resume_after_recreation and (not args.terraform or not args.result_root or (evidence / "SUCCESS.txt").exists()):
+        raise ValueError("Resume requires an unfinished explicit Terraform result directory")
     (evidence / "SUCCESS.txt").unlink(missing_ok=True)
     compose = [args.docker, "compose", "-p", "cartco-assessed", "-f", str(repo / "infra/assessed/stack.json")]
 
     def run(command, name):
+        if args.resume_after_recreation and name.startswith("terraform-"): name = "resume-" + name
         print("Running:", name, flush=True)
         with (evidence / name).open("wb") as log:
             result = subprocess.run(command, cwd=repo, stdout=log, stderr=subprocess.STDOUT)
@@ -61,7 +76,8 @@ def main():
     def baseline(rows):
         return sorted((row["Names"], row["ID"]) for row in rows if row["Names"].startswith("cartco-") and not row["Names"].startswith(("cartco-infra-p1-", "cartco-assessed-")))
 
-    opener = build_opener(HTTPCookieProcessor(http.cookiejar.CookieJar()))
+    cookies = http.cookiejar.CookieJar()
+    opener = build_opener(HTTPCookieProcessor(cookies))
     def request(url, data=None, method=None, headers=None):
         body = None if data is None else json.dumps(data).encode()
         req = Request(url, data=body, method=method, headers={"Content-Type": "application/json", **(headers or {})})
@@ -79,11 +95,7 @@ def main():
 
     api = "http://127.0.0.1:18080"
     def login():
-        with opener.open(api + "/login/", timeout=15) as response: html = response.read().decode()
-        csrf = CSRF(); csrf.feed(html)
-        if not csrf.token: raise RuntimeError("Airflow login CSRF token missing")
-        body = urlencode({"username": "airflow", "password": "airflow", "csrf_token": csrf.token}).encode()
-        with opener.open(Request(api + "/login/", data=body), timeout=15) as response: response.read()
+        airflow_login(opener, cookies, api)
 
     def dag_run(name):
         url = api + "/api/v1/dags/" + name
@@ -110,45 +122,63 @@ def main():
 
     before = None
     try:
-        run([args.docker, "version"], "docker-version.log")
-        if shutil.disk_usage(repo).free < (2 if args.skip_build else 8) * 1024**3:
-            raise RuntimeError("Insufficient free build space; preserve all existing data and volumes")
-        rows = inventory("containers-before.jsonl")
-        before = baseline(rows)
-        run(compose + ["config", "--quiet"], "compose-config.log")
-        if not args.skip_build and not args.terraform:
-            run([args.docker, "build", "-t", "cartco/airflow:infra-p1-base", "-f", str(repo / "Dockerfile.airflow"), str(repo)], "base-build.log")
-            run(compose + ["build"], "assessed-build.log")
-        earlier = [row["ID"] for row in rows if row["Names"].startswith(("cartco-infra-p1-", "cartco-assessed-")) and not row["Names"].startswith(deployment.project + "-") and row.get("State") != "exited"]
-        if earlier: run([args.docker, "stop", *earlier], "stop-earlier-phase1.log")
-        deployment.start()
-        wait(api + "/health", airflow=True)
-        run(deployment.execute("airflow-scheduler", "python", "/opt/airflow/scripts/check_assessed_dags.py"), "dag-import-serialization.log")
-        run(deployment.execute("airflow-scheduler", "/opt/cartco-spark/bin/python", "-c", "import pyspark,importlib.util; assert pyspark.__version__=='3.5.6'; assert importlib.util.find_spec('airflow') is None; print('Isolated Spark environment verified')"), "compute-isolation.log")
-        login()
-        for name in ["assessed_orders_ingestion", "assessed_inventory_ingestion", "assessed_commerce_release", "assessed_system_health"]: dag_run(name)
-        snapshot = wait("http://127.0.0.1:18100/api/snapshot")
-        if not snapshot["quality"]["success"] or snapshot["lineage_transport"]["status"] != "verified": raise ValueError("Published snapshot lacks verified quality/lineage")
-        if snapshot.get("source_bundle_sha256") != source_identity(repo):
-            raise ValueError("Built image differs from the current assessed source; rebuild before accepting it")
-        # Preserve raw JSON snapshot-number strings as exported, not JS numbers.
-        (evidence / "public-snapshot.json").write_text(json.dumps(snapshot, indent=2), encoding="utf-8")
-        run(deployment.execute("airflow-scheduler", "python", "/opt/airflow/scripts/check_grafana_access.py"), "grafana-role-proof.log")
-        auth = {"Authorization": "Basic " + base64.b64encode(b"cartco:cartco-grafana-local-only").decode()}
-        wait("http://127.0.0.1:13030/api/health")
-        dashboard = request("http://127.0.0.1:13030/api/dashboards/uid/cartco-health", headers=auth)
-        if len(dashboard["dashboard"]["panels"]) != 5: raise ValueError("Grafana dashboard panels missing")
-        query = {"queries": [{"refId": "A", "datasource": {"type": "postgres", "uid": "cartco-airflow-health"}, "rawSql": "SELECT count(*) AS runs FROM cartco_monitoring.dag_health WHERE dag_id LIKE 'assessed_%'", "format": "table"}], "from": "0", "to": str(int(time.time()*1000))}
-        result = request("http://127.0.0.1:13030/api/ds/query", query, "POST", auth)
-        if result["results"]["A"].get("error") or not result["results"]["A"].get("frames"): raise ValueError("Grafana SQL datasource query failed")
-        (evidence / "grafana-query.json").write_text(json.dumps(result, indent=2), encoding="utf-8")
-        verifier = deployment.execute("airflow-scheduler", "/opt/cartco-spark/bin/python", "/opt/airflow/scripts/verify_assessed_catalog.py")
-        run(verifier, "catalog-before-recreation.log")
-        # Recreate only this stack's catalog/storage containers, keeping volumes.
-        # No ingestion or Spark write task runs during this checkpoint.
-        deployment.recreate()
-        wait("http://127.0.0.1:19120/api/v2/config")
-        run(verifier, "catalog-after-recreation.log")
+        if args.resume_after_recreation:
+            for name in ["terraform-apply.log", "public-snapshot.json", "catalog-after-recreation.log", "containers-before.jsonl"]:
+                if not (evidence / name).is_file(): raise ValueError("Missing completed resume prerequisite: " + name)
+            for dag in ["assessed_orders_ingestion", "assessed_inventory_ingestion", "assessed_commerce_release", "assessed_system_health"]:
+                if json.loads((evidence / (dag + ".json")).read_text())["run"]["state"] != "success":
+                    raise ValueError("Cannot resume an unfinished initial DAG: " + dag)
+            before = baseline([json.loads(row) for row in (evidence / "containers-before.jsonl").read_text().splitlines()])
+            snapshot = json.loads((evidence / "public-snapshot.json").read_text())
+            if snapshot.get("source_bundle_sha256") != source_identity(repo): raise ValueError("Resume compute implementation differs from accepted source")
+            deployment.evidence = evidence / ("resume-" + datetime.now().strftime("%Y%m%d-%H%M%S"))
+            deployment.evidence.mkdir(exist_ok=False)
+            # Reconcile the small current image layer without rerunning ingestion,
+            # the four completed DAGs, or the completed storage recreation.
+            deployment.start()
+            wait("http://127.0.0.1:19120/api/v2/config")
+            verifier = deployment.execute("airflow-scheduler", "/opt/cartco-spark/bin/python", "/opt/airflow/scripts/verify_assessed_catalog.py")
+            run(verifier, "resume-catalog-verification.log")
+        else:
+            run([args.docker, "version"], "docker-version.log")
+            if shutil.disk_usage(repo).free < (2 if args.skip_build else 8) * 1024**3:
+                raise RuntimeError("Insufficient free build space; preserve all existing data and volumes")
+            rows = inventory("containers-before.jsonl")
+            before = baseline(rows)
+            run(compose + ["config", "--quiet"], "compose-config.log")
+            if not args.skip_build and not args.terraform:
+                run([args.docker, "build", "-t", "cartco/airflow:infra-p1-base", "-f", str(repo / "Dockerfile.airflow"), str(repo)], "base-build.log")
+                run(compose + ["build"], "assessed-build.log")
+            earlier = [row["ID"] for row in rows if row["Names"].startswith(("cartco-infra-p1-", "cartco-assessed-")) and not row["Names"].startswith(deployment.project + "-") and row.get("State") != "exited"]
+            if earlier: run([args.docker, "stop", *earlier], "stop-earlier-phase1.log")
+            deployment.start()
+            wait(api + "/health", airflow=True)
+            run(deployment.execute("airflow-scheduler", "python", "/opt/airflow/scripts/check_assessed_dags.py"), "dag-import-serialization.log")
+            run(deployment.execute("airflow-scheduler", "/opt/cartco-spark/bin/python", "-c", "import pyspark,importlib.util; assert pyspark.__version__=='3.5.6'; assert importlib.util.find_spec('airflow') is None; print('Isolated Spark environment verified')"), "compute-isolation.log")
+            login()
+            for name in ["assessed_orders_ingestion", "assessed_inventory_ingestion", "assessed_commerce_release", "assessed_system_health"]: dag_run(name)
+            snapshot = wait("http://127.0.0.1:18100/api/snapshot")
+            if not snapshot["quality"]["success"] or snapshot["lineage_transport"]["status"] != "verified": raise ValueError("Published snapshot lacks verified quality/lineage")
+            if snapshot.get("source_bundle_sha256") != source_identity(repo):
+                raise ValueError("Built image differs from the current assessed source; rebuild before accepting it")
+            # Preserve raw JSON snapshot-number strings as exported, not JS numbers.
+            (evidence / "public-snapshot.json").write_text(json.dumps(snapshot, indent=2), encoding="utf-8")
+            run(deployment.execute("airflow-scheduler", "python", "/opt/airflow/scripts/check_grafana_access.py"), "grafana-role-proof.log")
+            auth = {"Authorization": "Basic " + base64.b64encode(b"cartco:cartco-grafana-local-only").decode()}
+            wait("http://127.0.0.1:13030/api/health")
+            dashboard = request("http://127.0.0.1:13030/api/dashboards/uid/cartco-health", headers=auth)
+            if len(dashboard["dashboard"]["panels"]) != 5: raise ValueError("Grafana dashboard panels missing")
+            query = {"queries": [{"refId": "A", "datasource": {"type": "postgres", "uid": "cartco-airflow-health"}, "rawSql": "SELECT count(*) AS runs FROM cartco_monitoring.dag_health WHERE dag_id LIKE 'assessed_%'", "format": "table"}], "from": "0", "to": str(int(time.time()*1000))}
+            result = request("http://127.0.0.1:13030/api/ds/query", query, "POST", auth)
+            if result["results"]["A"].get("error") or not result["results"]["A"].get("frames"): raise ValueError("Grafana SQL datasource query failed")
+            (evidence / "grafana-query.json").write_text(json.dumps(result, indent=2), encoding="utf-8")
+            verifier = deployment.execute("airflow-scheduler", "/opt/cartco-spark/bin/python", "/opt/airflow/scripts/verify_assessed_catalog.py")
+            run(verifier, "catalog-before-recreation.log")
+            # Recreate only this stack's catalog/storage containers, keeping volumes.
+            # No ingestion or Spark write task runs during this checkpoint.
+            deployment.recreate()
+            wait("http://127.0.0.1:19120/api/v2/config")
+            run(verifier, "catalog-after-recreation.log")
         after_snapshot = request("http://127.0.0.1:18100/api/snapshot")
         if snapshot != after_snapshot:
             raise ValueError("Published snapshot changed during storage recreation")

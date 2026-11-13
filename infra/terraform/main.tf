@@ -1,8 +1,14 @@
 # One shared specification drives Compose and Terraform. This provisions Docker
 # resources on an existing host; it does not provision a cloud VM/account.
 locals {
-  spec      = jsondecode(file("${path.module}/../phase1/stack.json"))
+  spec      = jsondecode(file("${path.module}/${var.stack_spec}"))
   repo_root = abspath("${path.module}/../..")
+  assessed_sources = flatten([
+    for folder in ["pipeline", "ingestion", "transforms", "lineage", "scripts", "infra/assessed", "dashboard/src"] : [
+      for name in sort(tolist(fileset("${path.module}/../../${folder}", "**"))) : "${folder}/${name}"
+      if !strcontains(name, "__pycache__/") && !endswith(name, ".pyc")
+    ]
+  ])
   builds = {
     for name, service in local.spec.services : service.image => service.build
     if can(service.build)
@@ -54,7 +60,8 @@ resource "docker_image" "built" {
   triggers = {
     source = sha256(join("", concat(
       [filesha256("${local.repo_root}/${each.value.dockerfile}"), filesha256("${local.repo_root}/scripts/phase1_spark_smoke.py"), filesha256("${local.repo_root}/scripts/initialize_airflow.py")],
-      [for name in sort(tolist(fileset("${local.repo_root}/infra/phase1", "**"))) : filesha256("${local.repo_root}/infra/phase1/${name}") if !strcontains(name, "__pycache__/") && !endswith(name, ".pyc")]
+      [for name in sort(tolist(fileset("${local.repo_root}/infra/phase1", "**"))) : filesha256("${local.repo_root}/infra/phase1/${name}") if !strcontains(name, "__pycache__/") && !endswith(name, ".pyc")],
+      var.stack_spec == "../assessed/stack.json" ? [for name in concat(local.assessed_sources, ["dashboard/package.json", "dashboard/package-lock.json", "dashboard/index.html", "dashboard/vite.config.js", "requirements/connectors.txt"]) : filesha256("${local.repo_root}/${name}")] : []
     )))
   }
   build {
@@ -79,10 +86,11 @@ resource "docker_container" "service" {
   env        = [for key, value in try(each.value.environment, {}) : "${key}=${value}"]
   command    = try(each.value.command, null)
   entrypoint = try(each.value.entrypoint, null)
+  user       = try(each.value.user, null)
   memory     = tonumber(trimsuffix(each.value.mem_limit, "m"))
   restart    = each.value.restart
   # Initializers and the acceptance job are successful when they exit zero.
-  must_run       = !contains(["bucket-init", "airflow-init", "spark-smoke"], each.key)
+  must_run       = !contains(["bucket-init", "airflow-init", "spark-smoke", "runtime-init", "fixture-seed", "grafana-init"], each.key)
   remove_volumes = false
   networks_advanced {
     name    = docker_network.stack.name
@@ -93,6 +101,7 @@ resource "docker_container" "service" {
     content {
       volume_name    = docker_volume.persistent[split(":", volumes.value)[0]].name
       container_path = split(":", volumes.value)[1]
+      read_only      = try(split(":", volumes.value)[2] == "ro", false)
     }
   }
   dynamic "ports" {

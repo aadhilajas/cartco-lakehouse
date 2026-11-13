@@ -1,0 +1,28 @@
+# An isolated Spark environment inside the task container avoids a Docker socket
+# or remote arbitrary-command API. Airflow's own Python environment stays locked.
+FROM python:3.11.14-slim-bookworm@sha256:65a93d69fa75478d554f4ad27c85c1e69fa184956261b4301ebaf6dbb0a3543d AS compute
+COPY infra/phase1/build-tools.txt /tmp/build-tools.txt
+COPY infra/phase1/spark-requirements.txt /tmp/spark-requirements.txt
+RUN pip install --no-cache-dir --require-hashes -r /tmp/build-tools.txt \
+    && pip install --no-cache-dir --no-build-isolation --require-hashes -r /tmp/spark-requirements.txt
+COPY infra/phase1/artifacts.json /tmp/artifacts.json
+COPY infra/phase1/fetch_jars.py /tmp/fetch_jars.py
+RUN python /tmp/fetch_jars.py /tmp/artifacts.json /usr/local/lib/python3.11/site-packages/pyspark/jars
+
+FROM cartco/airflow:infra-p1-base
+USER root
+RUN apt-get update && apt-get install -y --no-install-recommends openjdk-17-jre-headless \
+    && rm -rf /var/lib/apt/lists/* && python -m venv /opt/cartco-spark
+COPY --from=compute /usr/local/lib/python3.11/site-packages/pyspark /opt/cartco-spark/lib/python3.11/site-packages/pyspark
+COPY --from=compute /usr/local/lib/python3.11/site-packages/py4j /opt/cartco-spark/lib/python3.11/site-packages/py4j
+ENV SPARK_HOME=/opt/cartco-spark/lib/python3.11/site-packages/pyspark
+ENV PYTHONPATH=/opt/airflow PYSPARK_PYTHON=/opt/cartco-spark/bin/python SPARK_LOCAL_IP=127.0.0.1
+USER airflow
+COPY requirements/connectors.txt /tmp/connectors.txt
+RUN pip install --no-cache-dir --require-hashes -r /tmp/connectors.txt && pip check
+COPY --chown=airflow:root pipeline /opt/airflow/pipeline
+COPY --chown=airflow:root ingestion /opt/airflow/ingestion
+COPY --chown=airflow:root transforms /opt/airflow/transforms
+COPY --chown=airflow:root lineage /opt/airflow/lineage
+COPY --chown=airflow:root scripts /opt/airflow/scripts
+COPY --chown=airflow:root infra/assessed/dags /opt/airflow/dags

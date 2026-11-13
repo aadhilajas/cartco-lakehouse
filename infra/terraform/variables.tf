@@ -4,6 +4,16 @@ variable "docker_host" {
   default     = null
 }
 
+variable "stack_spec" {
+  description = "Shared isolated foundation or assessed-stack specification, relative to this module. Use a fresh project/state when selecting the assessed stack."
+  type        = string
+  default     = "../phase1/stack.json"
+  validation {
+    condition     = contains(["../phase1/stack.json", "../assessed/stack.json"], var.stack_spec)
+    error_message = "Select one of the reviewed isolated stack specifications."
+  }
+}
+
 variable "project_name" {
   description = "Separate from Compose and all baseline/recovery resources."
   type        = string

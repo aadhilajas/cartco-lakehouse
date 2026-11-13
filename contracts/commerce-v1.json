@@ -1,0 +1,40 @@
+{
+  "contract_id": "cartco.commerce.v1",
+  "declared_owner": "Aadhil A Kareem, project maintainer",
+  "approval": {"status": "pending_owner_review", "approved_at": null, "record": null},
+  "data_classification": "synthetic",
+  "source_schemas": {
+    "shopify": "shopify.orders.v2",
+    "amazon": "amazon.orders.v2",
+    "pos": "pos.orders.v1",
+    "sftp_inventory": "inventory.sftp.v1"
+  },
+  "canonical_schema_source": "pipeline/order_state.py:STATE_SCHEMA",
+  "source_contract_validator": "pipeline/source_contracts.py:validate_contract",
+  "spark_implementation": "pipeline/spark_commerce.py",
+  "quality_gate": "pipeline/assessed_release.py:validate_candidate",
+  "rules": {
+    "order_key": ["channel", "order_id"],
+    "source_version": "Explicit source_updated_at; UTC; never inferred from ingestion time",
+    "version_conflict": "Reject equal-version conflicting business values",
+    "late_arrival": "Ignore older versions; exact replay preserves the original audit time",
+    "deletion": "Retain tombstones; missing snapshot rows are not implicit deletes",
+    "currency": "INR",
+    "money": "Exact decimal(18,2); reject fractional cents and unsupported currencies",
+    "business_timezone": "Asia/Kolkata for the assessed fixture",
+    "source_timestamps": "Explicit UTC offset on wire timestamps",
+    "quantity": "Integer from 0 through 10000 for canonical orders",
+    "unit_price": "Nonnegative, at most INR 500000, exact cents",
+    "single_line_scope": "One product per order/receipt; no separate tax/shipping/discount",
+    "customer_identity": "Channel scoped; POS walk-in identity is receipt scoped",
+    "inventory_entity": "Source-qualified SKU, one declared location and fixed standard cost",
+    "inventory_coverage": "Actual daily stock observations; missing/zero denominator produces null turnover",
+    "bronze_partition": "UTC ingestion date with retained immutable batch identity",
+    "publication": "Exact independent reconciliation and seven GE suites before atomic CURRENT",
+    "public_export": "No raw payloads, customer IDs, credentials or local file paths"
+  },
+  "compatibility": {
+    "additive": "Disposable Iceberg add-column/time-travel proof; assess consumers before production evolution",
+    "breaking": "Reject incompatible type changes; introduce a new contract/table with explicit migration"
+  }
+}

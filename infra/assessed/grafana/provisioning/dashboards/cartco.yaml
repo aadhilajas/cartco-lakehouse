@@ -1,0 +1,9 @@
+apiVersion: 1
+providers:
+  - name: CartCo
+    folder: CartCo
+    type: file
+    disableDeletion: true
+    editable: false
+    options:
+      path: /opt/cartco/dashboards

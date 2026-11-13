@@ -245,3 +245,9 @@ work/
 *.tfvars.json
 crash.log
 crash.*.log
+
+# Dashboard dependencies/build output; source and lockfile are committed.
+**/node_modules/
+dashboard/dist/
+hs_err_pid*.log
+replay_pid*.log

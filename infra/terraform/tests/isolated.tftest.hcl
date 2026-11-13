@@ -39,3 +39,23 @@ run "acceptance_plan" {
     error_message = "Spark must have a bounded memory budget."
   }
 }
+
+run "assessed_plan" {
+  command = plan
+  variables {
+    stack_spec   = "../assessed/stack.json"
+    project_name = "cartco-infra-p1-tf-assessed"
+  }
+  assert {
+    condition     = length(docker_container.service) == 19 && length(docker_volume.persistent) == 9
+    error_message = "Assessed services and their independent persistent stores must be explicit."
+  }
+  assert {
+    condition     = one(docker_container.service["dashboard"].volumes).read_only && !docker_container.service["fixture-seed"].must_run
+    error_message = "Dashboard must be read-only and seed must be a finite initializer."
+  }
+  assert {
+    condition     = docker_container.service["runtime-init"].user == "0" && docker_container.service["airflow-scheduler"].memory == 3072
+    error_message = "Volume initialization and the bounded Spark task budget must be preserved."
+  }
+}

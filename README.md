@@ -1,11 +1,10 @@
 # CartCo Unified Commerce Lakehouse
 
-> Current project update, 13 November 2026: the assessed implementation adds all
-> four local protocol connectors and actual Spark/Iceberg/Nessie commerce compute.
-> Native protocol, Spark/reference and dashboard browser checks passed. Expanded
-> Airflow/GE/Marquez/Grafana Compose acceptance also passed, including exact
-> recreation, replay and Iceberg compaction. Recovery, expanded Terraform, hosting
-> and remote CI retain their own acceptance gates.
+> Current project update, 13 November 2026: local protocol, Spark/reference,
+> quality/lineage, browser, scheduled Compose, cold backup/restore and expanded
+> Terraform acceptance passed. The final Terraform plan has no changes. Original
+> CartCo data is preserved. GitHub integration, remote CI and public hosting are
+> the next manual/external steps; no public URL is claimed.
 
 **Commerce, reconciled.** A synthetic data platform that makes business results
 traceable from source delivery to a coherent, validated Iceberg release.

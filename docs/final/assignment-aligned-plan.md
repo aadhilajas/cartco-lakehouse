@@ -7,8 +7,10 @@ Implementation update, 2026-11-12: the isolated Phase 1 foundation, Terraform
 configuration and compatibility harness passed local Compose and Terraform
 apply/recreation acceptance. Hosting/account availability and ARM execution remain open. See [Phase 1 evidence](../phase1-infrastructure.md). The project advanced beyond this checkpoint on 13 November; the current
 implementation and acceptance ledger is [local completion](../local-completion-checklist.md).
-Native protocol/Spark/quality/lineage/browser checks are verified; expanded
-scheduled-container, recovery and hosted checks retain separate pending gates.
+Native protocol/Spark/quality/lineage/browser checks, scheduled Compose, cold
+restore and expanded live Terraform acceptance are now verified, including a
+final no-change plan. GitHub integration, remote CI and hosted operation remain
+manual/external gates.
 
 Latest user direction: complete project work locally, then guide manual GitHub
 integration and hosting. Do not publish automatically. Personal resume/interview

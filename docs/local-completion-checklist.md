@@ -1,77 +1,55 @@
-# Local completion worklist
+# Local project completion ledger
 
-Authority: user instruction on 12 November 2026: finish all work that can be done
-locally, then guide the user through integration into the existing GitHub repo
-and hosting. Publication is deferred to that manual walkthrough.
+Updated 13 November 2026. Scope: finish the project locally, then guide manual
+integration into the existing GitHub repo and hosting. No automatic publication,
+paid resources or personal resume/interview work.
 
-- [x] Isolated Spark/Iceberg/Nessie compatibility and Compose/Terraform recreation.
-- [x] Four bounded protocol connectors, immutable evidence and failure/replay proof.
-- [x] Actual Spark Silver/Gold, date-partitioned Bronze and catalog metadata (native runtime).
-- [x] Meaningful DAGs, DQ/lineage integration and Grafana health panels (real Compose run).
-- [x] Coherent snapshot exporter and locally built/tested dashboard.
-- [ ] Local deployment/recovery/acceptance runner and retained results.
-- [x] Current README, diagrams, ADRs and project walkthrough/postmortem (verification limits explicit).
-- [ ] Verified Git bundle, integration instructions and hosting walkthrough.
+- [x] Four real local protocols, immutable evidence and replay/failure checks.
+- [x] Actual Spark Bronze/Silver/Gold through Iceberg/Nessie/MinIO and catalog metadata.
+- [x] Independent exact reconciliation, seven GE suites and safe publication.
+- [x] Marquez backend verification: 44 output fields, 34 nonconstant derivations.
+- [x] Four real Airflow DAGs and Grafana with a restricted database role.
+- [x] Read-only dashboard, browser tests, screenshots and genuine interface GIF.
+- [x] Compose recreation/replay, time travel, evolution, compaction and pruning.
+- [x] Coordinated cold backup and exact restore into a separate project.
+- [x] Real expanded Terraform apply/recreation/replay and final no-change plan.
+- [x] README, C4 diagrams, ADRs, contracts, runbook and walkthrough/postmortem.
+- [x] Manual integration/hosting guides and verified Git bundle handoff.
 
-## Verified progress at 13 November checkpoint
+## Retained successful evidence
 
-- 296 unit checks passed; one Windows FIFO platform skip.
-- Three real Spark tests passed against the independent Python/PyArrow reference.
-- Four real local protocols passed: paginated HTTP GraphQL/SP-API, SSH/SFTP and
-  a two-partition Kafka broker. Kafka replay, retained landing receipts and
-  refusal of a broker checkpoint without its local durable landing were checked.
-- A real Spark Bronze/Silver/Gold candidate was written through Nessie/MinIO;
-  five catalogued Gold outputs passed exact reconciliation and seven GE suites.
-- A genuine GE failure and a financial mismatch retained the prior publication;
-  a bad export retained its valid snapshot.
-- Marquez verified output schemas for 44 fields and 34 nonconstant derivations.
-- The built React dashboard passed browser checks for channel filtering, mobile
-  overflow, lineage/quality views, failed-refresh retention and read-only routes.
-- Three Terraform mock plans passed, including the expanded assessed specification.
+| Check | Evidence |
+|---|---|
+| Compose | `test-results/assessed/20261113-203545/SUCCESS.txt` |
+| Cold recovery, eight active volumes | `test-results/assessed-recovery/20261113-205004/SUCCESS.txt` |
+| Terraform, including successful resume | `test-results/assessed/20261113-210244/SUCCESS.txt` |
+| No-change plan | Same directory, `resume-terraform-convergence.log` |
+| Full unit suite | `test-results/final-local/unit.xml`: 298 passed, one Windows FIFO skip |
+| Additional auth regression | `tests/unit/test_assessed_auth.py`: real valid/expired-cookie HTTP exchange passed |
+| Spark reference | Three real tests plus the repeating-ratio regression passed |
+| Browser | Compose directory, `ui/ui-verification.json` |
 
-Still required: build/run the expanded assessed container image and four DAGs,
-verify live Grafana/read-only DB access, complete the compaction/replay/recreation
-checks, finish CI and project documentation, then refresh commits/bundle and the
-manual GitHub/hosting guides. The new host runner is implemented but has not run.
+Machine-readable summaries are in `docs/validation/`. Original CartCo baseline
+container IDs were unchanged. Old Phase 1/Compose volumes, recovery archives and
+restored copies are retained. The active assessed stack is now the isolated
+Terraform project `cartco-infra-p1-tf-assessed`; prior new Compose services are
+stopped. The previous Terraform workspace selection was restored.
 
-Environment checkpoint: Windows relocated the workspace into OneDrive Documents.
-The Python environments were repaired at the new path. Local execution then
-became unavailable before shell launch with `MXC launcher: native MXC is
-unavailable on this Windows build`. This is a tool/runtime blocker, not a passed
-project check. Do not mark the remaining checklist complete from prepared code.
+The tiny synthetic fixture has seven completed orders and INR 921.75 completed
+sales. Compaction reduced five files to two with unchanged row hashes. This is
+neither merchant onboarding nor a production throughput benchmark. The GIF and
+written demo plan do not claim a narrated recording.
 
-Update: shell execution returned after the runtime reset. Folder/socket access
-needed to be restored for the relocated workspace. Continue the targeted checks;
-the temporary launcher failure is retained here as diagnostic history.
+## Manual and external steps
 
-Scope correction from the user: focus on the project only. Resume, personal
-interview package, company targets and personal submission material are excluded.
-User-dependent project items remain explicit: real owner sign-off, account
-verification, free hosting capacity and remote CI. Do not invent these facts.
+- Integrate the existing feature branch into GitHub and run actual remote CI.
+- Record genuine owner review of `cartco.commerce.v1` in the PR or a dated record.
+- Qualify available free hosting and runtime architecture. Pinned amd64-only
+  Marquez images are not already qualified for ARM.
+- Deploy/verify public HTTPS backend/dashboard and hosted persistence/recovery.
+- Record the narrated project presentation with the final real system if required.
 
-Keep the original baseline and volumes. New work uses isolated assessed-stack
-resources. Do not count mock protocols as merchant onboarding, mocked Kafka
-objects as broker acceptance, or a written recording script as a recorded video.
-
-The repeating-decimal inventory regression passed in actual Spark (including
-1/3 rounded once to 0.333333333333). Source bundle hashes now fence container
-acceptance against stale code. The recreated-catalog and coordinated cold restore
-checks are implemented and await host execution. Native compaction was interrupted
-by unavailable local catalog service; no successful compaction result is claimed.
-
-Expanded Compose acceptance passed in `test-results/assessed/20261113-203545`.
-All four DAGs succeeded; the actual Spark task took 39.26 seconds on this tiny
-fixture. Grafana queried real records and its limited role refused raw conf and
-writes. Catalog recreation and immutable-input replay retained exact identities
-and rows. Compaction reduced five files to two with an unchanged row hash; time
-travel, additive/incompatible evolution and date-file pruning passed. The browser
-suite passed again using this real Airflow-produced snapshot. See
-`validation/assessed-compose-checkpoint.json`. Recovery and expanded live Terraform
-remain pending until their separate host runs complete.
-
-Coordinated cold recovery passed in
-`test-results/assessed-recovery/20261113-205004`. Eight active volume archives
-were checksum-verified and restored into a distinct recovery project. The same
-public snapshot, all table identities and exact Silver/Gold rows matched, then
-the original assessed services restarted. Archives and restored copies remain.
-The inactive optional smoke volume is not part of the active state.
+Follow `manual-github-integration.md`, then `manual-hosting.md`. No public URL,
+remote CI success, owner signature or guaranteed free capacity is invented.
+Failed runs remain in the postmortem and original evidence folders; they do not
+receive success markers.

@@ -1,7 +1,7 @@
 # ADR-015: Spark state and coherent release publication
 
 Date: 12 November 2026
-Status: native and scheduled Compose compute/catalog/quality path accepted; recovery and Terraform tracked separately
+Status: accepted locally through native, scheduled Compose, cold restore and real Terraform acceptance
 
 ## Context
 

@@ -71,9 +71,9 @@ heavy work. The tiny earlier memory sample is not a full-stack sizing guarantee.
 ## What remains a boundary
 
 The original baseline remains preserved. A prepared container specification,
-diagram or workflow is not runtime acceptance. Expanded scheduled DAG/Grafana acceptance has now passed; separate
-coordinated recovery, hosted architecture, account capacity and remote CI must
-each have their own actual evidence. No free-host promise, fake public URL,
+diagram or workflow is not runtime acceptance. Expanded scheduled DAG/Grafana,
+coordinated recovery and real Terraform acceptance have now passed. Hosted
+architecture, account capacity and remote CI still need their own actual evidence. No free-host promise, fake public URL,
 merchant onboarding or retrospective on-time submission claim follows from a
 successful local compatibility probe.
 
@@ -98,3 +98,8 @@ Docker's implicit total RAM/swap value also produced repeated null-versus-2x-RAM
 plan changes; Terraform now declares the same value explicitly, and acceptance
 requires a final detailed-exitcode plan with no changes. The failed run remains
 at `test-results/assessed/20261113-205319` and is not labelled a full success.
+
+The next run exposed the valid-session case: an authenticated login route
+redirects home without a CSRF form. Clearing the cookie jar before login fixed
+both cases; a real HTTP regression covers valid and expired sessions. The final
+resumed Terraform run passed exact replay, compaction and a no-change plan.

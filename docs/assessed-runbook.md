@@ -177,8 +177,8 @@ Terraform provider, use the same PowerShell wrapper with the pinned executable:
 This selects the separate `assessed` workspace, saves and applies a real plan,
 uses its own container/volume prefix, and restores the previously selected
 workspace afterward. It stops competing new Compose/Phase 1 services to free
-their ports. No original baseline resource is managed or deleted. Its live result
-is still pending; the earlier Phase 1 Terraform success does not qualify it.
+their ports. No original baseline resource is managed or deleted. Its separate live result passed in `test-results/assessed/20261113-210244`,
+including exact replay, compaction and a final no-change plan.
 
 The Windows checkout also includes no-flag wrappers for these two follow-up
 checks. Run the recovery proof while the Compose stack is active, before
@@ -190,3 +190,10 @@ switching to Terraform:
 ```
 
 Each wrapper saves a separate dated result directory and retains volumes.
+
+The final successful Terraform run resumed after the completed recreation using
+`Resume-CartcoAssessedTerraformValidation.ps1`. This preserves earlier plans/logs,
+checks successful prerequisites and unchanged compute identity, reconciles cached
+images, then finishes verification/replay/compaction/convergence. It clears prior
+cookies before obtaining a fresh CSRF login form and restores the previously
+selected Terraform workspace. It does not repeat ingestion or cold recovery.

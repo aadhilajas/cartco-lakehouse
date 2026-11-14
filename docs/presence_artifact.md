@@ -22,7 +22,7 @@ Shopify filter, quality evidence, provenance, catalog and lineage. Its checksum
 and original release remain in `assets/demo.gif.json`; it is not relabelled as a
 capture of the newer public deployment. Frames are 2.5 seconds each.
 
-`dashboard/capture-demo.mjs` generates the artifact from a built dashboard and
+`dashboard/scripts/capture-demo.mjs` generates the artifact from a built dashboard and
 quality/lineage-verified snapshot. Its accepted arguments include `--python`,
 `--snapshot`, `--output`, optional `--chrome`, and `--sharp`.
 

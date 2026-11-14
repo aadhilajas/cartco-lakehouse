@@ -14,6 +14,12 @@ Review and merge this pass before starting unrelated runtime moves.
 
 ## 2. Dashboard maintainability
 
+Prepared locally after PR #6: separate views, shared components, snapshot hook,
+model/configuration helpers, grouped scripts/unit/browser tests and styles.
+Package commands and workflow callers now use the grouped paths. Browser checks
+for both serving modes are required in the dashboard PR job; successful remote
+acceptance and merge are still pending for this refactor.
+
 Extract `src/main.jsx` into an application shell, shared components and separate
 Business/Engineering/Lineage views. Keep `dashboard/` as the Vercel root. Group
 publication helpers and tests into dashboard subdirectories, updating package

@@ -1,5 +1,9 @@
 # Manual hosting walkthrough
 
+For the selected no-card public demonstration using Vercel and on-demand GitHub
+Actions, follow [the Vercel demo guide](vercel-demo-guide.md). The server guide
+below describes a separate persistent-backend option, not the selected demo route.
+
 Reviewed 13 November 2026. Budget remains zero. This guide prepares the sequence;
 no cloud account, VM, paid service, public URL or successful hosted deployment is
 claimed. Finish local acceptance and GitHub integration first.

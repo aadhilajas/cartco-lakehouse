@@ -36,7 +36,15 @@ uv pip compile requirements/test.in -c requirements/airflow.txt -c requirements/
 After regeneration, run clean dependency installation, pip check, unit tests,
 Docker build and the DAG import check. Resolution alone is not runtime proof.
 setuptools is intentional: OpenLineage 1.11.3 imports pkg_resources at runtime.
-Unused PySpark and Java are no longer installed; no implemented job uses them.
+The test lock must always use `--universal`: Linux requires pinned/hash-locked
+`pexpect`/`ptyprocess`, while `pywinpty` must be restricted to Windows. A
+Windows-only resolution can pass locally but fail Linux CI before tests start.
+For a platform repair that preserves current versions, use the exact regeneration
+command in `test.txt`'s header, including the connector constraints.
+
+The baseline Airflow environment excludes Spark/Java. The assessed deployment
+adds Java and a separate hash-locked Spark virtual environment; it does not mix
+Spark dependencies into Airflow's Python environment.
 
 Container manifests were read from Docker Registry on 2026-11-09 for Airflow,
 Postgres, Iceberg REST and Marquez. MinIO/mc registry requests were unauthorized;

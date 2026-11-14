@@ -5,7 +5,8 @@ is a demo plan, not a claim that a narrated recording already exists.
 
 ## 1. Show the result
 
-Open the local dashboard at 127.0.0.1:18100. Explain that it is a frozen synthetic
+Open [the public dashboard](https://cartco-lakehouse.vercel.app/) or the local
+dashboard at 127.0.0.1:18100. Explain that it is a frozen synthetic
 fixture with actual pipeline outputs. Show completed sales, order count and
 average order value. Filter Shopify to the reconciled INR 301.50 sample, then
 reset. Explain why refunded/cancelled orders and tombstones do not count as
@@ -47,5 +48,7 @@ Show the shared assessed specification and isolated Terraform plan. Explain the
 separate Spark environment and protected volumes. Show the actual restart or
 recovery evidence only when it exists. Close with honest boundaries: synthetic
 one-line source contracts, a small fixture, no production merchant onboarding,
-and hosting/ARM/account gates until genuinely verified. Keep public links and
-remote CI claims tied to the manual deployment's real results.
+and the distinction between the public saved snapshot, temporary GitHub processing
+and retained local volumes. Show the producing run from the website's published
+provenance. Persistent cloud services and ARM qualification remain separate;
+remote publication success does not establish them.

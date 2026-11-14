@@ -1,212 +1,171 @@
-# CartCo Lakehouse Data Catalog
+# Current Iceberg catalog
 
-This document serves as the central data catalog for the CartCo E-Commerce Data Lakehouse. It details table-level business metadata, column schemas, data types, nullability constraints, ownership, partition strategies, and lineage links across the Bronze, Silver, and Gold layers.
+The current Spark application uses **Nessie/JDBC2 with MinIO**, not the earlier
+REST/SQLite catalog. Names and schemas below were read from the committed public
+snapshot during the 14 November 2026 documentation review. Each later release
+has its own identities; do not treat these documentation examples as a live query.
 
-> **Catalog Infrastructure**: Built on top of the Apache Iceberg REST Catalog (`http://iceberg-rest:8181`) backed by MinIO S3 object storage. Live schema verification can be executed at any time using [`scripts/print_catalog.py`](file:///c:/Users/aadhi/Documents/cartco-lakehouse/scripts/print_catalog.py).
+## Table map
 
----
+| Snapshot key | Table name or pattern | Partition |
+|---|---|---|
+| `bronze_orders` | `nessie.cartco_assessed.bronze_orders` | ingestion_date |
+| `bronze_wire_objects` | `nessie.cartco_assessed.bronze_wire_objects` | ingestion_date |
+| `bronze_inventory` | `nessie.cartco_assessed.bronze_inventory` | ingestion_date |
+| `silver` | `nessie.cartco_assessed.silver_order_state` | channel |
+| `daily_revenue` | `nessie.cartco_assessed.daily_revenue_<release_id>` | Unpartitioned release table |
+| `channel_performance` | `nessie.cartco_assessed.channel_performance_<release_id>` | Unpartitioned release table |
+| `customer_360` | `nessie.cartco_assessed.customer_360_<release_id>` | Unpartitioned release table |
+| `category_unit_sales` | `nessie.cartco_assessed.category_unit_sales_<release_id>` | Unpartitioned release table |
+| `inventory_turnover` | `nessie.cartco_assessed.inventory_turnover_<release_id>` | Unpartitioned release table |
 
-## Local versioned three-source path
+## Semantics and publication
 
-The local adapter path also has bronze.shopify_order_events,
-bronze.amazon_order_events and bronze.pos_order_events, partitioned by batch_id.
-Their fields are batch_id (required string), source_row_number (required int),
-ingestion_date (required date), source (required string) and raw_payload (required
-JSON string). POS native store/terminal/transaction IDs remain in raw_payload.
+Bronze preserves source-shaped data and original wire evidence. Silver retains
+channel-qualified order keys, source versions and tombstones. Money uses exact
+decimals, and business dates follow the declared source/timezone contracts.
 
-The shared target silver.order_state_v2 is identity-partitioned by channel,
-with (channel, order_id) keys, exact decimal(18,2) prices/totals, source versions,
-retained tombstones and INR currency. Business timezone is declared in table
-properties. The [POS guide](phase3/pos-source.md) defines single-product receipt
-identity and customer mappings. This table is separate from legacy silver.orders.
+Five Gold outputs provide daily revenue, channel performance, customer 360,
+category unit sales and genuine cost/stock inventory turnover. Fulfillment time
+is unavailable without measured source timestamps. Customer matching remains
+channel-qualified; public business exports do not include customer IDs.
 
-Coordinated local Gold artifacts are daily_revenue, channel_performance,
-customer_360 and category_unit_sales under a checksum-verified release manifest
-and CURRENT.json. Optional inventory_turnover.parquet adds a fixed-standard-cost
-COGS/average-daily-inventory ratio with SKU/location coverage and explicit quality
-reasons. Its cost/stock CSVs and manifest are checksum-retained within the release;
-see [inventory inputs and turnover](phase4/inventory-turnover.md).
-These are local Parquet release artifacts, not the legacy SQL
-Gold tables below. See [Gold releases](phase4/gold-releases.md). Kafka and live
-REST/MinIO/Airflow integration are not established by the local proof.
+A release manifest pins table UUIDs and snapshots; an atomic CURRENT pointer
+selects the coherent release. This does not claim a multi-table ACID transaction.
+Public snapshot identifiers are strings so JavaScript cannot round them.
 
-## Legacy Catalog Overview & Summary
+## Current column schemas
 
-| Layer | Table Identifier | Owner | Partition Spec | Primary Downstream |
-|---|---|---|---|---|
-| **Bronze** | `bronze.shopify_orders` | Data Platform Team (single-person for this project) | `ingestion_date` (identity) | `silver.orders` |
-| **Bronze** | `bronze.amazon_orders` | Data Platform Team (single-person for this project) | `ingestion_date` (identity) | `silver.orders` |
-| **Silver** | `silver.orders` | Data Platform Team (single-person for this project) | `order_date` (identity), `channel` (identity) | All 4 Gold Marts |
-| **Gold** | `gold.daily_revenue` | Data Platform Team (single-person for this project) | Unpartitioned | BI / Revenue Dashboard |
-| **Gold** | `gold.channel_performance` | Data Platform Team (single-person for this project) | Unpartitioned | Executive Channel KPI Dashboard |
-| **Gold** | `gold.inventory_turnover` | Data Platform Team (single-person for this project) | Unpartitioned | Supply Chain / Inventory Dashboard |
-| **Gold** | `gold.customer_360` | Data Platform Team (single-person for this project) | Unpartitioned | CRM & Customer Analytics |
+Field comments, owner metadata and UUID/snapshot identities are retained in the
+[published snapshot](../dashboard/public/published/snapshot.json). Bronze inventory
+uses source-shaped strings; casts and validation belong to subsequent processing.
 
----
+### bronze_orders
 
-## 1. Bronze Layer Tables
+| Column | Spark type |
+|---|---|
+| `source` | `string` |
+| `batch_id` | `string` |
+| `ingestion_date` | `date` |
+| `raw_payload` | `string` |
 
-### 1.1 `bronze.shopify_orders`
+### bronze_wire_objects
 
-- **Business Description**: Raw, unmodified ingestion table landing order events generated by CartCo's Shopify e-commerce platform. Stores source-faithful records for auditability before data cleaning or normalization.
-- **Owner**: `Data Platform Team (single-person for this project)`
-- **Partition Strategy**: Partitioned by `ingestion_date` (DateType, identity transform).
-- **Lineage Reference**: [Marquez Lineage UI (shopify_bronze_ingestion)](http://localhost:3000/namespaces/cartco-lakehouse/jobs/shopify_bronze_ingestion.ingest_to_bronze)
+| Column | Spark type |
+|---|---|
+| `source` | `string` |
+| `ingestion_date` | `date` |
+| `sha256` | `string` |
+| `payload` | `binary` |
 
-#### Schema & Column Dictionary
+### bronze_inventory
 
-| Column Name | Iceberg Type | Nullable | Description |
-|---|---|---|---|
-| `order_id` | `string` | `True` | Raw order UUID string generated by Shopify source platform. |
-| `customer_id` | `string` | `True` | Synthetic customer identifier (`CUST-XXXXXX`). |
-| `channel` | `string` | `True` | Sales channel identifier; constant value `'shopify'`. |
-| `order_date` | `timestamp` | `True` | Source transaction timestamp in ISO-8601 UTC format. |
-| `product_id` | `string` | `True` | Shopify SKU product identifier (`PROD-XXXX`). |
-| `product_category` | `string` | `True` | Product category classification (e.g. `Electronics`, `Apparel`). |
-| `quantity` | `int` | `True` | Number of units purchased in the order line item. |
-| `unit_price` | `double` | `True` | Unit sales price per item in USD. |
-| `status` | `string` | `True` | Source order status string (`delivered`, `cancelled`, `returned`). |
-| `ingestion_date` | `date` | `True` | Ingestion batch execution date (Partition key). |
+| Column | Spark type |
+|---|---|
+| `sku` | `string` |
+| `location_id` | `string` |
+| `snapshot_date` | `string` |
+| `on_hand` | `string` |
+| `unit_cost` | `string` |
+| `currency` | `string` |
+| `ingestion_date` | `date` |
+| `batch_id` | `string` |
 
----
+### silver
 
-### 1.2 `bronze.amazon_orders`
+| Column | Spark type |
+|---|---|
+| `order_id` | `string` |
+| `customer_id` | `string` |
+| `channel` | `string` |
+| `order_date` | `date` |
+| `product_id` | `string` |
+| `product_category` | `string` |
+| `quantity` | `integer` |
+| `unit_price` | `decimal(18,2)` |
+| `order_status` | `string` |
+| `order_total` | `decimal(18,2)` |
+| `transform_timestamp` | `timestamp_ntz` |
+| `source_updated_at` | `timestamp_ntz` |
+| `is_deleted` | `boolean` |
+| `currency` | `string` |
 
-- **Business Description**: Raw, unmodified ingestion table landing order transactions from CartCo's Amazon seller accounts across globally supported marketplaces (`amazon.in`, `amazon.com`, `amazon.co.uk`).
-- **Owner**: `Data Platform Team (single-person for this project)`
-- **Partition Strategy**: Partitioned by `ingestion_date` (DateType, identity transform).
-- **Lineage Reference**: [Marquez Lineage UI (amazon_bronze_ingestion)](http://localhost:3000/namespaces/cartco-lakehouse/jobs/amazon_bronze_ingestion.ingest_to_bronze)
+### daily_revenue
 
-#### Schema & Column Dictionary
+| Column | Spark type |
+|---|---|
+| `order_date` | `date` |
+| `channel` | `string` |
+| `total_revenue` | `decimal(18,2)` |
+| `order_count` | `integer` |
+| `avg_order_value` | `decimal(18,2)` |
+| `currency` | `string` |
 
-| Column Name | Iceberg Type | Nullable | Description |
-|---|---|---|---|
-| `order_id` | `string` | `True` | Raw Amazon Order ID string (`AMZ-XXXXXXXX-XXXXXX`). |
-| `customer_id` | `string` | `True` | Amazon customer reference identifier (`AMZ-CUST-XXXXXX`). |
-| `channel` | `string` | `True` | Sales channel identifier; constant value `'amazon'`. |
-| `order_date` | `timestamp` | `True` | Source transaction timestamp in ISO-8601 UTC format. |
-| `asin` | `string` | `True` | Amazon Standard Identification Number (`B0` + 8 alphanumeric chars). |
-| `product_category` | `string` | `True` | Product category classification. |
-| `quantity` | `int` | `True` | Number of units ordered. |
-| `unit_price` | `double` | `True` | Unit sales price per item. |
-| `status` | `string` | `True` | Source status string (`shipped`, `cancelled`, `refund_initiated`, `pending`). |
-| `marketplace` | `string` | `True` | Target Amazon marketplace domain (`amazon.in`, `amazon.com`, `amazon.co.uk`). |
-| `fulfillment_channel` | `string` | `True` | Logistics fulfillment method (`FBA` vs `FBM`). |
-| `ingestion_date` | `date` | `True` | Ingestion batch execution date (Partition key). |
+### channel_performance
 
----
+| Column | Spark type |
+|---|---|
+| `channel` | `string` |
+| `total_revenue` | `decimal(18,2)` |
+| `total_orders` | `integer` |
+| `cancellation_rate` | `double` |
+| `refund_rate` | `double` |
+| `placed_order_value` | `decimal(18,2)` |
+| `cancelled_order_value` | `decimal(18,2)` |
+| `refunded_order_value` | `decimal(18,2)` |
+| `pending_order_value` | `decimal(18,2)` |
+| `avg_fulfillment_days` | `double` |
+| `currency` | `string` |
 
-## 2. Silver Layer Tables
+### customer_360
 
-### 2.1 `silver.orders`
+| Column | Spark type |
+|---|---|
+| `customer_id` | `string` |
+| `channel` | `string` |
+| `total_orders` | `integer` |
+| `total_spend` | `decimal(18,2)` |
+| `first_order_date` | `date` |
+| `last_order_date` | `date` |
+| `favorite_category` | `string` |
+| `currency` | `string` |
 
-- **Business Description**: Canonical, deduplicated enterprise order table consolidating order transactions across all sales channels (`shopify`, `amazon`). Enforces primary key non-nullability, canonical status mapping (`completed`, `cancelled`, `refunded`, `pending`), and computed line totals.
-- **Owner**: `Data Platform Team (single-person for this project)`
-- **Partition Strategy**: Composite partitioning by `order_date` (DateType, identity transform) and `channel` (StringType, identity transform).
-- **Lineage Reference**: [Marquez Lineage UI (silver.orders)](http://localhost:3000/namespaces/cartco-lakehouse/datasets/silver.orders)
+### category_unit_sales
 
-#### Schema & Column Dictionary
+| Column | Spark type |
+|---|---|
+| `product_category` | `string` |
+| `channel` | `string` |
+| `units_sold` | `integer` |
+| `reporting_period` | `string` |
 
-| Column Name | Iceberg Type | Nullable | Description |
-|---|---|---|---|
-| `order_id` | `string` | `False` | Primary Key: Unique order identifier string across channels. |
-| `customer_id` | `string` | `False` | Primary Key: Unique customer identifier string across channels. |
-| `channel` | `string` | `True` | Channel origin identifier (`shopify` or `amazon`). |
-| `order_date` | `date` | `True` | Calendar date of transaction (Partition key). |
-| `product_id` | `string` | `True` | Canonical product identifier (renamed from `asin` for Amazon). |
-| `product_category` | `string` | `True` | Standardized product category name. |
-| `quantity` | `int` | `True` | Unit count (defaulted to 1 if null in Bronze). |
-| `unit_price` | `double` | `True` | Unit price (defaulted to 0.0 if null in Bronze). |
-| `order_status` | `string` | `True` | Canonicalized status enum (`completed`, `cancelled`, `refunded`, `pending`, `unknown`). |
-| `order_total` | `double` | `True` | Computed total order revenue (`quantity * unit_price`). |
-| `transform_timestamp` | `timestamp` | `True` | Audit timestamp when the Silver record was transformed and written. |
+### inventory_turnover
 
----
+| Column | Spark type |
+|---|---|
+| `sku` | `string` |
+| `location_id` | `string` |
+| `observed_days` | `integer` |
+| `inventory_value_days` | `decimal(24,2)` |
+| `cogs` | `decimal(18,2)` |
+| `expected_days` | `integer` |
+| `average_daily_inventory_value` | `decimal(28,10)` |
+| `turnover` | `decimal(38,12)` |
+| `quality_status` | `string` |
+| `currency` | `string` |
+| `period_start` | `date` |
+| `period_end` | `date` |
+| `cost_basis` | `string` |
+| `period_basis` | `string` |
+| `is_synthetic` | `boolean` |
 
-## 3. Gold Layer Data Marts
+## Verification and historical catalog
 
-### 3.1 `gold.daily_revenue`
+Use the [local acceptance runner](../scripts/README.md) and
+[verify_assessed_catalog.py](../scripts/verify_assessed_catalog.py) inside the
+current Spark environment. The dashboard catalog registry displays the approved
+snapshot identities; the Vercel page does not query a persistent public Nessie.
 
-- **Business Description**: Daily revenue aggregation mart summarizing revenue trends, order counts, and Average Order Value (AOV) broken down by calendar date and sales channel.
-- **Owner**: `Data Platform Team (single-person for this project)`
-- **Partition Strategy**: Unpartitioned.
-- **Lineage Reference**: [Marquez Lineage UI (gold_marts.daily_revenue)](http://localhost:3000/namespaces/cartco-lakehouse/jobs/gold_marts.daily_revenue)
-
-#### Schema & Column Dictionary
-
-| Column Name | Iceberg Type | Nullable | Description |
-|---|---|---|---|
-| `order_date` | `date` | `True` | Transaction order date. |
-| `channel` | `string` | `True` | Sales channel (`shopify` or `amazon`). |
-| `total_revenue` | `double` | `True` | Retained completed-order sales for the date/channel, in declared synthetic INR. |
-| `order_count` | `int` | `True` | Completed-order count used for this daily sales/AOV metric. |
-| `avg_order_value` | `double` | `True` | Completed-order AOV (`total_revenue / order_count`), rounded half-up to two decimals. |
-
----
-
-### 3.2 `gold.channel_performance`
-
-- **Business Description**: Executive channel health mart tracking overall channel sales volume, cancellation rates, refund rates, and nullable fulfillment measurements across Shopify and Amazon.
-- **Owner**: `Data Platform Team (single-person for this project)`
-- **Partition Strategy**: Unpartitioned.
-- **Lineage Reference**: [Marquez Lineage UI (gold_marts.channel_performance)](http://localhost:3000/namespaces/cartco-lakehouse/jobs/gold_marts.channel_performance)
-
-#### Schema & Column Dictionary
-
-| Column Name | Iceberg Type | Nullable | Description |
-|---|---|---|---|
-| `channel` | `string` | `True` | Sales channel name (`shopify` or `amazon`). |
-| `total_revenue` | `double` | `True` | Retained completed-order sales in declared synthetic INR. |
-| `total_orders` | `int` | `True` | Total order count placed through channel. |
-| `cancellation_rate` | `double` | `True` | Ratio of cancelled orders to total orders (`0.0 - 1.0`). |
-| `refund_rate` | `double` | `True` | Ratio of refunded orders to total orders (`0.0 - 1.0`). |
-| `avg_fulfillment_days` | `double` | `True` | Null: source fulfillment timestamps are not captured. |
-
----
-
-### 3.3 `gold.inventory_turnover`
-
-- **Business Description**: Completed category unit sales under a legacy compatibility name. No inventory turnover ratio is calculated; stock and cost inputs are absent. New local releases call this category_unit_sales.
-- **Owner**: `Data Platform Team (single-person for this project)`
-- **Partition Strategy**: Unpartitioned.
-- **Lineage Reference**: [Marquez Lineage UI (gold_marts.inventory_turnover)](http://localhost:3000/namespaces/cartco-lakehouse/jobs/gold_marts.inventory_turnover)
-
-#### Schema & Column Dictionary
-
-| Column Name | Iceberg Type | Nullable | Description |
-|---|---|---|---|
-| `product_category` | `string` | `True` | Product category classification. |
-| `units_sold` | `int` | `True` | Total physical units sold across completed transactions. |
-| `channel` | `string` | `True` | Sales channel (`shopify` or `amazon`). |
-| `turnover_period` | `string` | `True` | Reporting period window description (e.g. `2024-07 to 2026-07`). |
-
----
-
-### 3.4 `gold.customer_360`
-
-- **Business Description**: Channel-scoped customer profile mart providing 360-degree customer intelligence including total spend, order frequency, recency, and favorite product category.
-- **Owner**: `Data Platform Team (single-person for this project)`
-- **Partition Strategy**: Unpartitioned.
-- **Lineage Reference**: [Marquez Lineage UI (gold_marts.customer_360)](http://localhost:3000/namespaces/cartco-lakehouse/jobs/gold_marts.customer_360)
-
-#### Schema & Column Dictionary
-
-| Column Name | Iceberg Type | Nullable | Description |
-|---|---|---|---|
-| `customer_id` | `string` | `True` | Unique customer identifier. |
-| `channel` | `string` | `True` | Primary channel association (`shopify` or `amazon`). |
-| `total_orders` | `int` | `True` | Lifetime completed order count for the customer. |
-| `total_spend` | `double` | `True` | Completed-order spend in declared synthetic INR. |
-| `first_order_date` | `date` | `True` | Date of customer's first completed purchase. |
-| `last_order_date` | `date` | `True` | Date of customer's most recent completed purchase. |
-| `favorite_category` | `string` | `True` | Category with most completed purchased units; lexical category name breaks ties. |
-
----
-
-## 4. Live Catalog CLI Verification
-
-The table schemas above describe the code contract; live REST/MinIO verification remains pending. Local Gold release artifacts use decimal money and explicit currency fields; see docs/phase4/gold-releases.md. Run the verification script inside the Airflow environment:
-
-```bash
-docker exec cartco-airflow-scheduler python /opt/airflow/scripts/print_catalog.py
-```
+The [earlier catalog dictionary](history/baseline-catalog.md) describes legacy
+tables, doubles and REST-catalog commands. It is preserved for baseline
+regression context, not recommended as the current schema reference.

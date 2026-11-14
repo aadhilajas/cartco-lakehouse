@@ -1,3 +1,8 @@
+> Implementation-stage reference. Pending statements below belong to the
+> original stage. See the [documentation index](../README.md) and
+> [current verification report](../test_report.md) for later acceptance, remote CI
+> and the working public snapshot deployment.
+
 # Source-versioned order state
 
 Date: 2026-11-10. Status: implemented and tested locally; staged separately from

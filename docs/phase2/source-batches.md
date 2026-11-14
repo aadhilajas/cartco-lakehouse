@@ -1,3 +1,8 @@
+> Implementation-stage reference. Pending statements below belong to the
+> original stage. See the [documentation index](../README.md) and
+> [current verification report](../test_report.md) for later acceptance, remote CI
+> and the working public snapshot deployment.
+
 # Immutable source batches and the local versioned ingestion path
 
 Status: implemented and tested locally on 2026-11-10. Legacy DAGs and Gold readers

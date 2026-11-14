@@ -1,4 +1,7 @@
-> Current acceptance is summarized in the repository README, docs/test_report.md and deliverables/week4/status_one_pager.md. Earlier pending statements below describe implementation history; later local Docker/scheduler/recovery/GE/column-lineage checks have completed. Remote CI/cloud/video milestones remain open.
+> Implementation-stage reference. Pending statements below belong to the
+> original stage. See the [documentation index](../README.md) and
+> [current verification report](../test_report.md) for later acceptance, remote CI
+> and the working public snapshot deployment.
 
 # Runtime lineage and local failure-alert outbox
 

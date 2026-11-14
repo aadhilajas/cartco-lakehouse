@@ -1,3 +1,8 @@
+> Implementation-stage reference. Pending statements below belong to the
+> original stage. See the [documentation index](../README.md) and
+> [current verification report](../test_report.md) for later acceptance, remote CI
+> and the working public snapshot deployment.
+
 # Scoped standard-cost inventory turnover
 
 The optional local Gold inventory path adds an actual COGS / average daily

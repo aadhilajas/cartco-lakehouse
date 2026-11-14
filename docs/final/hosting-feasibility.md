@@ -1,3 +1,8 @@
+> Historical planning/handoff document. These dated decisions and pending items
+> record an earlier project stage. For current implementation and the selected
+> public demo hosting model, use the [documentation index](../README.md) and
+> [status ledger](../local-completion-checklist.md).
+
 # Zero-budget hosted backend feasibility
 
 Reviewed: 2026-11-11. Decision status: candidate research only; no deployment.

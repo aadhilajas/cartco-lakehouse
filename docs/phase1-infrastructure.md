@@ -1,3 +1,7 @@
+> Infrastructure-foundation reference, not the complete current application.
+> Its dated pending statements are historical; see the [infrastructure map](../infra/README.md)
+> and [current verification report](test_report.md).
+
 # Phase 1 infrastructure and compatibility
 
 Updated: 2026-11-12. Status: local amd64 Compose and Terraform acceptance passed; hosting/ARM pending.

@@ -1,3 +1,8 @@
+> Implementation-stage reference. Pending statements below belong to the
+> original stage. See the [documentation index](../README.md) and
+> [current verification report](../test_report.md) for later acceptance, remote CI
+> and the working public snapshot deployment.
+
 > Superseded scope interpretation: review the actual B1 requirements in docs/final/assignment-gap-matrix.md and assignment-aligned-plan.md. Spark, IaC, Grafana and a listed catalog are mandatory gaps; reproducible Compose is a permitted backend option. Historical evidence below remains scoped to the tested baseline.
 
 # Original-plan requirements and current evidence

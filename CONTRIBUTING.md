@@ -4,7 +4,7 @@
 
 Read the [repository overview](README.md), [infrastructure map](infra/README.md)
 and [script guide](scripts/README.md). The current Spark application uses
-`infra/assessed/stack.json`; root Compose and `scripts/dev.py` refer to the earlier
+`infra/assessed/stack.json`; root Compose and `scripts/development/dev.py` refer to the earlier
 application. Shared reference modules remain in active use.
 
 Create a focused branch from up-to-date main. Keep documentation-only changes
@@ -38,3 +38,8 @@ historical checkpoint files as dated records and add a new summary for new proof
 Public snapshots under `dashboard/public/published/` are intentional versioned
 outputs. Publish them with the reviewed workflow after acceptance; do not type
 business totals by hand. The website refresh button does not start processing.
+
+Operator script implementations belong in the documented purpose-based groups.
+Keep the `scripts/layout.json` compatibility map and supported forwarding files
+synchronized. Update standalone Docker copies and source-hash checks together
+with script changes; a forwarder is not the file to fingerprint as probe source.

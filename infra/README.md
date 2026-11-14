@@ -5,8 +5,8 @@ plain `docker compose up` at repository root selects the preserved baseline.
 
 | Configuration | Purpose | Entrypoint |
 |---|---|---|
-| `assessed/stack.json` | Current protocol/Spark/Nessie application | `python scripts/run_assessed_stack.py` from repository root |
-| `phase1/stack.json` | Smaller Spark/catalog compatibility foundation | `scripts/Start-CartcoInfrastructure.ps1` |
+| `assessed/stack.json` | Current protocol/Spark/Nessie application | `python scripts/acceptance/run_assessed_stack.py` from repository root |
+| `phase1/stack.json` | Smaller Spark/catalog compatibility foundation | `scripts/windows/Start-CartcoInfrastructure.ps1` |
 | Root `docker-compose.yml` | Earlier REST-catalog/PyArrow application | Root Compose commands; baseline CI |
 | `terraform/` | Docker resources on an existing host | Current application's Terraform wrapper or explicit reviewed variables |
 | `hosting/Caddyfile.example` | Alternative persistent-server HTTPS example | Not used by the Vercel demonstration |

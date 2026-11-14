@@ -178,7 +178,7 @@
       },
       "command": [
         "python",
-        "/opt/airflow/scripts/initialize_airflow.py"
+        "/opt/airflow/scripts/deployment/initialize_airflow.py"
       ],
       "depends_on": {
         "airflow-db": {
@@ -527,7 +527,7 @@
       ],
       "entrypoint": [
         "python",
-        "/opt/airflow/scripts/seed_assessed_fixtures.py"
+        "/opt/airflow/scripts/fixtures/seed_assessed_fixtures.py"
       ],
       "depends_on": {
         "runtime-init": {
@@ -591,7 +591,7 @@
       ],
       "entrypoint": [
         "python",
-        "/opt/airflow/scripts/initialize_grafana_reader.py"
+        "/opt/airflow/scripts/deployment/initialize_grafana_reader.py"
       ],
       "depends_on": {
         "airflow-init": {

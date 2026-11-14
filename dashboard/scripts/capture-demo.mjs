@@ -35,7 +35,7 @@ await new Promise((resolve) => probe.close(resolve));
 const server = spawn(
   path.resolve(args.python),
   [
-    path.join(repo, "scripts/serve_dashboard.py"),
+    path.join(repo, "scripts/runtime/serve_dashboard.py"),
     "--dist",
     path.join(repo, "dashboard/dist"),
     "--snapshot",

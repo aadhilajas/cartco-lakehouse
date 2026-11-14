@@ -9,9 +9,7 @@ on:
       - 'infra/terraform/**'
       - 'dashboard/**'
       - 'requirements/**'
-      - 'scripts/*assessed*'
-      - 'scripts/*dashboard*'
-      - 'scripts/*CartcoAssessed*.ps1'
+      - 'scripts/**'
       - 'tests/spark/**'
       - '.github/workflows/assessed.yml'
       - '.github/workflows/publish-demo.yml'
@@ -88,10 +86,14 @@ jobs:
         with:
           python-version: '3.11'
       - name: Build and run actual scheduled project
-        run: python scripts/run_assessed_stack.py --result-root test-results/assessed
+        run: python scripts/acceptance/run_assessed_stack.py --result-root test-results/assessed
+      - name: Verify grouped cold recovery entrypoint
+        run: python scripts/recovery/prove_assessed_recovery.py --output test-results/assessed-recovery
       - uses: actions/upload-artifact@v4
         if: always()
         with:
           name: assessed-scheduled-stack-evidence
-          path: test-results/assessed/
+          path: |
+            test-results/assessed/
+            test-results/assessed-recovery/
           if-no-files-found: warn

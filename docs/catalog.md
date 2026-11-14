@@ -162,7 +162,7 @@ uses source-shaped strings; casts and validation belong to subsequent processing
 ## Verification and historical catalog
 
 Use the [local acceptance runner](../scripts/README.md) and
-[verify_assessed_catalog.py](../scripts/verify_assessed_catalog.py) inside the
+[verify_assessed_catalog.py](../scripts/diagnostics/verify_assessed_catalog.py) inside the
 current Spark environment. The dashboard catalog registry displays the approved
 snapshot identities; the Vercel page does not query a persistent public Nessie.
 

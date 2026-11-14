@@ -79,11 +79,11 @@ jobs:
         run: >-
           docker compose run --rm --no-deps
           -e AIRFLOW__DATABASE__SQL_ALCHEMY_CONN=sqlite:////tmp/cartco-dag-check.db
-          --entrypoint python airflow-scheduler /opt/airflow/scripts/check_dags.py
+          --entrypoint python airflow-scheduler /opt/airflow/scripts/diagnostics/check_dags.py
       - name: Start a fresh stack
         run: docker compose up -d
       - name: Exercise versioned three-source replay, legacy DAGs and integration tests
-        run: bash scripts/ci_baseline.sh
+        run: bash scripts/ci/ci_baseline.sh
       - name: Capture stack diagnostics
         if: always()
         run: |

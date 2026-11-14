@@ -78,7 +78,7 @@ def prepare_manifest():
 
 def compute():
     repo = Path(__file__).resolve().parents[1]
-    subprocess.run([os.environ.get("CARTCO_SPARK_PYTHON", "/opt/cartco-spark/bin/python"), str(repo / "scripts/run_spark_commerce.py"),
+    subprocess.run([os.environ.get("CARTCO_SPARK_PYTHON", "/opt/cartco-spark/bin/python"), str(repo / "scripts/runtime/run_spark_commerce.py"),
         "--manifest", str(root() / "protocols/protocol-acceptance.json"), "--candidate", str(root() / "candidate.json")],
         check=True, timeout=1200, cwd=repo)
 

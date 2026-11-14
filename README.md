@@ -87,13 +87,13 @@ Airflow runs in Linux containers, not natively on Windows.
 ```bash
 git clone https://github.com/aadhilajas/cartco-lakehouse.git
 cd cartco-lakehouse
-python scripts/run_assessed_stack.py
+python scripts/acceptance/run_assessed_stack.py
 ```
 
 On Windows, with Python and Docker available, the equivalent wrapper is:
 
 ```powershell
-& .\scripts\Start-CartcoAssessedStack.ps1
+& .\scripts\windows\Start-CartcoAssessedStack.ps1
 ```
 
 Open the local dashboard at http://127.0.0.1:18100 after acceptance completes.

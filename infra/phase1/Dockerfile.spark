@@ -12,7 +12,7 @@ ENV PATH="${SPARK_HOME}/bin:${PATH}"
 COPY infra/phase1/artifacts.json /opt/cartco/artifacts.json
 COPY infra/phase1/fetch_jars.py /opt/cartco/fetch_jars.py
 RUN python /opt/cartco/fetch_jars.py /opt/cartco/artifacts.json ${SPARK_HOME}/jars
-COPY scripts/phase1_spark_smoke.py /opt/cartco/phase1_spark_smoke.py
+COPY scripts/acceptance/phase1_spark_smoke.py /opt/cartco/phase1_spark_smoke.py
 RUN useradd --create-home --uid 10001 cartco && mkdir /evidence && chown cartco /evidence
 USER cartco
 WORKDIR /opt/cartco

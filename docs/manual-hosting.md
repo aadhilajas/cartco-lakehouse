@@ -64,7 +64,7 @@ The checked-in fixture specification is not a public-production secret profile.
 ## 4. Run the same acceptance on the server
 
 ```bash
-python3 scripts/run_assessed_stack.py
+python3 scripts/acceptance/run_assessed_stack.py
 ```
 
 Use the server's actual Python 3.11+ and Docker access. Keep its full generated

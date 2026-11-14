@@ -39,3 +39,11 @@ Use the [verification report](../docs/test_report.md) for dated results and the
 [checkpoint index](../docs/validation/README.md) for evidence boundaries. Full
 logs and JUnit files belong in ignored `test-results/` or workflow artifacts;
 small reviewed summaries may be committed under `docs/validation/`.
+
+## Script migration compatibility
+
+`tests/unit/test_script_layout.py` exercises old/new help commands outside the
+repository, Python module alias identity and individually copied stdlib tools.
+The existing worker signal guards and authentication/deployment tests continue
+using old imports to protect compatibility. The scheduled-stack CI job also runs
+the grouped cold-recovery entrypoint after acceptance and retains its evidence.

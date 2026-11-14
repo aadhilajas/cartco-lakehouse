@@ -12,9 +12,9 @@ must actually remain stopped. A failed candidate has no final manifest and must
 not be used for recovery.
 
 ```text
-python scripts/local_recovery.py backup --catalog-db <absolute-db> --warehouse <absolute-warehouse> --runtime-root <absolute-runtime> --catalog-name <exact-name> --output <new-backup-directory> --writers-stopped
-python scripts/local_recovery.py verify --backup <backup-directory>
-python scripts/local_recovery.py restore --backup <backup-directory> --catalog-db <original-db> --warehouse <original-warehouse> --runtime-root <original-runtime> --writers-stopped
+python scripts/recovery/local_recovery.py backup --catalog-db <absolute-db> --warehouse <absolute-warehouse> --runtime-root <absolute-runtime> --catalog-name <exact-name> --output <new-backup-directory> --writers-stopped
+python scripts/recovery/local_recovery.py verify --backup <backup-directory>
+python scripts/recovery/local_recovery.py restore --backup <backup-directory> --catalog-db <original-db> --warehouse <original-warehouse> --runtime-root <original-runtime> --writers-stopped
 ```
 
 The complete catalog, warehouse and runtime files are copied, including retained
@@ -54,7 +54,7 @@ removing volumes, then compare through fresh catalog handles. Separately test
 coordinated recovery of the JDBC database, MinIO objects, runtime data and service
 databases. The local backup tool cannot substitute for this check.
 
-`scripts/catalog_checkpoint.py capture --check-airflow-quiescent --output <new-file>`
+`scripts/diagnostics/catalog_checkpoint.py capture --check-airflow-quiescent --output <new-file>`
 records exact current row multiset hashes (including processing timestamps),
 table UUIDs, schema, properties, metadata locations and retained snapshot IDs.
 It checks for queued/running DAG runs and unpaused active DAGs before and after
@@ -100,7 +100,7 @@ directories and symlink targets. Special files are rejected. Original volumes
 are never overwritten or deleted, and the original stack is requested to resume
 in a finally block even if an archive/restore step fails.
 
-`scripts/volume_inventory.py` supplies the inventories. These checks do not
+`scripts/recovery/volume_inventory.py` supplies the inventories. These checks do not
 cover ACLs, xattrs, file capabilities, hard-link identity or timestamps. The
 final backup manifest records archive checksums, inventory checksums, helper
 image IDs and the bundled source-history checksum. Retain the archives and new
@@ -204,7 +204,7 @@ the original stack and prior restored copies were untouched. The evidence is
 retained in host run `20261111172001-20261111175354`. Coverage remains limited to
 the explicitly post-commit task-process SIGKILL described above.
 
-`scripts/check_marquez_runtime.py` independently reads the Marquez API to require
+`scripts/diagnostics/check_marquez_runtime.py` independently reads the Marquez API to require
 six completed indexed stage runs with the expected orchestration identity,
 release/snapshot/count run facets, dataset versions, state schema fields and
 source-to-state-to-publication graph edges. It passed against the live backend
@@ -213,7 +213,7 @@ backend persistence across restarts. For repeat verification, provide the exact
 runtime acceptance summary and orchestration run ID:
 
 ```text
-python scripts/check_marquez_runtime.py --expected <versioned-runtime.json> --orchestration-run-id <exact-run-id> --output <report.json>
+python scripts/diagnostics/check_marquez_runtime.py --expected <versioned-runtime.json> --orchestration-run-id <exact-run-id> --output <report.json>
 ```
 
 This check is read-only, assumes the local demo namespace/storage names, and

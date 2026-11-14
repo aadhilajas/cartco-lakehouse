@@ -21,21 +21,22 @@ The local services below are private; the website does not host them continuousl
 - Sufficient host memory for the capped services and one Spark task at a time.
   Container caps are not measured usage or a cloud sizing guarantee.
 
-The Windows wrapper uses the existing workspace Python if available, otherwise
-`python` on PATH. A fresh clone does not include that workspace environment.
+The Windows wrapper accepts `-PythonPath` and prefers a project/active Python
+3.11 environment or PATH. An older workspace environment is only an optional
+last-resort compatibility fallback. See [tool discovery](../scripts/README.md).
 
 ## One acceptance entrypoint
 
 From the repository in normal PowerShell:
 
 ```powershell
-& .\scripts\Start-CartcoAssessedStack.ps1
+& .\scripts\windows\Start-CartcoAssessedStack.ps1
 ```
 
 On Linux, or with a chosen host Python:
 
 ```bash
-python scripts/run_assessed_stack.py
+python scripts/acceptance/run_assessed_stack.py
 ```
 
 The runner saves full logs, inventories original baseline container identities,
@@ -157,7 +158,7 @@ Bronze/Silver identities. These checks passed in the retained Compose host resul
 After that run succeeds, a separate cold recovery proof can be run from the repo:
 
 ```powershell
-& '..\work\phase1-locked-venv\Scripts\python.exe' -X utf8 scripts/prove_assessed_recovery.py --output test-results/assessed-recovery/proof-1
+& '..\work\phase1-locked-venv\Scripts\python.exe' -X utf8 scripts/recovery/prove_assessed_recovery.py --output test-results/assessed-recovery/proof-1
 ```
 
 Docker must be on PATH; otherwise add `--docker` with its executable path. Choose
@@ -174,7 +175,7 @@ To execute the same scheduled/data/recreation acceptance through the real
 Terraform provider, use the same PowerShell wrapper with the pinned executable:
 
 ```powershell
-& '.\scripts\Start-CartcoAssessedStack.ps1' -TerraformPath ((Resolve-Path '..\work\infra-phase1\terraform\terraform.exe').Path)
+& '.\scripts\windows\Start-CartcoAssessedStack.ps1' -TerraformPath ((Resolve-Path '..\work\infra-phase1\terraform\terraform.exe').Path)
 ```
 
 This selects the separate `assessed` workspace, saves and applies a real plan,
@@ -188,8 +189,8 @@ checks. Run the recovery proof while the Compose stack is active, before
 switching to Terraform:
 
 ```powershell
-& '.\scripts\Start-CartcoAssessedRecovery.ps1'
-& '.\scripts\Start-CartcoAssessedTerraformValidation.ps1'
+& '.\scripts\windows\Start-CartcoAssessedRecovery.ps1'
+& '.\scripts\windows\Start-CartcoAssessedTerraformValidation.ps1'
 ```
 
 Each wrapper saves a separate dated result directory and retains volumes.

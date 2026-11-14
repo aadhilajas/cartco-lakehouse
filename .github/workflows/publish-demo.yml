@@ -28,7 +28,7 @@ jobs:
           npm --prefix dashboard ci --ignore-scripts --no-audit --no-fund
           npm --prefix dashboard test
       - name: Run real scheduled pipeline and acceptance
-        run: python scripts/run_assessed_stack.py --result-root test-results/hosted-demo
+        run: python scripts/acceptance/run_assessed_stack.py --result-root test-results/hosted-demo
       - name: Prepare verified snapshot and build public website
         run: |
           node dashboard/scripts/prepare-publication.mjs test-results/hosted-demo dashboard/public/published

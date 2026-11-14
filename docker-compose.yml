@@ -151,7 +151,7 @@ services:
   airflow-init:
     <<: *airflow-common
     container_name: cartco-airflow-init
-    command: ["python", "/opt/airflow/scripts/initialize_airflow.py"]
+    command: ["python", "/opt/airflow/scripts/deployment/initialize_airflow.py"]
     restart: "no"
 
   airflow-webserver:

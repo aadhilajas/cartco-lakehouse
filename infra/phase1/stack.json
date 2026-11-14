@@ -166,7 +166,7 @@
       },
       "command": [
         "python",
-        "/opt/airflow/scripts/initialize_airflow.py"
+        "/opt/airflow/scripts/deployment/initialize_airflow.py"
       ],
       "depends_on": {
         "airflow-db": {

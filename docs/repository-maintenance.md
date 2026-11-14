@@ -14,11 +14,11 @@ Review and merge this pass before starting unrelated runtime moves.
 
 ## 2. Dashboard maintainability
 
-Prepared locally after PR #6: separate views, shared components, snapshot hook,
+Completed in PR #7: separate views, shared components, snapshot hook,
 model/configuration helpers, grouped scripts/unit/browser tests and styles.
-Package commands and workflow callers now use the grouped paths. Browser checks
-for both serving modes are required in the dashboard PR job; successful remote
-acceptance and merge are still pending for this refactor.
+Both local and hosted browser modes passed remote CI. After merge, the public
+Vercel HTML and asset were checked against the refactored build; published run
+metadata remained intact.
 
 Extract `src/main.jsx` into an application shell, shared components and separate
 Business/Engineering/Lineage views. Keep `dashboard/` as the Vercel root. Group
@@ -28,6 +28,12 @@ zero/unavailable, failed-refresh and run-provenance behavior. Validate both loca
 and hosted builds, model/publication tests, mobile UI and real hosted publication.
 
 ## 3. Script organization and portable launchers
+
+Prepared on `refactor/script-layout`: canonical purpose-based directories, a
+reviewable compatibility map, old CLI/import/PowerShell forwarders, updated active
+callers and standalone Docker COPY/hash paths. Executable discovery prefers normal
+clone tools while retaining optional workspace fallbacks. Remote full-stack,
+foundation and cold recovery qualification must pass before this refactor merges.
 
 Group scripts into development, acceptance, recovery, deployment, diagnostics,
 fixtures and Windows launchers. First enumerate callers from workflows, Docker

@@ -23,7 +23,7 @@ Work on `hosting/vercel-demo`. Inspect `git status --short` and `git diff --stat
 Stage only these files, then commit and push from normal PowerShell:
 
 ```powershell
-git add .github/workflows/assessed.yml .github/workflows/publish-demo.yml dashboard/package.json dashboard/vite.config.js dashboard/vercel.json dashboard/src/main.jsx dashboard/prepare-publication.mjs dashboard/check-publication.mjs dashboard/publication.test.mjs dashboard/check-ui.mjs docs/vercel-demo-guide.md docs/manual-hosting.md
+git add dashboard .github/workflows/assessed.yml .github/workflows/publish-demo.yml docs/vercel-demo-guide.md docs/manual-hosting.md
 git commit -m "Prepare verified snapshot demo for Vercel hosting"
 git push -u origin hosting/vercel-demo
 ```

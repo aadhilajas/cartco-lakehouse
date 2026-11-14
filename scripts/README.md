@@ -25,7 +25,7 @@ they run in a host unit-test environment.
 ## Public publication
 
 Use **Publish verified demo** in GitHub Actions on `main`. It calls the current
-acceptance runner, then `dashboard/prepare-publication.mjs`. Browser checks must
+acceptance runner, then `dashboard/scripts/prepare-publication.mjs`. Browser checks must
 pass before the two public files are committed. See the
 [deployment guide](../docs/vercel-demo-guide.md).
 

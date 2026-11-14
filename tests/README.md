@@ -29,7 +29,7 @@ is the host-side runner under `scripts/`. The live baseline opts in with
 
 ## Browser and publication checks
 
-`dashboard/check-ui.mjs` checks business totals, filters, seven quality suites,
+`dashboard/tests/browser/check-ui.mjs` checks business totals, filters, seven quality suites,
 44 lineage fields, mobile layout, failed refresh retention and read-only routes.
 The publication workflow tests hosted mode against its actual newly computed
 snapshot before committing it. Publication unit tests also reject incomplete

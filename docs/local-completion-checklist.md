@@ -55,5 +55,5 @@ not completed capabilities. See [ADR-016](adr/ADR-016-public-snapshot-demo.md).
 ## Repository cleanup
 
 This documentation pass adds current navigation and preserves earlier guides
-under `history/`. Dashboard refactoring, script grouping and infrastructure path
-moves remain separate maintenance changes; they do not block the working demo.
+under `history/`. Dashboard refactoring is prepared as a separate follow-up; script grouping and
+infrastructure path moves remain later maintenance changes; they do not block the working demo.

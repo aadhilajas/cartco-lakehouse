@@ -43,3 +43,15 @@ source-trigger hashes cover both compatibility and shared build inputs.
 
 [Current runbook](../docs/assessed-runbook.md) ·
 [Hosting boundaries](../docs/vercel-demo-guide.md)
+
+## Apply concurrency
+
+Repository launchers and CI use `terraform apply -parallelism=1`. Keep that flag
+for direct applies too: concurrent container creation against a new shared Airflow
+log volume produced a Docker `scheduler/latest` symlink-already-exists error.
+Serialization limits Terraform operations; running containers and their finite
+initializers still initialize asynchronously and require readiness checks.
+Existing volume contents, ownership and names remain intact.
+
+See [Terraform apply options](https://developer.hashicorp.com/terraform/cli/commands/apply)
+and [Docker volume population](https://docs.docker.com/engine/storage/volumes/).

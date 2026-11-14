@@ -51,9 +51,11 @@ class Deployment:
         self.run(self.tf("test"), "terraform-tests.log")
         plan = str(self.evidence / "assessed.tfplan")
         self.run(self.tf("plan", *self.variables(), "-out=" + plan), "terraform-plan.log")
-        self.run(self.tf("apply", "-auto-approve", plan), "terraform-apply.log")
-        # Terraform creates services concurrently; wait for the same finite
-        # initializers that Compose gates with completed-successfully dependencies.
+        # Docker copies image contents into an empty named volume on first mount.
+        # Concurrent creates can race on Airflow's scheduler/latest symlink.
+        self.run(self.tf("apply", "-parallelism=1", "-auto-approve", plan), "terraform-apply.log")
+        # Container processes still initialize asynchronously. Wait for the same
+        # finite initializers that Compose gates with completed-successfully dependencies.
         deadline = time.monotonic() + 300
         pending = {name for name in ["runtime-init", "fixture-seed", "airflow-init", "grafana-init"]}
         states = {}
@@ -82,7 +84,7 @@ class Deployment:
             plan = str(self.evidence / "recreation.tfplan")
             replacements = ['-replace=docker_container.service["' + name + '"]' for name in ["catalog-db", "minio", "nessie"]]
             self.run(self.tf("plan", *self.variables(), *replacements, "-out=" + plan), "terraform-recreation-plan.log")
-            self.run(self.tf("apply", "-auto-approve", plan), "terraform-recreation-apply.log")
+            self.run(self.tf("apply", "-parallelism=1", "-auto-approve", plan), "terraform-recreation-apply.log")
         else:
             self.run(self.compose + ["stop", "nessie"], "stop-catalog.log")
             self.run(self.compose + ["up", "-d", "--no-deps", "--force-recreate", "catalog-db", "minio"], "recreate-storage.log")

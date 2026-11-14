@@ -1,17 +1,17 @@
 {
   "schema_version": 1,
   "is_synthetic": true,
-  "release_id": "r1ab299249be745a89f6df52a221dd90f",
+  "release_id": "rb319bbbaa297492daaa852b7aec66439",
   "batch_date": "2026-11-12",
-  "computed_at": "2026-11-14T04:10:40.604036+00:00",
-  "exported_at": "2026-11-14T04:11:15.121158+00:00",
+  "computed_at": "2026-11-14T08:44:26.301537+00:00",
+  "exported_at": "2026-11-14T08:44:50.705114+00:00",
   "compute": {
     "spark": "3.5.6",
     "master": "local[2]"
   },
   "execution": {
     "mode": "Airflow task",
-    "duration_seconds": 22.55
+    "duration_seconds": 14.51
   },
   "daily_revenue": [
     {
@@ -274,9 +274,9 @@
   "catalog": {
     "bronze_orders": {
       "table": "nessie.cartco_assessed.bronze_orders",
-      "uuid": "56cebbc0-ef47-4e6e-8372-bc1e94746953",
-      "snapshot_id": "7973096671012852692",
-      "metadata_location": "s3://cartco-phase1/assessed/cartco_assessed/bronze_orders_54d701bc-bf26-43e2-b6ce-b2f355e3c7b4/metadata/00000-5eaa1790-382c-4299-ad5b-1f899e0f31f6.metadata.json",
+      "uuid": "bffde804-7b56-4c5c-8cbf-3ffdd652ca18",
+      "snapshot_id": "7942172623028645962",
+      "metadata_location": "s3://cartco-phase1/assessed/cartco_assessed/bronze_orders_8ab1f42b-dd98-4c88-ad78-4a13ff04c3d2/metadata/00000-394b96ee-3008-4781-8832-e4a79eacc70f.metadata.json",
       "schema": {
         "type": "struct",
         "fields": [
@@ -320,9 +320,9 @@
     },
     "bronze_wire_objects": {
       "table": "nessie.cartco_assessed.bronze_wire_objects",
-      "uuid": "2d0ae22a-0f73-491f-aa01-814872b09b93",
-      "snapshot_id": "6933966330461501682",
-      "metadata_location": "s3://cartco-phase1/assessed/cartco_assessed/bronze_wire_objects_70ce8716-2c84-492e-9e4e-5fa79811a627/metadata/00000-375f30f3-cffc-4ea2-bcb4-77b748811762.metadata.json",
+      "uuid": "282bdabf-77c7-42fd-9923-f58c835d6f72",
+      "snapshot_id": "5604310294397773911",
+      "metadata_location": "s3://cartco-phase1/assessed/cartco_assessed/bronze_wire_objects_643b3a19-c19f-469b-8304-2672e5f84239/metadata/00000-487343fc-c988-41d8-9e2b-3249f752ef21.metadata.json",
       "schema": {
         "type": "struct",
         "fields": [
@@ -366,9 +366,9 @@
     },
     "bronze_inventory": {
       "table": "nessie.cartco_assessed.bronze_inventory",
-      "uuid": "94a16ff9-dab7-4c0a-a155-a9e49478af05",
-      "snapshot_id": "1867103436928749543",
-      "metadata_location": "s3://cartco-phase1/assessed/cartco_assessed/bronze_inventory_91f1d841-10f5-4e8b-8f24-deb334f6254f/metadata/00000-413001d6-5fcf-44ee-9a05-e64584a2b9f5.metadata.json",
+      "uuid": "3e43265a-1cd9-467e-8ded-ea68ebf1d182",
+      "snapshot_id": "1624975074243941472",
+      "metadata_location": "s3://cartco-phase1/assessed/cartco_assessed/bronze_inventory_07072b8b-4efb-453c-baea-1ec2cec96851/metadata/00000-d786b94b-4056-4d22-b79e-84076dc6dfc5.metadata.json",
       "schema": {
         "type": "struct",
         "fields": [
@@ -444,9 +444,9 @@
     },
     "silver": {
       "table": "nessie.cartco_assessed.silver_order_state",
-      "uuid": "daee5d5d-858e-468e-b7c0-a6b014eda73f",
-      "snapshot_id": "6066108775793311562",
-      "metadata_location": "s3://cartco-phase1/assessed/cartco_assessed/silver_order_state_e7da8bac-365c-4c5e-9a7d-6f95c4ce0b44/metadata/00000-8114464f-3b01-464e-b5d1-193fdcfbc1ec.metadata.json",
+      "uuid": "2fdbdeb3-b2ab-4a53-b3ec-c986ac91e228",
+      "snapshot_id": "4972518783979589249",
+      "metadata_location": "s3://cartco-phase1/assessed/cartco_assessed/silver_order_state_bd3ca2d7-ca05-4941-964d-2104813d4732/metadata/00000-20ebf110-308f-488e-ad18-5ded4a2c5b25.metadata.json",
       "schema": {
         "type": "struct",
         "fields": [
@@ -569,10 +569,10 @@
       "owner": "cartco-data-platform"
     },
     "daily_revenue": {
-      "table": "nessie.cartco_assessed.daily_revenue_r1ab299249be745a89f6df52a221dd90f",
-      "uuid": "d86eeae0-8b82-454a-9d28-8e24be78ff13",
-      "snapshot_id": "4395448964305000123",
-      "metadata_location": "s3://cartco-phase1/assessed/cartco_assessed/daily_revenue_r1ab299249be745a89f6df52a221dd90f_f7411427-0274-4990-8535-0d55598b41c6/metadata/00000-9046eddb-4fd9-4e98-80ce-a768aba7daa7.metadata.json",
+      "table": "nessie.cartco_assessed.daily_revenue_rb319bbbaa297492daaa852b7aec66439",
+      "uuid": "baf027c9-7248-47de-b726-ed4388a1d82b",
+      "snapshot_id": "7980625054161221855",
+      "metadata_location": "s3://cartco-phase1/assessed/cartco_assessed/daily_revenue_rb319bbbaa297492daaa852b7aec66439_5c1970f5-9e94-4e62-8fc5-e8fe70f750c1/metadata/00000-07851303-6992-4183-8a4c-09b5aa253dd2.metadata.json",
       "schema": {
         "type": "struct",
         "fields": [
@@ -627,14 +627,14 @@
         ]
       },
       "partition_spec": "[]",
-      "description": "Immutable candidate daily_revenue; release r1ab299249be745a89f6df52a221dd90f; synthetic INR",
+      "description": "Immutable candidate daily_revenue; release rb319bbbaa297492daaa852b7aec66439; synthetic INR",
       "owner": "cartco-data-platform"
     },
     "channel_performance": {
-      "table": "nessie.cartco_assessed.channel_performance_r1ab299249be745a89f6df52a221dd90f",
-      "uuid": "1aaa51f8-a5c5-42d0-a175-ba3d4b398c47",
-      "snapshot_id": "3339864608367802218",
-      "metadata_location": "s3://cartco-phase1/assessed/cartco_assessed/channel_performance_r1ab299249be745a89f6df52a221dd90f_bf747ce2-df24-4c01-ac1e-a4ccf1244168/metadata/00000-c191d451-67e5-4c24-9163-f6c652a3f604.metadata.json",
+      "table": "nessie.cartco_assessed.channel_performance_rb319bbbaa297492daaa852b7aec66439",
+      "uuid": "5caa378b-adcf-44d9-95fc-4f2187cb242a",
+      "snapshot_id": "4204804355740492284",
+      "metadata_location": "s3://cartco-phase1/assessed/cartco_assessed/channel_performance_rb319bbbaa297492daaa852b7aec66439_954ad4ca-4e78-4539-a8e2-bd37f47432c8/metadata/00000-d1c9a70c-3ac9-4a9c-b00d-fc8ae8a653b8.metadata.json",
       "schema": {
         "type": "struct",
         "fields": [
@@ -729,14 +729,14 @@
         ]
       },
       "partition_spec": "[]",
-      "description": "Immutable candidate channel_performance; release r1ab299249be745a89f6df52a221dd90f; synthetic INR",
+      "description": "Immutable candidate channel_performance; release rb319bbbaa297492daaa852b7aec66439; synthetic INR",
       "owner": "cartco-data-platform"
     },
     "customer_360": {
-      "table": "nessie.cartco_assessed.customer_360_r1ab299249be745a89f6df52a221dd90f",
-      "uuid": "fa8ba31e-bb21-4411-890b-6462b897d86a",
-      "snapshot_id": "1076151718553946918",
-      "metadata_location": "s3://cartco-phase1/assessed/cartco_assessed/customer_360_r1ab299249be745a89f6df52a221dd90f_1e49f84a-ade5-49e5-8c41-4006743a76ee/metadata/00000-43ba73c9-c75c-46c9-982d-6fd14cd16344.metadata.json",
+      "table": "nessie.cartco_assessed.customer_360_rb319bbbaa297492daaa852b7aec66439",
+      "uuid": "3e027ba0-e5dd-41b1-bbfe-707479b77fc7",
+      "snapshot_id": "854596177660620314",
+      "metadata_location": "s3://cartco-phase1/assessed/cartco_assessed/customer_360_rb319bbbaa297492daaa852b7aec66439_d7a8a1cf-b510-4054-8857-4d25d10dc06c/metadata/00000-3cc784ba-4125-484a-bd8e-9917336182dc.metadata.json",
       "schema": {
         "type": "struct",
         "fields": [
@@ -807,14 +807,14 @@
         ]
       },
       "partition_spec": "[]",
-      "description": "Immutable candidate customer_360; release r1ab299249be745a89f6df52a221dd90f; synthetic INR",
+      "description": "Immutable candidate customer_360; release rb319bbbaa297492daaa852b7aec66439; synthetic INR",
       "owner": "cartco-data-platform"
     },
     "category_unit_sales": {
-      "table": "nessie.cartco_assessed.category_unit_sales_r1ab299249be745a89f6df52a221dd90f",
-      "uuid": "b83b8353-e0db-4f7e-8869-e3ed3b19a404",
-      "snapshot_id": "6493469970692006243",
-      "metadata_location": "s3://cartco-phase1/assessed/cartco_assessed/category_unit_sales_r1ab299249be745a89f6df52a221dd90f_5925053e-8a58-494f-9fc1-aa10b2fa63aa/metadata/00000-8dea87da-c9c2-483b-b596-524c21bb0e98.metadata.json",
+      "table": "nessie.cartco_assessed.category_unit_sales_rb319bbbaa297492daaa852b7aec66439",
+      "uuid": "98093c5a-4d1d-4431-a5d9-e500370ae6f9",
+      "snapshot_id": "932879957810631775",
+      "metadata_location": "s3://cartco-phase1/assessed/cartco_assessed/category_unit_sales_rb319bbbaa297492daaa852b7aec66439_7f652068-987e-4be4-bd18-a6d7e9a182b5/metadata/00000-7e6d9f58-be50-4713-9475-e0c60f6e79c3.metadata.json",
       "schema": {
         "type": "struct",
         "fields": [
@@ -853,14 +853,14 @@
         ]
       },
       "partition_spec": "[]",
-      "description": "Immutable candidate category_unit_sales; release r1ab299249be745a89f6df52a221dd90f; synthetic INR",
+      "description": "Immutable candidate category_unit_sales; release rb319bbbaa297492daaa852b7aec66439; synthetic INR",
       "owner": "cartco-data-platform"
     },
     "inventory_turnover": {
-      "table": "nessie.cartco_assessed.inventory_turnover_r1ab299249be745a89f6df52a221dd90f",
-      "uuid": "8e0b5158-05a9-4944-affd-6fd671646441",
-      "snapshot_id": "371243771626710169",
-      "metadata_location": "s3://cartco-phase1/assessed/cartco_assessed/inventory_turnover_r1ab299249be745a89f6df52a221dd90f_de731091-e33e-4b66-a459-56ff68ff1cbf/metadata/00000-5afc55cc-565f-46bc-a250-8eede288cbc9.metadata.json",
+      "table": "nessie.cartco_assessed.inventory_turnover_rb319bbbaa297492daaa852b7aec66439",
+      "uuid": "3d6618fe-de3f-4627-80a4-7cd6273969bd",
+      "snapshot_id": "947765697169605015",
+      "metadata_location": "s3://cartco-phase1/assessed/cartco_assessed/inventory_turnover_rb319bbbaa297492daaa852b7aec66439_5bad6459-f161-4592-a66e-f3048d86852a/metadata/00000-4a3c885f-32b0-461f-b010-d0e9f67e7dac.metadata.json",
       "schema": {
         "type": "struct",
         "fields": [
@@ -987,7 +987,7 @@
         ]
       },
       "partition_spec": "[]",
-      "description": "Immutable candidate inventory_turnover; release r1ab299249be745a89f6df52a221dd90f; synthetic INR",
+      "description": "Immutable candidate inventory_turnover; release rb319bbbaa297492daaa852b7aec66439; synthetic INR",
       "owner": "cartco-data-platform"
     }
   },
@@ -1421,8 +1421,8 @@
   ],
   "lineage_transport": {
     "status": "verified",
-    "verified_at": "2026-11-14T04:11:11.144593+00:00",
+    "verified_at": "2026-11-14T08:44:47.635840+00:00",
     "fields_verified": 44
   },
-  "source_bundle_sha256": "45f8173cfe76b962e64fc45e42ea422c7f04f771a7b079edb71bc5428048c29d"
+  "source_bundle_sha256": "03dca2d0e296f4f871d92a9c5a47a2232371f8b5efa401216aae1d3e18160e1f"
 }

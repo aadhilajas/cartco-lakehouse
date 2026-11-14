@@ -1,10 +1,10 @@
 {
-  "commit": "93e0a7ceee0fd60072124cef1a123f46452ebdfd",
-  "run_id": "43554685157",
-  "run_url": "https://github.com/aadhilajas/cartco-lakehouse/actions/runs/43554685157",
-  "release_id": "r1ab299249be745a89f6df52a221dd90f",
-  "exported_at": "2026-11-14T04:11:15.121158+00:00",
-  "source_bundle_sha256": "45f8173cfe76b962e64fc45e42ea422c7f04f771a7b079edb71bc5428048c29d",
-  "published_at": "2026-11-14T04:12:57.697Z",
+  "commit": "647a407ea2118c3470ad7d05dfb61f87086d8fe3",
+  "run_id": "43576804201",
+  "run_url": "https://github.com/aadhilajas/cartco-lakehouse/actions/runs/43576804201",
+  "release_id": "rb319bbbaa297492daaa852b7aec66439",
+  "exported_at": "2026-11-14T08:44:50.705114+00:00",
+  "source_bundle_sha256": "03dca2d0e296f4f871d92a9c5a47a2232371f8b5efa401216aae1d3e18160e1f",
+  "published_at": "2026-11-14T08:46:04.957Z",
   "mode": "GitHub Actions batch; published snapshot; services stop after the run"
 }

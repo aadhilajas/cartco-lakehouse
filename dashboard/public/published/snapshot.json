@@ -1,0 +1,1428 @@
+{
+  "schema_version": 1,
+  "is_synthetic": true,
+  "release_id": "r47c721f8871344eba6c8d72f8a497a3e",
+  "batch_date": "2026-11-12",
+  "computed_at": "2026-11-14T03:37:30.378792+00:00",
+  "exported_at": "2026-11-14T03:37:58.321000+00:00",
+  "compute": {
+    "spark": "3.5.6",
+    "master": "local[2]"
+  },
+  "execution": {
+    "mode": "Airflow task",
+    "duration_seconds": 18.76
+  },
+  "daily_revenue": [
+    {
+      "order_date": "2026-11-12",
+      "channel": "pos",
+      "total_revenue": "20.25",
+      "order_count": 1,
+      "avg_order_value": "20.25",
+      "currency": "INR"
+    },
+    {
+      "order_date": "2026-11-11",
+      "channel": "amazon",
+      "total_revenue": "600.00",
+      "order_count": 3,
+      "avg_order_value": "200.00",
+      "currency": "INR"
+    },
+    {
+      "order_date": "2026-11-11",
+      "channel": "shopify",
+      "total_revenue": "301.50",
+      "order_count": 3,
+      "avg_order_value": "100.50",
+      "currency": "INR"
+    }
+  ],
+  "channels": [
+    {
+      "channel": "amazon",
+      "total_revenue": "600.00",
+      "total_orders": 3,
+      "cancellation_rate": 0.0,
+      "refund_rate": 0.0,
+      "placed_order_value": "600.00",
+      "cancelled_order_value": "0.00",
+      "refunded_order_value": "0.00",
+      "pending_order_value": "0.00",
+      "avg_fulfillment_days": null,
+      "currency": "INR"
+    },
+    {
+      "channel": "shopify",
+      "total_revenue": "301.50",
+      "total_orders": 3,
+      "cancellation_rate": 0.0,
+      "refund_rate": 0.0,
+      "placed_order_value": "301.50",
+      "cancelled_order_value": "0.00",
+      "refunded_order_value": "0.00",
+      "pending_order_value": "0.00",
+      "avg_fulfillment_days": null,
+      "currency": "INR"
+    },
+    {
+      "channel": "pos",
+      "total_revenue": "20.25",
+      "total_orders": 1,
+      "cancellation_rate": 0.0,
+      "refund_rate": 0.0,
+      "placed_order_value": "20.25",
+      "cancelled_order_value": "0.00",
+      "refunded_order_value": "0.00",
+      "pending_order_value": "0.00",
+      "avg_fulfillment_days": null,
+      "currency": "INR"
+    }
+  ],
+  "inventory": [
+    {
+      "sku": "shopify:gid://shopify/Product/1",
+      "location_id": "DEMO-WH-1",
+      "observed_days": 2,
+      "inventory_value_days": "100.00",
+      "cogs": "5.00",
+      "expected_days": 2,
+      "average_daily_inventory_value": "50.0000000000",
+      "turnover": "0.100000000000",
+      "quality_status": "complete",
+      "currency": "INR",
+      "period_start": "2026-11-11",
+      "period_end": "2026-11-13",
+      "cost_basis": "fixed-standard-cost-v1",
+      "period_basis": "order_date_latest_state",
+      "is_synthetic": true
+    },
+    {
+      "sku": "shopify:gid://shopify/Product/3",
+      "location_id": "DEMO-WH-1",
+      "observed_days": 2,
+      "inventory_value_days": "100.00",
+      "cogs": "5.00",
+      "expected_days": 2,
+      "average_daily_inventory_value": "50.0000000000",
+      "turnover": "0.100000000000",
+      "quality_status": "complete",
+      "currency": "INR",
+      "period_start": "2026-11-11",
+      "period_end": "2026-11-13",
+      "cost_basis": "fixed-standard-cost-v1",
+      "period_basis": "order_date_latest_state",
+      "is_synthetic": true
+    },
+    {
+      "sku": "amazon:SYNTH00002",
+      "location_id": "DEMO-WH-1",
+      "observed_days": 2,
+      "inventory_value_days": "100.00",
+      "cogs": "10.00",
+      "expected_days": 2,
+      "average_daily_inventory_value": "50.0000000000",
+      "turnover": "0.200000000000",
+      "quality_status": "complete",
+      "currency": "INR",
+      "period_start": "2026-11-11",
+      "period_end": "2026-11-13",
+      "cost_basis": "fixed-standard-cost-v1",
+      "period_basis": "order_date_latest_state",
+      "is_synthetic": true
+    },
+    {
+      "sku": "amazon:SYNTH00003",
+      "location_id": "DEMO-WH-1",
+      "observed_days": 2,
+      "inventory_value_days": "100.00",
+      "cogs": "10.00",
+      "expected_days": 2,
+      "average_daily_inventory_value": "50.0000000000",
+      "turnover": "0.200000000000",
+      "quality_status": "complete",
+      "currency": "INR",
+      "period_start": "2026-11-11",
+      "period_end": "2026-11-13",
+      "cost_basis": "fixed-standard-cost-v1",
+      "period_basis": "order_date_latest_state",
+      "is_synthetic": true
+    },
+    {
+      "sku": "pos:POS-001",
+      "location_id": "DEMO-WH-1",
+      "observed_days": 2,
+      "inventory_value_days": "100.00",
+      "cogs": "0.00",
+      "expected_days": 2,
+      "average_daily_inventory_value": "50.0000000000",
+      "turnover": "0.000000000000",
+      "quality_status": "complete",
+      "currency": "INR",
+      "period_start": "2026-11-11",
+      "period_end": "2026-11-13",
+      "cost_basis": "fixed-standard-cost-v1",
+      "period_basis": "order_date_latest_state",
+      "is_synthetic": true
+    },
+    {
+      "sku": "shopify:gid://shopify/Product/2",
+      "location_id": "DEMO-WH-1",
+      "observed_days": 2,
+      "inventory_value_days": "100.00",
+      "cogs": "5.00",
+      "expected_days": 2,
+      "average_daily_inventory_value": "50.0000000000",
+      "turnover": "0.100000000000",
+      "quality_status": "complete",
+      "currency": "INR",
+      "period_start": "2026-11-11",
+      "period_end": "2026-11-13",
+      "cost_basis": "fixed-standard-cost-v1",
+      "period_basis": "order_date_latest_state",
+      "is_synthetic": true
+    },
+    {
+      "sku": "amazon:SYNTH00001",
+      "location_id": "DEMO-WH-1",
+      "observed_days": 2,
+      "inventory_value_days": "100.00",
+      "cogs": "10.00",
+      "expected_days": 2,
+      "average_daily_inventory_value": "50.0000000000",
+      "turnover": "0.200000000000",
+      "quality_status": "complete",
+      "currency": "INR",
+      "period_start": "2026-11-11",
+      "period_end": "2026-11-13",
+      "cost_basis": "fixed-standard-cost-v1",
+      "period_basis": "order_date_latest_state",
+      "is_synthetic": true
+    },
+    {
+      "sku": "pos:POS-002",
+      "location_id": "DEMO-WH-1",
+      "observed_days": 2,
+      "inventory_value_days": "100.00",
+      "cogs": "15.00",
+      "expected_days": 2,
+      "average_daily_inventory_value": "50.0000000000",
+      "turnover": "0.300000000000",
+      "quality_status": "complete",
+      "currency": "INR",
+      "period_start": "2026-11-11",
+      "period_end": "2026-11-13",
+      "cost_basis": "fixed-standard-cost-v1",
+      "period_basis": "order_date_latest_state",
+      "is_synthetic": true
+    }
+  ],
+  "inventory_period": {
+    "period_start": "2026-11-11",
+    "period_end": "2026-11-13"
+  },
+  "quality": {
+    "success": true,
+    "engine": "great_expectations",
+    "engine_version": "0.18.19",
+    "suites": [
+      {
+        "name": "category_unit_sales",
+        "success": true,
+        "rows": 3,
+        "checks": 5
+      },
+      {
+        "name": "channel_performance",
+        "success": true,
+        "rows": 3,
+        "checks": 18
+      },
+      {
+        "name": "customer_360",
+        "success": true,
+        "rows": 6,
+        "checks": 9
+      },
+      {
+        "name": "daily_revenue",
+        "success": true,
+        "rows": 3,
+        "checks": 11
+      },
+      {
+        "name": "inventory_turnover",
+        "success": true,
+        "rows": 8,
+        "checks": 16
+      },
+      {
+        "name": "silver_active",
+        "success": true,
+        "rows": 7,
+        "checks": 17
+      },
+      {
+        "name": "silver_state",
+        "success": true,
+        "rows": 8,
+        "checks": 5
+      }
+    ]
+  },
+  "catalog": {
+    "bronze_orders": {
+      "table": "nessie.cartco_assessed.bronze_orders",
+      "uuid": "82c26098-78c8-4e3b-8e43-7cc67c03e553",
+      "snapshot_id": "7328953919771122567",
+      "metadata_location": "s3://cartco-phase1/assessed/cartco_assessed/bronze_orders_f15e38f8-8bb1-4984-aeaf-883953515b7e/metadata/00000-1c660871-e807-4e61-aa76-e50f4469e0d2.metadata.json",
+      "schema": {
+        "type": "struct",
+        "fields": [
+          {
+            "name": "source",
+            "type": "string",
+            "nullable": true,
+            "metadata": {
+              "comment": "source; synthetic CartCo contract"
+            }
+          },
+          {
+            "name": "batch_id",
+            "type": "string",
+            "nullable": true,
+            "metadata": {
+              "comment": "batch id; synthetic CartCo contract"
+            }
+          },
+          {
+            "name": "ingestion_date",
+            "type": "date",
+            "nullable": true,
+            "metadata": {
+              "comment": "ingestion date; synthetic CartCo contract"
+            }
+          },
+          {
+            "name": "raw_payload",
+            "type": "string",
+            "nullable": true,
+            "metadata": {
+              "comment": "raw payload; synthetic CartCo contract"
+            }
+          }
+        ]
+      },
+      "partition_spec": "[\n  1000: ingestion_date: identity(3)\n]",
+      "description": "Immutable source-shaped order records; UTC ingestion date and immutable batch identity",
+      "owner": "cartco-data-platform"
+    },
+    "bronze_wire_objects": {
+      "table": "nessie.cartco_assessed.bronze_wire_objects",
+      "uuid": "2476910c-195e-4435-898b-bdfc248f7d9e",
+      "snapshot_id": "7845460423239094834",
+      "metadata_location": "s3://cartco-phase1/assessed/cartco_assessed/bronze_wire_objects_ac258b79-c506-4db5-a5f4-d54c77df8c28/metadata/00000-9beb2360-bd70-4eb3-acf5-cb1a8db06c67.metadata.json",
+      "schema": {
+        "type": "struct",
+        "fields": [
+          {
+            "name": "source",
+            "type": "string",
+            "nullable": true,
+            "metadata": {
+              "comment": "source; synthetic CartCo contract"
+            }
+          },
+          {
+            "name": "ingestion_date",
+            "type": "date",
+            "nullable": true,
+            "metadata": {
+              "comment": "ingestion date; synthetic CartCo contract"
+            }
+          },
+          {
+            "name": "sha256",
+            "type": "string",
+            "nullable": true,
+            "metadata": {
+              "comment": "sha256; synthetic CartCo contract"
+            }
+          },
+          {
+            "name": "payload",
+            "type": "binary",
+            "nullable": true,
+            "metadata": {
+              "comment": "payload; synthetic CartCo contract"
+            }
+          }
+        ]
+      },
+      "partition_spec": "[\n  1000: ingestion_date: identity(2)\n]",
+      "description": "Original HTTP response, Kafka message and SFTP bytes; SHA-256 addressed",
+      "owner": "cartco-data-platform"
+    },
+    "bronze_inventory": {
+      "table": "nessie.cartco_assessed.bronze_inventory",
+      "uuid": "14bc578d-fd32-47c4-8004-5374d24a82a6",
+      "snapshot_id": "7438717266478331683",
+      "metadata_location": "s3://cartco-phase1/assessed/cartco_assessed/bronze_inventory_d93f77d5-b70e-4848-b9c9-bb10a8273f7e/metadata/00000-2a47cee6-cdcd-406e-8a22-a5d2fa3f8f3f.metadata.json",
+      "schema": {
+        "type": "struct",
+        "fields": [
+          {
+            "name": "sku",
+            "type": "string",
+            "nullable": true,
+            "metadata": {
+              "comment": "sku; synthetic CartCo contract"
+            }
+          },
+          {
+            "name": "location_id",
+            "type": "string",
+            "nullable": true,
+            "metadata": {
+              "comment": "location id; synthetic CartCo contract"
+            }
+          },
+          {
+            "name": "snapshot_date",
+            "type": "string",
+            "nullable": true,
+            "metadata": {
+              "comment": "snapshot date; synthetic CartCo contract"
+            }
+          },
+          {
+            "name": "on_hand",
+            "type": "string",
+            "nullable": true,
+            "metadata": {
+              "comment": "on hand; synthetic CartCo contract"
+            }
+          },
+          {
+            "name": "unit_cost",
+            "type": "string",
+            "nullable": true,
+            "metadata": {
+              "comment": "unit cost; synthetic CartCo contract"
+            }
+          },
+          {
+            "name": "currency",
+            "type": "string",
+            "nullable": true,
+            "metadata": {
+              "comment": "currency; synthetic CartCo contract"
+            }
+          },
+          {
+            "name": "ingestion_date",
+            "type": "date",
+            "nullable": true,
+            "metadata": {
+              "comment": "ingestion date; synthetic CartCo contract"
+            }
+          },
+          {
+            "name": "batch_id",
+            "type": "string",
+            "nullable": true,
+            "metadata": {
+              "comment": "batch id; synthetic CartCo contract"
+            }
+          }
+        ]
+      },
+      "partition_spec": "[\n  1000: ingestion_date: identity(7)\n]",
+      "description": "Immutable SFTP daily source-qualified SKU/location stock and fixed standard cost",
+      "owner": "cartco-data-platform"
+    },
+    "silver": {
+      "table": "nessie.cartco_assessed.silver_order_state",
+      "uuid": "b24a0ae6-d732-4bea-99f5-0513d3825d09",
+      "snapshot_id": "7837877543317161215",
+      "metadata_location": "s3://cartco-phase1/assessed/cartco_assessed/silver_order_state_6a0b99fe-36eb-494a-9d4f-3442e040a46d/metadata/00000-14099628-13a1-4991-826a-044b9f18a104.metadata.json",
+      "schema": {
+        "type": "struct",
+        "fields": [
+          {
+            "name": "order_id",
+            "type": "string",
+            "nullable": true,
+            "metadata": {
+              "comment": "order id; synthetic CartCo contract"
+            }
+          },
+          {
+            "name": "customer_id",
+            "type": "string",
+            "nullable": true,
+            "metadata": {
+              "comment": "customer id; synthetic CartCo contract"
+            }
+          },
+          {
+            "name": "channel",
+            "type": "string",
+            "nullable": true,
+            "metadata": {
+              "comment": "channel; synthetic CartCo contract"
+            }
+          },
+          {
+            "name": "order_date",
+            "type": "date",
+            "nullable": true,
+            "metadata": {
+              "comment": "order date; synthetic CartCo contract"
+            }
+          },
+          {
+            "name": "product_id",
+            "type": "string",
+            "nullable": true,
+            "metadata": {
+              "comment": "product id; synthetic CartCo contract"
+            }
+          },
+          {
+            "name": "product_category",
+            "type": "string",
+            "nullable": true,
+            "metadata": {
+              "comment": "product category; synthetic CartCo contract"
+            }
+          },
+          {
+            "name": "quantity",
+            "type": "integer",
+            "nullable": true,
+            "metadata": {
+              "comment": "quantity; synthetic CartCo contract"
+            }
+          },
+          {
+            "name": "unit_price",
+            "type": "decimal(18,2)",
+            "nullable": true,
+            "metadata": {
+              "comment": "unit price; synthetic CartCo contract"
+            }
+          },
+          {
+            "name": "order_status",
+            "type": "string",
+            "nullable": true,
+            "metadata": {
+              "comment": "order status; synthetic CartCo contract"
+            }
+          },
+          {
+            "name": "order_total",
+            "type": "decimal(18,2)",
+            "nullable": true,
+            "metadata": {
+              "comment": "order total; synthetic CartCo contract"
+            }
+          },
+          {
+            "name": "transform_timestamp",
+            "type": "timestamp_ntz",
+            "nullable": true,
+            "metadata": {
+              "comment": "transform timestamp; synthetic CartCo contract"
+            }
+          },
+          {
+            "name": "source_updated_at",
+            "type": "timestamp_ntz",
+            "nullable": true,
+            "metadata": {
+              "comment": "source updated at; synthetic CartCo contract"
+            }
+          },
+          {
+            "name": "is_deleted",
+            "type": "boolean",
+            "nullable": true,
+            "metadata": {
+              "comment": "is deleted; synthetic CartCo contract"
+            }
+          },
+          {
+            "name": "currency",
+            "type": "string",
+            "nullable": true,
+            "metadata": {
+              "comment": "currency; synthetic CartCo contract"
+            }
+          }
+        ]
+      },
+      "partition_spec": "[\n  1000: channel: identity(3)\n]",
+      "description": "Latest source-versioned orders with retained tombstones, exact INR and channel-qualified identities",
+      "owner": "cartco-data-platform"
+    },
+    "daily_revenue": {
+      "table": "nessie.cartco_assessed.daily_revenue_r47c721f8871344eba6c8d72f8a497a3e",
+      "uuid": "541a8083-9f3f-4168-9317-d42f49ec1385",
+      "snapshot_id": "3844885551609528514",
+      "metadata_location": "s3://cartco-phase1/assessed/cartco_assessed/daily_revenue_r47c721f8871344eba6c8d72f8a497a3e_5f91ad13-f4f5-49b2-9148-33efa4bd7283/metadata/00000-10853425-b4c5-42e2-a4b0-d7c014b4c5fa.metadata.json",
+      "schema": {
+        "type": "struct",
+        "fields": [
+          {
+            "name": "order_date",
+            "type": "date",
+            "nullable": true,
+            "metadata": {
+              "comment": "order date; synthetic CartCo contract"
+            }
+          },
+          {
+            "name": "channel",
+            "type": "string",
+            "nullable": true,
+            "metadata": {
+              "comment": "channel; synthetic CartCo contract"
+            }
+          },
+          {
+            "name": "total_revenue",
+            "type": "decimal(18,2)",
+            "nullable": true,
+            "metadata": {
+              "comment": "total revenue; synthetic CartCo contract"
+            }
+          },
+          {
+            "name": "order_count",
+            "type": "integer",
+            "nullable": true,
+            "metadata": {
+              "comment": "order count; synthetic CartCo contract"
+            }
+          },
+          {
+            "name": "avg_order_value",
+            "type": "decimal(18,2)",
+            "nullable": true,
+            "metadata": {
+              "comment": "avg order value; synthetic CartCo contract"
+            }
+          },
+          {
+            "name": "currency",
+            "type": "string",
+            "nullable": true,
+            "metadata": {
+              "comment": "currency; synthetic CartCo contract"
+            }
+          }
+        ]
+      },
+      "partition_spec": "[]",
+      "description": "Immutable candidate daily_revenue; release r47c721f8871344eba6c8d72f8a497a3e; synthetic INR",
+      "owner": "cartco-data-platform"
+    },
+    "channel_performance": {
+      "table": "nessie.cartco_assessed.channel_performance_r47c721f8871344eba6c8d72f8a497a3e",
+      "uuid": "305fc121-97ae-4e12-bea4-6ebb5f3696b6",
+      "snapshot_id": "8541228662862830121",
+      "metadata_location": "s3://cartco-phase1/assessed/cartco_assessed/channel_performance_r47c721f8871344eba6c8d72f8a497a3e_ae8781a4-4c0c-4810-9058-aad871649933/metadata/00000-072c8d30-7ba1-4bd3-a99d-d62e5e4b7c4d.metadata.json",
+      "schema": {
+        "type": "struct",
+        "fields": [
+          {
+            "name": "channel",
+            "type": "string",
+            "nullable": true,
+            "metadata": {
+              "comment": "channel; synthetic CartCo contract"
+            }
+          },
+          {
+            "name": "total_revenue",
+            "type": "decimal(18,2)",
+            "nullable": true,
+            "metadata": {
+              "comment": "total revenue; synthetic CartCo contract"
+            }
+          },
+          {
+            "name": "total_orders",
+            "type": "integer",
+            "nullable": true,
+            "metadata": {
+              "comment": "total orders; synthetic CartCo contract"
+            }
+          },
+          {
+            "name": "cancellation_rate",
+            "type": "double",
+            "nullable": true,
+            "metadata": {
+              "comment": "cancellation rate; synthetic CartCo contract"
+            }
+          },
+          {
+            "name": "refund_rate",
+            "type": "double",
+            "nullable": true,
+            "metadata": {
+              "comment": "refund rate; synthetic CartCo contract"
+            }
+          },
+          {
+            "name": "placed_order_value",
+            "type": "decimal(18,2)",
+            "nullable": true,
+            "metadata": {
+              "comment": "placed order value; synthetic CartCo contract"
+            }
+          },
+          {
+            "name": "cancelled_order_value",
+            "type": "decimal(18,2)",
+            "nullable": true,
+            "metadata": {
+              "comment": "cancelled order value; synthetic CartCo contract"
+            }
+          },
+          {
+            "name": "refunded_order_value",
+            "type": "decimal(18,2)",
+            "nullable": true,
+            "metadata": {
+              "comment": "refunded order value; synthetic CartCo contract"
+            }
+          },
+          {
+            "name": "pending_order_value",
+            "type": "decimal(18,2)",
+            "nullable": true,
+            "metadata": {
+              "comment": "pending order value; synthetic CartCo contract"
+            }
+          },
+          {
+            "name": "avg_fulfillment_days",
+            "type": "double",
+            "nullable": true,
+            "metadata": {
+              "comment": "avg fulfillment days; synthetic CartCo contract"
+            }
+          },
+          {
+            "name": "currency",
+            "type": "string",
+            "nullable": true,
+            "metadata": {
+              "comment": "currency; synthetic CartCo contract"
+            }
+          }
+        ]
+      },
+      "partition_spec": "[]",
+      "description": "Immutable candidate channel_performance; release r47c721f8871344eba6c8d72f8a497a3e; synthetic INR",
+      "owner": "cartco-data-platform"
+    },
+    "customer_360": {
+      "table": "nessie.cartco_assessed.customer_360_r47c721f8871344eba6c8d72f8a497a3e",
+      "uuid": "bdc98257-d201-4acc-96e5-7250553721a2",
+      "snapshot_id": "6279919149185875784",
+      "metadata_location": "s3://cartco-phase1/assessed/cartco_assessed/customer_360_r47c721f8871344eba6c8d72f8a497a3e_7b010d6a-bfa1-4e2e-b0c8-e804dfe638f5/metadata/00000-64e702cd-53ca-4c55-9cfa-931dd70f8b81.metadata.json",
+      "schema": {
+        "type": "struct",
+        "fields": [
+          {
+            "name": "customer_id",
+            "type": "string",
+            "nullable": true,
+            "metadata": {
+              "comment": "customer id; synthetic CartCo contract"
+            }
+          },
+          {
+            "name": "channel",
+            "type": "string",
+            "nullable": true,
+            "metadata": {
+              "comment": "channel; synthetic CartCo contract"
+            }
+          },
+          {
+            "name": "total_orders",
+            "type": "integer",
+            "nullable": true,
+            "metadata": {
+              "comment": "total orders; synthetic CartCo contract"
+            }
+          },
+          {
+            "name": "total_spend",
+            "type": "decimal(18,2)",
+            "nullable": true,
+            "metadata": {
+              "comment": "total spend; synthetic CartCo contract"
+            }
+          },
+          {
+            "name": "first_order_date",
+            "type": "date",
+            "nullable": true,
+            "metadata": {
+              "comment": "first order date; synthetic CartCo contract"
+            }
+          },
+          {
+            "name": "last_order_date",
+            "type": "date",
+            "nullable": true,
+            "metadata": {
+              "comment": "last order date; synthetic CartCo contract"
+            }
+          },
+          {
+            "name": "favorite_category",
+            "type": "string",
+            "nullable": true,
+            "metadata": {
+              "comment": "favorite category; synthetic CartCo contract"
+            }
+          },
+          {
+            "name": "currency",
+            "type": "string",
+            "nullable": true,
+            "metadata": {
+              "comment": "currency; synthetic CartCo contract"
+            }
+          }
+        ]
+      },
+      "partition_spec": "[]",
+      "description": "Immutable candidate customer_360; release r47c721f8871344eba6c8d72f8a497a3e; synthetic INR",
+      "owner": "cartco-data-platform"
+    },
+    "category_unit_sales": {
+      "table": "nessie.cartco_assessed.category_unit_sales_r47c721f8871344eba6c8d72f8a497a3e",
+      "uuid": "266015a8-57a1-4b4d-92e7-a3f08de0b4d4",
+      "snapshot_id": "891159159847630771",
+      "metadata_location": "s3://cartco-phase1/assessed/cartco_assessed/category_unit_sales_r47c721f8871344eba6c8d72f8a497a3e_64bab24d-3cd5-4c60-8c2e-7c8a9d0d439a/metadata/00000-e2a4b282-355d-46ed-b850-36ca0c5b412e.metadata.json",
+      "schema": {
+        "type": "struct",
+        "fields": [
+          {
+            "name": "product_category",
+            "type": "string",
+            "nullable": true,
+            "metadata": {
+              "comment": "product category; synthetic CartCo contract"
+            }
+          },
+          {
+            "name": "channel",
+            "type": "string",
+            "nullable": true,
+            "metadata": {
+              "comment": "channel; synthetic CartCo contract"
+            }
+          },
+          {
+            "name": "units_sold",
+            "type": "integer",
+            "nullable": true,
+            "metadata": {
+              "comment": "units sold; synthetic CartCo contract"
+            }
+          },
+          {
+            "name": "reporting_period",
+            "type": "string",
+            "nullable": true,
+            "metadata": {
+              "comment": "reporting period; synthetic CartCo contract"
+            }
+          }
+        ]
+      },
+      "partition_spec": "[]",
+      "description": "Immutable candidate category_unit_sales; release r47c721f8871344eba6c8d72f8a497a3e; synthetic INR",
+      "owner": "cartco-data-platform"
+    },
+    "inventory_turnover": {
+      "table": "nessie.cartco_assessed.inventory_turnover_r47c721f8871344eba6c8d72f8a497a3e",
+      "uuid": "a45a7040-cc0a-49b9-9479-65877ec10427",
+      "snapshot_id": "6138096641143303974",
+      "metadata_location": "s3://cartco-phase1/assessed/cartco_assessed/inventory_turnover_r47c721f8871344eba6c8d72f8a497a3e_ea2ad7bf-eed4-4534-87d2-099bea819b1e/metadata/00000-81829605-ee37-4966-b5bd-72d418c9a2bf.metadata.json",
+      "schema": {
+        "type": "struct",
+        "fields": [
+          {
+            "name": "sku",
+            "type": "string",
+            "nullable": true,
+            "metadata": {
+              "comment": "sku; synthetic CartCo contract"
+            }
+          },
+          {
+            "name": "location_id",
+            "type": "string",
+            "nullable": true,
+            "metadata": {
+              "comment": "location id; synthetic CartCo contract"
+            }
+          },
+          {
+            "name": "observed_days",
+            "type": "integer",
+            "nullable": true,
+            "metadata": {
+              "comment": "observed days; synthetic CartCo contract"
+            }
+          },
+          {
+            "name": "inventory_value_days",
+            "type": "decimal(24,2)",
+            "nullable": true,
+            "metadata": {
+              "comment": "inventory value days; synthetic CartCo contract"
+            }
+          },
+          {
+            "name": "cogs",
+            "type": "decimal(18,2)",
+            "nullable": true,
+            "metadata": {
+              "comment": "cogs; synthetic CartCo contract"
+            }
+          },
+          {
+            "name": "expected_days",
+            "type": "integer",
+            "nullable": true,
+            "metadata": {
+              "comment": "expected days; synthetic CartCo contract"
+            }
+          },
+          {
+            "name": "average_daily_inventory_value",
+            "type": "decimal(28,10)",
+            "nullable": true,
+            "metadata": {
+              "comment": "average daily inventory value; synthetic CartCo contract"
+            }
+          },
+          {
+            "name": "turnover",
+            "type": "decimal(38,12)",
+            "nullable": true,
+            "metadata": {
+              "comment": "turnover; synthetic CartCo contract"
+            }
+          },
+          {
+            "name": "quality_status",
+            "type": "string",
+            "nullable": true,
+            "metadata": {
+              "comment": "quality status; synthetic CartCo contract"
+            }
+          },
+          {
+            "name": "currency",
+            "type": "string",
+            "nullable": true,
+            "metadata": {
+              "comment": "currency; synthetic CartCo contract"
+            }
+          },
+          {
+            "name": "period_start",
+            "type": "date",
+            "nullable": true,
+            "metadata": {
+              "comment": "period start; synthetic CartCo contract"
+            }
+          },
+          {
+            "name": "period_end",
+            "type": "date",
+            "nullable": true,
+            "metadata": {
+              "comment": "period end; synthetic CartCo contract"
+            }
+          },
+          {
+            "name": "cost_basis",
+            "type": "string",
+            "nullable": true,
+            "metadata": {
+              "comment": "cost basis; synthetic CartCo contract"
+            }
+          },
+          {
+            "name": "period_basis",
+            "type": "string",
+            "nullable": true,
+            "metadata": {
+              "comment": "period basis; synthetic CartCo contract"
+            }
+          },
+          {
+            "name": "is_synthetic",
+            "type": "boolean",
+            "nullable": true,
+            "metadata": {
+              "comment": "is synthetic; synthetic CartCo contract"
+            }
+          }
+        ]
+      },
+      "partition_spec": "[]",
+      "description": "Immutable candidate inventory_turnover; release r47c721f8871344eba6c8d72f8a497a3e; synthetic INR",
+      "owner": "cartco-data-platform"
+    }
+  },
+  "lineage": [
+    {
+      "output": "daily_revenue.order_date",
+      "inputs": [
+        "silver_order_state.channel",
+        "silver_order_state.is_deleted",
+        "silver_order_state.order_date",
+        "silver_order_state.order_status"
+      ],
+      "description": "GROUP canonical active orders by declared keys; completed-only sales/customer/category metrics, all-status channel counts and status value bridge; exact decimal money and deterministic category ties"
+    },
+    {
+      "output": "daily_revenue.channel",
+      "inputs": [
+        "silver_order_state.channel",
+        "silver_order_state.is_deleted",
+        "silver_order_state.order_date",
+        "silver_order_state.order_status"
+      ],
+      "description": "GROUP canonical active orders by declared keys; completed-only sales/customer/category metrics, all-status channel counts and status value bridge; exact decimal money and deterministic category ties"
+    },
+    {
+      "output": "daily_revenue.total_revenue",
+      "inputs": [
+        "silver_order_state.channel",
+        "silver_order_state.is_deleted",
+        "silver_order_state.order_date",
+        "silver_order_state.order_status",
+        "silver_order_state.order_total"
+      ],
+      "description": "GROUP canonical active orders by declared keys; completed-only sales/customer/category metrics, all-status channel counts and status value bridge; exact decimal money and deterministic category ties"
+    },
+    {
+      "output": "daily_revenue.order_count",
+      "inputs": [
+        "silver_order_state.channel",
+        "silver_order_state.is_deleted",
+        "silver_order_state.order_date",
+        "silver_order_state.order_id",
+        "silver_order_state.order_status"
+      ],
+      "description": "GROUP canonical active orders by declared keys; completed-only sales/customer/category metrics, all-status channel counts and status value bridge; exact decimal money and deterministic category ties"
+    },
+    {
+      "output": "daily_revenue.avg_order_value",
+      "inputs": [
+        "silver_order_state.channel",
+        "silver_order_state.is_deleted",
+        "silver_order_state.order_date",
+        "silver_order_state.order_id",
+        "silver_order_state.order_status",
+        "silver_order_state.order_total"
+      ],
+      "description": "GROUP canonical active orders by declared keys; completed-only sales/customer/category metrics, all-status channel counts and status value bridge; exact decimal money and deterministic category ties"
+    },
+    {
+      "output": "daily_revenue.currency",
+      "inputs": [],
+      "description": "Constant INR contract"
+    },
+    {
+      "output": "channel_performance.channel",
+      "inputs": [
+        "silver_order_state.channel",
+        "silver_order_state.is_deleted",
+        "silver_order_state.order_status"
+      ],
+      "description": "GROUP canonical active orders by declared keys; completed-only sales/customer/category metrics, all-status channel counts and status value bridge; exact decimal money and deterministic category ties"
+    },
+    {
+      "output": "channel_performance.total_revenue",
+      "inputs": [
+        "silver_order_state.channel",
+        "silver_order_state.is_deleted",
+        "silver_order_state.order_status",
+        "silver_order_state.order_total"
+      ],
+      "description": "GROUP canonical active orders by declared keys; completed-only sales/customer/category metrics, all-status channel counts and status value bridge; exact decimal money and deterministic category ties"
+    },
+    {
+      "output": "channel_performance.total_orders",
+      "inputs": [
+        "silver_order_state.channel",
+        "silver_order_state.is_deleted",
+        "silver_order_state.order_id",
+        "silver_order_state.order_status"
+      ],
+      "description": "GROUP canonical active orders by declared keys; completed-only sales/customer/category metrics, all-status channel counts and status value bridge; exact decimal money and deterministic category ties"
+    },
+    {
+      "output": "channel_performance.cancellation_rate",
+      "inputs": [
+        "silver_order_state.channel",
+        "silver_order_state.is_deleted",
+        "silver_order_state.order_id",
+        "silver_order_state.order_status"
+      ],
+      "description": "GROUP canonical active orders by declared keys; completed-only sales/customer/category metrics, all-status channel counts and status value bridge; exact decimal money and deterministic category ties"
+    },
+    {
+      "output": "channel_performance.refund_rate",
+      "inputs": [
+        "silver_order_state.channel",
+        "silver_order_state.is_deleted",
+        "silver_order_state.order_id",
+        "silver_order_state.order_status"
+      ],
+      "description": "GROUP canonical active orders by declared keys; completed-only sales/customer/category metrics, all-status channel counts and status value bridge; exact decimal money and deterministic category ties"
+    },
+    {
+      "output": "channel_performance.placed_order_value",
+      "inputs": [
+        "silver_order_state.channel",
+        "silver_order_state.is_deleted",
+        "silver_order_state.order_status",
+        "silver_order_state.order_total"
+      ],
+      "description": "GROUP canonical active orders by declared keys; completed-only sales/customer/category metrics, all-status channel counts and status value bridge; exact decimal money and deterministic category ties"
+    },
+    {
+      "output": "channel_performance.cancelled_order_value",
+      "inputs": [
+        "silver_order_state.channel",
+        "silver_order_state.is_deleted",
+        "silver_order_state.order_status",
+        "silver_order_state.order_total"
+      ],
+      "description": "GROUP canonical active orders by declared keys; completed-only sales/customer/category metrics, all-status channel counts and status value bridge; exact decimal money and deterministic category ties"
+    },
+    {
+      "output": "channel_performance.refunded_order_value",
+      "inputs": [
+        "silver_order_state.channel",
+        "silver_order_state.is_deleted",
+        "silver_order_state.order_status",
+        "silver_order_state.order_total"
+      ],
+      "description": "GROUP canonical active orders by declared keys; completed-only sales/customer/category metrics, all-status channel counts and status value bridge; exact decimal money and deterministic category ties"
+    },
+    {
+      "output": "channel_performance.pending_order_value",
+      "inputs": [
+        "silver_order_state.channel",
+        "silver_order_state.is_deleted",
+        "silver_order_state.order_status",
+        "silver_order_state.order_total"
+      ],
+      "description": "GROUP canonical active orders by declared keys; completed-only sales/customer/category metrics, all-status channel counts and status value bridge; exact decimal money and deterministic category ties"
+    },
+    {
+      "output": "channel_performance.avg_fulfillment_days",
+      "inputs": [],
+      "description": "Constant null: fulfillment events unavailable"
+    },
+    {
+      "output": "channel_performance.currency",
+      "inputs": [],
+      "description": "Constant INR contract"
+    },
+    {
+      "output": "customer_360.customer_id",
+      "inputs": [
+        "silver_order_state.channel",
+        "silver_order_state.customer_id",
+        "silver_order_state.is_deleted",
+        "silver_order_state.order_status"
+      ],
+      "description": "GROUP canonical active orders by declared keys; completed-only sales/customer/category metrics, all-status channel counts and status value bridge; exact decimal money and deterministic category ties"
+    },
+    {
+      "output": "customer_360.channel",
+      "inputs": [
+        "silver_order_state.channel",
+        "silver_order_state.customer_id",
+        "silver_order_state.is_deleted",
+        "silver_order_state.order_status"
+      ],
+      "description": "GROUP canonical active orders by declared keys; completed-only sales/customer/category metrics, all-status channel counts and status value bridge; exact decimal money and deterministic category ties"
+    },
+    {
+      "output": "customer_360.total_orders",
+      "inputs": [
+        "silver_order_state.channel",
+        "silver_order_state.customer_id",
+        "silver_order_state.is_deleted",
+        "silver_order_state.order_id",
+        "silver_order_state.order_status"
+      ],
+      "description": "GROUP canonical active orders by declared keys; completed-only sales/customer/category metrics, all-status channel counts and status value bridge; exact decimal money and deterministic category ties"
+    },
+    {
+      "output": "customer_360.total_spend",
+      "inputs": [
+        "silver_order_state.channel",
+        "silver_order_state.customer_id",
+        "silver_order_state.is_deleted",
+        "silver_order_state.order_status",
+        "silver_order_state.order_total"
+      ],
+      "description": "GROUP canonical active orders by declared keys; completed-only sales/customer/category metrics, all-status channel counts and status value bridge; exact decimal money and deterministic category ties"
+    },
+    {
+      "output": "customer_360.first_order_date",
+      "inputs": [
+        "silver_order_state.channel",
+        "silver_order_state.customer_id",
+        "silver_order_state.is_deleted",
+        "silver_order_state.order_date",
+        "silver_order_state.order_status"
+      ],
+      "description": "GROUP canonical active orders by declared keys; completed-only sales/customer/category metrics, all-status channel counts and status value bridge; exact decimal money and deterministic category ties"
+    },
+    {
+      "output": "customer_360.last_order_date",
+      "inputs": [
+        "silver_order_state.channel",
+        "silver_order_state.customer_id",
+        "silver_order_state.is_deleted",
+        "silver_order_state.order_date",
+        "silver_order_state.order_status"
+      ],
+      "description": "GROUP canonical active orders by declared keys; completed-only sales/customer/category metrics, all-status channel counts and status value bridge; exact decimal money and deterministic category ties"
+    },
+    {
+      "output": "customer_360.favorite_category",
+      "inputs": [
+        "silver_order_state.channel",
+        "silver_order_state.customer_id",
+        "silver_order_state.is_deleted",
+        "silver_order_state.order_status",
+        "silver_order_state.product_category",
+        "silver_order_state.quantity"
+      ],
+      "description": "GROUP canonical active orders by declared keys; completed-only sales/customer/category metrics, all-status channel counts and status value bridge; exact decimal money and deterministic category ties"
+    },
+    {
+      "output": "customer_360.currency",
+      "inputs": [],
+      "description": "Constant INR contract"
+    },
+    {
+      "output": "category_unit_sales.product_category",
+      "inputs": [
+        "silver_order_state.channel",
+        "silver_order_state.is_deleted",
+        "silver_order_state.order_status",
+        "silver_order_state.product_category"
+      ],
+      "description": "GROUP canonical active orders by declared keys; completed-only sales/customer/category metrics, all-status channel counts and status value bridge; exact decimal money and deterministic category ties"
+    },
+    {
+      "output": "category_unit_sales.channel",
+      "inputs": [
+        "silver_order_state.channel",
+        "silver_order_state.is_deleted",
+        "silver_order_state.order_status",
+        "silver_order_state.product_category"
+      ],
+      "description": "GROUP canonical active orders by declared keys; completed-only sales/customer/category metrics, all-status channel counts and status value bridge; exact decimal money and deterministic category ties"
+    },
+    {
+      "output": "category_unit_sales.units_sold",
+      "inputs": [
+        "silver_order_state.channel",
+        "silver_order_state.is_deleted",
+        "silver_order_state.order_status",
+        "silver_order_state.product_category",
+        "silver_order_state.quantity"
+      ],
+      "description": "GROUP canonical active orders by declared keys; completed-only sales/customer/category metrics, all-status channel counts and status value bridge; exact decimal money and deterministic category ties"
+    },
+    {
+      "output": "category_unit_sales.reporting_period",
+      "inputs": [
+        "silver_order_state.channel",
+        "silver_order_state.is_deleted",
+        "silver_order_state.order_date",
+        "silver_order_state.order_status",
+        "silver_order_state.product_category"
+      ],
+      "description": "GROUP canonical active orders by declared keys; completed-only sales/customer/category metrics, all-status channel counts and status value bridge; exact decimal money and deterministic category ties"
+    },
+    {
+      "output": "inventory_turnover.sku",
+      "inputs": [
+        "bronze_inventory.location_id",
+        "bronze_inventory.on_hand",
+        "bronze_inventory.sku",
+        "bronze_inventory.snapshot_date",
+        "bronze_inventory.unit_cost"
+      ],
+      "description": "GROUP observed daily stock values; divide by declared days; missing coverage or zero stock produces a null ratio"
+    },
+    {
+      "output": "inventory_turnover.location_id",
+      "inputs": [
+        "bronze_inventory.location_id",
+        "bronze_inventory.on_hand",
+        "bronze_inventory.sku",
+        "bronze_inventory.snapshot_date",
+        "bronze_inventory.unit_cost"
+      ],
+      "description": "GROUP observed daily stock values; divide by declared days; missing coverage or zero stock produces a null ratio"
+    },
+    {
+      "output": "inventory_turnover.observed_days",
+      "inputs": [
+        "bronze_inventory.location_id",
+        "bronze_inventory.on_hand",
+        "bronze_inventory.sku",
+        "bronze_inventory.snapshot_date",
+        "bronze_inventory.unit_cost"
+      ],
+      "description": "GROUP observed daily stock values; divide by declared days; missing coverage or zero stock produces a null ratio"
+    },
+    {
+      "output": "inventory_turnover.inventory_value_days",
+      "inputs": [
+        "bronze_inventory.location_id",
+        "bronze_inventory.on_hand",
+        "bronze_inventory.sku",
+        "bronze_inventory.snapshot_date",
+        "bronze_inventory.unit_cost"
+      ],
+      "description": "GROUP observed daily stock values; divide by declared days; missing coverage or zero stock produces a null ratio"
+    },
+    {
+      "output": "inventory_turnover.cogs",
+      "inputs": [
+        "bronze_inventory.location_id",
+        "bronze_inventory.sku",
+        "bronze_inventory.unit_cost",
+        "silver_order_state.channel",
+        "silver_order_state.is_deleted",
+        "silver_order_state.order_date",
+        "silver_order_state.order_status",
+        "silver_order_state.product_id",
+        "silver_order_state.quantity"
+      ],
+      "description": "GROUP completed latest-state order quantities by source-qualified SKU; multiply by declared fixed standard cost"
+    },
+    {
+      "output": "inventory_turnover.expected_days",
+      "inputs": [
+        "bronze_inventory.location_id",
+        "bronze_inventory.on_hand",
+        "bronze_inventory.sku",
+        "bronze_inventory.snapshot_date",
+        "bronze_inventory.unit_cost"
+      ],
+      "description": "GROUP observed daily stock values; divide by declared days; missing coverage or zero stock produces a null ratio"
+    },
+    {
+      "output": "inventory_turnover.average_daily_inventory_value",
+      "inputs": [
+        "bronze_inventory.location_id",
+        "bronze_inventory.on_hand",
+        "bronze_inventory.sku",
+        "bronze_inventory.snapshot_date",
+        "bronze_inventory.unit_cost"
+      ],
+      "description": "GROUP observed daily stock values; divide by declared days; missing coverage or zero stock produces a null ratio"
+    },
+    {
+      "output": "inventory_turnover.turnover",
+      "inputs": [
+        "bronze_inventory.location_id",
+        "bronze_inventory.on_hand",
+        "bronze_inventory.sku",
+        "bronze_inventory.snapshot_date",
+        "bronze_inventory.unit_cost",
+        "silver_order_state.channel",
+        "silver_order_state.is_deleted",
+        "silver_order_state.order_date",
+        "silver_order_state.order_status",
+        "silver_order_state.product_id",
+        "silver_order_state.quantity"
+      ],
+      "description": "GROUP observed daily stock values; divide by declared days; missing coverage or zero stock produces a null ratio"
+    },
+    {
+      "output": "inventory_turnover.quality_status",
+      "inputs": [
+        "bronze_inventory.location_id",
+        "bronze_inventory.on_hand",
+        "bronze_inventory.sku",
+        "bronze_inventory.snapshot_date",
+        "bronze_inventory.unit_cost",
+        "silver_order_state.channel",
+        "silver_order_state.is_deleted",
+        "silver_order_state.order_date",
+        "silver_order_state.order_status",
+        "silver_order_state.product_id",
+        "silver_order_state.quantity"
+      ],
+      "description": "GROUP observed daily stock values; divide by declared days; missing coverage or zero stock produces a null ratio"
+    },
+    {
+      "output": "inventory_turnover.currency",
+      "inputs": [],
+      "description": "Declared period, INR, fixed-standard-cost and synthetic fixture contract"
+    },
+    {
+      "output": "inventory_turnover.period_start",
+      "inputs": [],
+      "description": "Declared period, INR, fixed-standard-cost and synthetic fixture contract"
+    },
+    {
+      "output": "inventory_turnover.period_end",
+      "inputs": [],
+      "description": "Declared period, INR, fixed-standard-cost and synthetic fixture contract"
+    },
+    {
+      "output": "inventory_turnover.cost_basis",
+      "inputs": [],
+      "description": "Declared period, INR, fixed-standard-cost and synthetic fixture contract"
+    },
+    {
+      "output": "inventory_turnover.period_basis",
+      "inputs": [],
+      "description": "Declared period, INR, fixed-standard-cost and synthetic fixture contract"
+    },
+    {
+      "output": "inventory_turnover.is_synthetic",
+      "inputs": [],
+      "description": "Declared period, INR, fixed-standard-cost and synthetic fixture contract"
+    }
+  ],
+  "lineage_transport": {
+    "status": "verified",
+    "verified_at": "2026-11-14T03:37:55.252727+00:00",
+    "fields_verified": 44
+  },
+  "source_bundle_sha256": "45f8173cfe76b962e64fc45e42ea422c7f04f771a7b079edb71bc5428048c29d"
+}

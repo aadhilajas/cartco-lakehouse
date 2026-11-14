@@ -39,7 +39,8 @@ try{
  await page.setViewportSize({width:390,height:844});
  assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
  await page.screenshot({path:path.join(args.output,'dashboard-mobile.png'),fullPage:true});
- await page.route('**/api/snapshot',route=>route.fulfill({status:200,contentType:'application/json',body:'{"schema_version":999}'}));
+ if(args.hosted==='true') assert(await page.getByText('Published project demo',{exact:false}).count());
+ await page.route(args.hosted==='true'?'**/published/snapshot.json':'**/api/snapshot',route=>route.fulfill({status:200,contentType:'application/json',body:'{"schema_version":999}'}));
  await page.getByRole('button',{name:'Refresh snapshot'}).click();
  await page.getByRole('alert').waitFor();
  assert((await page.getByRole('alert').textContent()).includes('Keeping the last valid snapshot'));

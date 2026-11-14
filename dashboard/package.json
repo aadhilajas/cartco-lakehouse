@@ -6,8 +6,9 @@
   "scripts": {
     "dev": "vite --host 127.0.0.1",
     "build": "vite build",
-    "test": "node --test src/model.test.js",
-    "preview": "vite preview --host 127.0.0.1"
+    "test": "node --test src/model.test.js publication.test.mjs",
+    "preview": "vite preview --host 127.0.0.1",
+    "build:hosted": "node check-publication.mjs && vite build --mode hosted"
   },
   "engines": {
     "node": ">=22.12.0"

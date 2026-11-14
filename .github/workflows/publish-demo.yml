@@ -1,0 +1,61 @@
+name: Publish verified demo
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: publish-verified-demo
+  cancel-in-progress: false
+jobs:
+  publish:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24.22.1'
+          cache: npm
+          cache-dependency-path: dashboard/package-lock.json
+      - name: Test dashboard and publication gates
+        run: |
+          npm --prefix dashboard ci --ignore-scripts --no-audit --no-fund
+          npm --prefix dashboard test
+      - name: Run real scheduled pipeline and acceptance
+        run: python scripts/run_assessed_stack.py --result-root test-results/hosted-demo
+      - name: Prepare verified snapshot and build public website
+        run: |
+          node dashboard/prepare-publication.mjs test-results/hosted-demo dashboard/public/published
+          npm --prefix dashboard run build:hosted
+      - name: Install browser for public dashboard acceptance
+        working-directory: dashboard
+        run: npx playwright install --with-deps chromium
+      - name: Check hosted dashboard in a real browser
+        run: node dashboard/check-ui.mjs --python "$(command -v python)" --snapshot test-results/hosted-demo/public-snapshot.json --output test-results/hosted-demo/ui --hosted true
+      - name: Retain acceptance evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: hosted-demo-evidence-${{ github.run_id }}
+          path: test-results/hosted-demo/
+          retention-days: 3
+      - name: Publish only snapshot and run provenance
+        env:
+          DEMO_AUTHOR: ${{ github.actor }}
+          DEMO_AUTHOR_ID: ${{ github.actor_id }}
+        run: |
+          git config user.name "$DEMO_AUTHOR"
+          git config user.email "$DEMO_AUTHOR_ID+$DEMO_AUTHOR@users.noreply.github.com"
+          git add -- dashboard/public/published/snapshot.json dashboard/public/published/publication.json
+          git commit -m 'Publish verified synthetic demo snapshot'
+          # A concurrent main update causes a safe rejection. Never force-push.
+          git push origin HEAD:main
+      - name: Stop temporary demo services
+        if: always()
+        run: docker compose -p cartco-assessed -f infra/assessed/stack.json down

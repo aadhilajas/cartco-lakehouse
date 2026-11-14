@@ -14,6 +14,7 @@ on:
       - 'scripts/*CartcoAssessed*.ps1'
       - 'tests/spark/**'
       - '.github/workflows/assessed.yml'
+      - '.github/workflows/publish-demo.yml'
 permissions:
   contents: read
 concurrency:

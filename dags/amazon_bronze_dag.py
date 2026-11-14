@@ -64,12 +64,15 @@ with DAG(
     schedule=None,
     start_date=datetime(2026, 1, 1),
     catchup=False,
+    max_active_runs=1,
     tags=["bronze", "silver", "amazon"],
 ) as dag:
     generate_data = BashOperator(
         task_id="generate_data",
         bash_command=f"python {INGESTION_DIR}/generate_synthetic_amazon_data.py",
         cwd="/opt/airflow",
+        env={"CARTCO_BATCH_DATE": "{{ ds }}"},
+        append_env=True,
         doc="Generates the synthetic Amazon orders CSV consumed by ingest_to_bronze.",
     )
 
@@ -77,6 +80,8 @@ with DAG(
         task_id="ingest_to_bronze",
         bash_command=f"python {INGESTION_DIR}/amazon_bronze.py",
         cwd="/opt/airflow",
+        env={"CARTCO_BATCH_DATE": "{{ ds }}"},
+        append_env=True,
         doc=(
             "Lands the synthetic Amazon CSV into bronze.amazon_orders "
             "(Iceberg on MinIO), partitioned by ingestion_date."
@@ -86,6 +91,7 @@ with DAG(
     run_ge_checkpoint = PythonOperator(
         task_id="run_ge_checkpoint",
         python_callable=ge_bronze_amazon_checkpoint.run,
+        op_kwargs={"batch_date": "{{ ds }}"},
         doc_md=(
             "Runs Great Expectations quality gate on bronze.amazon_orders. "
             "Fails the DAG if any expectation is violated — Silver will not "
@@ -96,6 +102,7 @@ with DAG(
     transform_to_silver = PythonOperator(
         task_id="transform_to_silver",
         python_callable=amazon_silver.run,
+        op_kwargs={"batch_date": "{{ ds }}"},
         doc_md=(
             "Reads bronze.amazon_orders, applies canonical schema + dedup + "
             "null handling + status mapping + asin->product_id rename, "

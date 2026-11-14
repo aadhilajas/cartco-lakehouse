@@ -1,0 +1,5 @@
+# The host runner builds this parent from the existing hash-locked Dockerfile.
+FROM cartco/airflow:infra-p1-base
+COPY --chown=airflow:root scripts/initialize_airflow.py /opt/airflow/scripts/initialize_airflow.py
+COPY --chown=airflow:root infra/phase1/dags /opt/airflow/dags
+COPY --chown=airflow:root infra/phase1/check_dags.py /opt/airflow/scripts/check_dags.py

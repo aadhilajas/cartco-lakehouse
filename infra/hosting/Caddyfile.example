@@ -1,0 +1,7 @@
+# Set CARTCO_HOSTNAME to a real hostname you control, pointed at the host.
+# This is a deployment template, not an already-working public URL.
+{$CARTCO_HOSTNAME} {
+    @writes not method GET HEAD
+    respond @writes "Read-only dashboard" 405
+    reverse_proxy 127.0.0.1:18100
+}

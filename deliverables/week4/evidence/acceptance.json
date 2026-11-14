@@ -1,0 +1,126 @@
+{
+  "verified_date": "2026-11-11",
+  "scope": "Local synthetic project; no final remote CI/cloud/video publication",
+  "tests": {
+    "unit": {
+      "tests": 279,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 1
+    },
+    "file_integration": {
+      "tests": 99,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "live_integration": {
+      "tests": 4,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    }
+  },
+  "ge": {
+    "suite_version": "cartco.ge.outputs.v1",
+    "engine_version": "0.18.19",
+    "success": true,
+    "suites": {
+      "silver_state": {
+        "success": true,
+        "rows": 150,
+        "expectations": 5
+      },
+      "silver_active": {
+        "success": true,
+        "rows": 150,
+        "expectations": 17
+      },
+      "category_unit_sales": {
+        "success": true,
+        "rows": 24,
+        "expectations": 5
+      },
+      "channel_performance": {
+        "success": true,
+        "rows": 3,
+        "expectations": 18
+      },
+      "customer_360": {
+        "success": true,
+        "rows": 118,
+        "expectations": 9
+      },
+      "daily_revenue": {
+        "success": true,
+        "rows": 115,
+        "expectations": 11
+      },
+      "inventory_turnover": {
+        "success": true,
+        "rows": 1,
+        "expectations": 16
+      }
+    },
+    "release_id": "04aa736ebb8a34497d7472c8cedbc85bd4d94d20c1d84fdb1f8ebeb861729f50",
+    "state_snapshot_id": 4668388625262197654,
+    "isolated_live_publication": {
+      "success": true,
+      "quality_suite_version": "cartco.ge.outputs.v1",
+      "release_id": "e43a52a0e266ae3b35a0183e430413129c48522c9fc1887f078c9ab31b04f764",
+      "source_snapshot_id": 4668388625262197654,
+      "artifacts": 5,
+      "source_pointer_unchanged": true,
+      "state_snapshot_unchanged": true
+    }
+  },
+  "column_lineage": {
+    "outputs": 5,
+    "fields": 44,
+    "derived_fields": 40,
+    "backend_verified": true,
+    "constant_fields_have_no_input_edges": true,
+    "source_output_field_checks": 57,
+    "gold_output_field_checks": 44,
+    "total_output_field_checks": 101
+  },
+  "workloads": {
+    "retained_local_file": {
+      "shopify": 50000,
+      "amazon": 40000,
+      "pos": 30000
+    },
+    "live_versioned": {
+      "shopify": 50,
+      "amazon": 50,
+      "pos": 50
+    },
+    "legacy_silver_rows": 90000,
+    "isolated_recovery_after_new_deliveries": {
+      "amazon": 75,
+      "pos": 75,
+      "shopify": 75
+    }
+  },
+  "worker_crash": {
+    "post_commit_task_crash_retry_verified": true,
+    "catalog_snapshots_unchanged_by_retry": true,
+    "alerts": {
+      "retry_scheduled": 1
+    },
+    "terminal_alerts": 0
+  },
+  "service_recovery": {
+    "catalog_tables": 11,
+    "volume_inventory_entries": 20288,
+    "restored_boot_verified": true,
+    "original_stack_preserved": true
+  },
+  "open_milestones": [
+    "Cloud target/account/budget/authorization and deployment",
+    "Authorized GitHub publication and final remote CI",
+    "Newly recorded/published final video",
+    "External notification recipient/configuration if desired"
+  ],
+  "documented_deviation": "PyArrow/PyIceberg retained instead of original PySpark selection; ADR-012"
+}

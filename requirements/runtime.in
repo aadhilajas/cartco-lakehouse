@@ -1,0 +1,9 @@
+# Direct application dependencies. Compile transitive pins into runtime.txt.
+faker==25.9.1
+great-expectations==0.18.19
+numpy==1.26.4
+openlineage-python==1.11.3
+pandas==2.1.4
+pyarrow==15.0.2
+pyiceberg[s3fs,pyarrow]==0.7.1
+setuptools==75.8.0

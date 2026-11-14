@@ -1,0 +1,681 @@
+{
+  "name": "cartco-assessed",
+  "services": {
+    "minio": {
+      "image": "cartco/minio:infra-p1",
+      "mem_limit": "512m",
+      "restart": "unless-stopped",
+      "build": {
+        "context": "../..",
+        "dockerfile": "Dockerfile.minio"
+      },
+      "command": [
+        "server",
+        "/data",
+        "--console-address",
+        ":9001"
+      ],
+      "environment": {
+        "MINIO_ROOT_USER": "cartco-local",
+        "MINIO_ROOT_PASSWORD": "cartco-local-secret"
+      },
+      "volumes": [
+        "objects-data:/data"
+      ],
+      "ports": [
+        "127.0.0.1:19000:9000",
+        "127.0.0.1:19001:9001"
+      ],
+      "healthcheck": {
+        "test": [
+          "CMD",
+          "curl",
+          "--fail",
+          "http://localhost:9000/minio/health/ready"
+        ],
+        "interval": "10s",
+        "timeout": "5s",
+        "retries": 18,
+        "start_period": "20s"
+      }
+    },
+    "bucket-init": {
+      "image": "cartco/minio:infra-p1",
+      "mem_limit": "128m",
+      "restart": "on-failure",
+      "entrypoint": [
+        "/bin/sh",
+        "-ec"
+      ],
+      "command": [
+        "until mc alias set p1 http://minio:9000 cartco-local cartco-local-secret && mc mb --ignore-existing p1/cartco-phase1; do sleep 2; done"
+      ],
+      "depends_on": {
+        "minio": {
+          "condition": "service_healthy"
+        }
+      }
+    },
+    "catalog-db": {
+      "image": "library/postgres@sha256:834a046089d76edd1d2e81c4741f3ad5d1853646ededc86c2708936aad31c1ed",
+      "mem_limit": "384m",
+      "restart": "unless-stopped",
+      "environment": {
+        "POSTGRES_USER": "nessie",
+        "POSTGRES_PASSWORD": "nessie-local-only",
+        "POSTGRES_DB": "nessie"
+      },
+      "volumes": [
+        "nessie-data:/var/lib/postgresql/data"
+      ],
+      "healthcheck": {
+        "test": [
+          "CMD",
+          "pg_isready",
+          "-U",
+          "nessie"
+        ],
+        "interval": "10s",
+        "timeout": "5s",
+        "retries": 18,
+        "start_period": "20s"
+      },
+      "command": [
+        "postgres",
+        "-c",
+        "shared_buffers=64MB",
+        "-c",
+        "max_connections=40"
+      ]
+    },
+    "nessie": {
+      "image": "ghcr.io/projectnessie/nessie:0.110.0@sha256:d3e30c5dda5c57df198f1093f7fe7ef0266f4972a18cf097f447745fcba632f5",
+      "mem_limit": "1024m",
+      "restart": "unless-stopped",
+      "environment": {
+        "NESSIE_VERSION_STORE_TYPE": "JDBC2",
+        "NESSIE_VERSION_STORE_PERSIST_JDBC_DATASOURCE": "postgresql",
+        "QUARKUS_DATASOURCE_POSTGRESQL_JDBC_URL": "jdbc:postgresql://catalog-db:5432/nessie",
+        "QUARKUS_DATASOURCE_POSTGRESQL_USERNAME": "nessie",
+        "QUARKUS_DATASOURCE_POSTGRESQL_PASSWORD": "nessie-local-only",
+        "QUARKUS_HTTP_PORT": "19120",
+        "NESSIE_SERVER_AUTHENTICATION_ENABLED": "false",
+        "JAVA_OPTS_APPEND": "-Xms128m -Xmx640m",
+        "NESSIE_VERSION_STORE_PERSIST_CACHE_CAPACITY_MB": "64"
+      },
+      "ports": [
+        "127.0.0.1:19120:19120"
+      ],
+      "depends_on": {
+        "catalog-db": {
+          "condition": "service_healthy"
+        }
+      }
+    },
+    "airflow-db": {
+      "image": "library/postgres@sha256:834a046089d76edd1d2e81c4741f3ad5d1853646ededc86c2708936aad31c1ed",
+      "mem_limit": "384m",
+      "restart": "unless-stopped",
+      "environment": {
+        "POSTGRES_USER": "airflow",
+        "POSTGRES_PASSWORD": "airflow-local-only",
+        "POSTGRES_DB": "airflow"
+      },
+      "volumes": [
+        "airflow-data:/var/lib/postgresql/data"
+      ],
+      "healthcheck": {
+        "test": [
+          "CMD",
+          "pg_isready",
+          "-U",
+          "airflow"
+        ],
+        "interval": "10s",
+        "timeout": "5s",
+        "retries": 18,
+        "start_period": "20s"
+      },
+      "command": [
+        "postgres",
+        "-c",
+        "shared_buffers=64MB",
+        "-c",
+        "max_connections=40"
+      ]
+    },
+    "airflow-init": {
+      "image": "cartco/airflow:assessed",
+      "mem_limit": "768m",
+      "restart": "on-failure",
+      "build": {
+        "context": "../..",
+        "dockerfile": "infra/assessed/Dockerfile.airflow"
+      },
+      "environment": {
+        "AIRFLOW__CORE__EXECUTOR": "LocalExecutor",
+        "AIRFLOW__DATABASE__SQL_ALCHEMY_CONN": "postgresql+psycopg2://airflow:airflow-local-only@airflow-db/airflow",
+        "AIRFLOW__CORE__LOAD_EXAMPLES": "false",
+        "AIRFLOW__CORE__DAGS_ARE_PAUSED_AT_CREATION": "true",
+        "AIRFLOW__CORE__PARALLELISM": "1",
+        "AIRFLOW__CORE__MAX_ACTIVE_TASKS_PER_DAG": "1",
+        "AIRFLOW__WEBSERVER__WORKERS": "1",
+        "AIRFLOW__WEBSERVER__EXPOSE_CONFIG": "false",
+        "AIRFLOW__SCHEDULER__ENABLE_HEALTH_CHECK": "true",
+        "AIRFLOW__OPENLINEAGE__DISABLED": "true",
+        "CARTCO_ASSESSED_ROOT": "/opt/airflow/data/assessed",
+        "KAFKA_BOOTSTRAP": "kafka:9092",
+        "CARTCO_POS_TOPIC": "cartco.synthetic.pos.20261112.v1",
+        "NESSIE_URI": "http://nessie:19120/api/v2",
+        "S3_ENDPOINT": "http://minio:9000",
+        "AWS_ACCESS_KEY_ID": "cartco-local",
+        "AWS_SECRET_ACCESS_KEY": "cartco-local-secret",
+        "AWS_REGION": "us-east-1",
+        "AWS_EC2_METADATA_DISABLED": "true",
+        "ICEBERG_WAREHOUSE": "s3://cartco-phase1/assessed",
+        "PYSPARK_SUBMIT_ARGS": "--driver-memory 1g pyspark-shell",
+        "GE_USAGE_STATS": "false"
+      },
+      "command": [
+        "python",
+        "/opt/airflow/scripts/initialize_airflow.py"
+      ],
+      "depends_on": {
+        "airflow-db": {
+          "condition": "service_healthy"
+        },
+        "runtime-init": {
+          "condition": "service_completed_successfully"
+        }
+      },
+      "volumes": [
+        "assessed-runtime:/opt/airflow/data"
+      ]
+    },
+    "airflow-web": {
+      "image": "cartco/airflow:assessed",
+      "mem_limit": "768m",
+      "restart": "unless-stopped",
+      "environment": {
+        "AIRFLOW__CORE__EXECUTOR": "LocalExecutor",
+        "AIRFLOW__DATABASE__SQL_ALCHEMY_CONN": "postgresql+psycopg2://airflow:airflow-local-only@airflow-db/airflow",
+        "AIRFLOW__CORE__LOAD_EXAMPLES": "false",
+        "AIRFLOW__CORE__DAGS_ARE_PAUSED_AT_CREATION": "true",
+        "AIRFLOW__CORE__PARALLELISM": "1",
+        "AIRFLOW__CORE__MAX_ACTIVE_TASKS_PER_DAG": "1",
+        "AIRFLOW__WEBSERVER__WORKERS": "1",
+        "AIRFLOW__WEBSERVER__EXPOSE_CONFIG": "false",
+        "AIRFLOW__SCHEDULER__ENABLE_HEALTH_CHECK": "true",
+        "AIRFLOW__OPENLINEAGE__DISABLED": "true",
+        "CARTCO_ASSESSED_ROOT": "/opt/airflow/data/assessed",
+        "KAFKA_BOOTSTRAP": "kafka:9092",
+        "CARTCO_POS_TOPIC": "cartco.synthetic.pos.20261112.v1",
+        "NESSIE_URI": "http://nessie:19120/api/v2",
+        "S3_ENDPOINT": "http://minio:9000",
+        "AWS_ACCESS_KEY_ID": "cartco-local",
+        "AWS_SECRET_ACCESS_KEY": "cartco-local-secret",
+        "AWS_REGION": "us-east-1",
+        "AWS_EC2_METADATA_DISABLED": "true",
+        "ICEBERG_WAREHOUSE": "s3://cartco-phase1/assessed",
+        "PYSPARK_SUBMIT_ARGS": "--driver-memory 1g pyspark-shell",
+        "GE_USAGE_STATS": "false"
+      },
+      "command": [
+        "bash",
+        "-ec",
+        "airflow db check-migrations --migration-wait-timeout 180; exec airflow webserver"
+      ],
+      "volumes": [
+        "airflow-logs:/opt/airflow/logs",
+        "assessed-runtime:/opt/airflow/data"
+      ],
+      "depends_on": {
+        "airflow-init": {
+          "condition": "service_completed_successfully"
+        },
+        "runtime-init": {
+          "condition": "service_completed_successfully"
+        }
+      },
+      "ports": [
+        "127.0.0.1:18080:8080"
+      ],
+      "healthcheck": {
+        "test": [
+          "CMD",
+          "curl",
+          "--fail",
+          "http://localhost:8080/health"
+        ],
+        "interval": "10s",
+        "timeout": "5s",
+        "retries": 18,
+        "start_period": "20s"
+      }
+    },
+    "airflow-scheduler": {
+      "image": "cartco/airflow:assessed",
+      "mem_limit": "3072m",
+      "restart": "unless-stopped",
+      "environment": {
+        "AIRFLOW__CORE__EXECUTOR": "LocalExecutor",
+        "AIRFLOW__DATABASE__SQL_ALCHEMY_CONN": "postgresql+psycopg2://airflow:airflow-local-only@airflow-db/airflow",
+        "AIRFLOW__CORE__LOAD_EXAMPLES": "false",
+        "AIRFLOW__CORE__DAGS_ARE_PAUSED_AT_CREATION": "true",
+        "AIRFLOW__CORE__PARALLELISM": "1",
+        "AIRFLOW__CORE__MAX_ACTIVE_TASKS_PER_DAG": "1",
+        "AIRFLOW__WEBSERVER__WORKERS": "1",
+        "AIRFLOW__WEBSERVER__EXPOSE_CONFIG": "false",
+        "AIRFLOW__SCHEDULER__ENABLE_HEALTH_CHECK": "true",
+        "AIRFLOW__OPENLINEAGE__DISABLED": "true",
+        "CARTCO_ASSESSED_ROOT": "/opt/airflow/data/assessed",
+        "KAFKA_BOOTSTRAP": "kafka:9092",
+        "CARTCO_POS_TOPIC": "cartco.synthetic.pos.20261112.v1",
+        "NESSIE_URI": "http://nessie:19120/api/v2",
+        "S3_ENDPOINT": "http://minio:9000",
+        "AWS_ACCESS_KEY_ID": "cartco-local",
+        "AWS_SECRET_ACCESS_KEY": "cartco-local-secret",
+        "AWS_REGION": "us-east-1",
+        "AWS_EC2_METADATA_DISABLED": "true",
+        "ICEBERG_WAREHOUSE": "s3://cartco-phase1/assessed",
+        "PYSPARK_SUBMIT_ARGS": "--driver-memory 1g pyspark-shell",
+        "GE_USAGE_STATS": "false"
+      },
+      "command": [
+        "bash",
+        "-ec",
+        "airflow db check-migrations --migration-wait-timeout 180; exec airflow scheduler"
+      ],
+      "volumes": [
+        "airflow-logs:/opt/airflow/logs",
+        "assessed-runtime:/opt/airflow/data"
+      ],
+      "depends_on": {
+        "airflow-init": {
+          "condition": "service_completed_successfully"
+        },
+        "runtime-init": {
+          "condition": "service_completed_successfully"
+        },
+        "fixture-seed": {
+          "condition": "service_completed_successfully"
+        },
+        "sftp-fixture": {
+          "condition": "service_started"
+        },
+        "source-api": {
+          "condition": "service_started"
+        }
+      },
+      "healthcheck": {
+        "test": [
+          "CMD",
+          "curl",
+          "--fail",
+          "http://localhost:8974/health"
+        ],
+        "interval": "10s",
+        "timeout": "5s",
+        "retries": 18,
+        "start_period": "20s"
+      }
+    },
+    "marquez-db": {
+      "image": "library/postgres@sha256:834a046089d76edd1d2e81c4741f3ad5d1853646ededc86c2708936aad31c1ed",
+      "mem_limit": "384m",
+      "restart": "unless-stopped",
+      "environment": {
+        "POSTGRES_USER": "marquez",
+        "POSTGRES_PASSWORD": "marquez-local-only",
+        "POSTGRES_DB": "marquez"
+      },
+      "volumes": [
+        "marquez-data:/var/lib/postgresql/data"
+      ],
+      "healthcheck": {
+        "test": [
+          "CMD",
+          "pg_isready",
+          "-U",
+          "marquez"
+        ],
+        "interval": "10s",
+        "timeout": "5s",
+        "retries": 18,
+        "start_period": "20s"
+      },
+      "command": [
+        "postgres",
+        "-c",
+        "shared_buffers=64MB",
+        "-c",
+        "max_connections=40"
+      ]
+    },
+    "marquez-api": {
+      "image": "cartco/marquez:infra-p1",
+      "mem_limit": "1024m",
+      "restart": "unless-stopped",
+      "environment": {
+        "MARQUEZ_PORT": "5000",
+        "MARQUEZ_ADMIN_PORT": "5001",
+        "POSTGRES_HOST": "marquez-db",
+        "POSTGRES_PORT": "5432",
+        "POSTGRES_DB": "marquez",
+        "POSTGRES_USER": "marquez",
+        "POSTGRES_PASSWORD": "marquez-local-only",
+        "JAVA_TOOL_OPTIONS": "-Xms128m -Xmx640m"
+      },
+      "ports": [
+        "127.0.0.1:15000:5000"
+      ],
+      "depends_on": {
+        "marquez-db": {
+          "condition": "service_healthy"
+        }
+      },
+      "build": {
+        "context": "../..",
+        "dockerfile": "infra/phase1/Dockerfile.marquez"
+      }
+    },
+    "marquez-web": {
+      "image": "marquezproject/marquez-web@sha256:7312112ca0e611b0a37b00d3da6a677485ae4a97622b23d3ae24d849a927868b",
+      "mem_limit": "256m",
+      "restart": "unless-stopped",
+      "environment": {
+        "MARQUEZ_HOST": "marquez-api",
+        "MARQUEZ_PORT": "5000",
+        "WEB_PORT": "3000"
+      },
+      "ports": [
+        "127.0.0.1:13000:3000"
+      ],
+      "depends_on": {
+        "marquez-api": {
+          "condition": "service_started"
+        }
+      }
+    },
+    "spark-smoke": {
+      "image": "cartco/spark:infra-p1",
+      "build": {
+        "context": "../..",
+        "dockerfile": "infra/phase1/Dockerfile.spark"
+      },
+      "mem_limit": "2560m",
+      "restart": "no",
+      "profiles": [
+        "acceptance"
+      ],
+      "environment": {
+        "AWS_ACCESS_KEY_ID": "cartco-local",
+        "AWS_SECRET_ACCESS_KEY": "cartco-local-secret",
+        "AWS_REGION": "us-east-1",
+        "AWS_EC2_METADATA_DISABLED": "true",
+        "NESSIE_URI": "http://nessie:19120/api/v2",
+        "S3_ENDPOINT": "http://minio:9000",
+        "ICEBERG_WAREHOUSE": "s3://cartco-phase1/warehouse",
+        "PYSPARK_SUBMIT_ARGS": "--driver-memory 1g pyspark-shell"
+      },
+      "volumes": [
+        "evidence-data:/evidence"
+      ],
+      "depends_on": {
+        "bucket-init": {
+          "condition": "service_completed_successfully"
+        },
+        "nessie": {
+          "condition": "service_started"
+        }
+      }
+    },
+    "runtime-init": {
+      "image": "cartco/airflow:assessed",
+      "networks": [
+        "default"
+      ],
+      "restart": "on-failure",
+      "mem_limit": "64m",
+      "environment": {
+        "CARTCO_ASSESSED_ROOT": "/opt/airflow/data/assessed"
+      },
+      "volumes": [
+        "assessed-runtime:/opt/airflow/data"
+      ],
+      "entrypoint": [
+        "/bin/sh",
+        "-ec",
+        "mkdir -p /opt/airflow/data/assessed && chown -R 50000:0 /opt/airflow/data/assessed"
+      ],
+      "user": "0"
+    },
+    "source-api": {
+      "image": "cartco/airflow:assessed",
+      "networks": [
+        "default"
+      ],
+      "restart": "unless-stopped",
+      "mem_limit": "256m",
+      "environment": {
+        "CARTCO_ASSESSED_ROOT": "/opt/airflow/data/assessed"
+      },
+      "volumes": [
+        "assessed-runtime:/opt/airflow/data"
+      ],
+      "entrypoint": [
+        "python",
+        "-m",
+        "ingestion.protocols.fixtures",
+        "--host",
+        "0.0.0.0",
+        "--port",
+        "18081"
+      ]
+    },
+    "kafka": {
+      "image": "apache/kafka:3.9.1@sha256:4ceccc577f03f51f6af8dbfda55194d0d892f4fa7913ffbded567ce3895622ed",
+      "networks": [
+        "default"
+      ],
+      "restart": "unless-stopped",
+      "mem_limit": "1024m",
+      "environment": {
+        "KAFKA_NODE_ID": "1",
+        "KAFKA_PROCESS_ROLES": "broker,controller",
+        "KAFKA_LISTENERS": "PLAINTEXT://:9092,CONTROLLER://:9093",
+        "KAFKA_ADVERTISED_LISTENERS": "PLAINTEXT://kafka:9092",
+        "KAFKA_CONTROLLER_LISTENER_NAMES": "CONTROLLER",
+        "KAFKA_LISTENER_SECURITY_PROTOCOL_MAP": "CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT",
+        "KAFKA_INTER_BROKER_LISTENER_NAME": "PLAINTEXT",
+        "KAFKA_CONTROLLER_QUORUM_VOTERS": "1@kafka:9093",
+        "KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR": "1",
+        "KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR": "1",
+        "KAFKA_TRANSACTION_STATE_LOG_MIN_ISR": "1",
+        "KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS": "0",
+        "KAFKA_LOG_DIRS": "/var/lib/kafka/data",
+        "KAFKA_HEAP_OPTS": "-Xms256m -Xmx512m",
+        "CLUSTER_ID": "MkU3OEVBNTcwNTJENDM2Qk"
+      },
+      "volumes": [
+        "kafka-data:/var/lib/kafka/data"
+      ],
+      "healthcheck": {
+        "test": [
+          "CMD-SHELL",
+          "/opt/kafka/bin/kafka-broker-api-versions.sh --bootstrap-server localhost:9092 >/dev/null 2>&1"
+        ],
+        "interval": "15s",
+        "timeout": "15s",
+        "retries": 20,
+        "start_period": "30s"
+      }
+    },
+    "fixture-seed": {
+      "image": "cartco/airflow:assessed",
+      "networks": [
+        "default"
+      ],
+      "restart": "on-failure",
+      "mem_limit": "256m",
+      "environment": {
+        "CARTCO_ASSESSED_ROOT": "/opt/airflow/data/assessed",
+        "KAFKA_BOOTSTRAP": "kafka:9092"
+      },
+      "volumes": [
+        "assessed-runtime:/opt/airflow/data"
+      ],
+      "entrypoint": [
+        "python",
+        "/opt/airflow/scripts/seed_assessed_fixtures.py"
+      ],
+      "depends_on": {
+        "runtime-init": {
+          "condition": "service_completed_successfully"
+        },
+        "kafka": {
+          "condition": "service_healthy"
+        }
+      }
+    },
+    "sftp-fixture": {
+      "image": "cartco/airflow:assessed",
+      "networks": [
+        "default"
+      ],
+      "restart": "unless-stopped",
+      "mem_limit": "256m",
+      "environment": {
+        "CARTCO_ASSESSED_ROOT": "/opt/airflow/data/assessed"
+      },
+      "volumes": [
+        "assessed-runtime:/opt/airflow/data"
+      ],
+      "entrypoint": [
+        "python",
+        "-m",
+        "ingestion.protocols.sftp_fixture",
+        "--root",
+        "/opt/airflow/data/assessed/fixtures/inventory",
+        "--host",
+        "0.0.0.0",
+        "--port",
+        "12222",
+        "--key",
+        "/opt/airflow/data/assessed/fixtures/ssh_host_key",
+        "--known-hosts",
+        "/opt/airflow/data/assessed/fixtures/known_hosts",
+        "--known-hostname",
+        "sftp-fixture"
+      ],
+      "depends_on": {
+        "fixture-seed": {
+          "condition": "service_completed_successfully"
+        }
+      }
+    },
+    "grafana-init": {
+      "image": "cartco/airflow:assessed",
+      "networks": [
+        "default"
+      ],
+      "restart": "on-failure",
+      "mem_limit": "256m",
+      "environment": {
+        "CARTCO_ASSESSED_ROOT": "/opt/airflow/data/assessed",
+        "AIRFLOW__DATABASE__SQL_ALCHEMY_CONN": "postgresql+psycopg2://airflow:airflow-local-only@airflow-db/airflow",
+        "CARTCO_GRAFANA_DB_PASSWORD": "grafana-local-only"
+      },
+      "volumes": [
+        "assessed-runtime:/opt/airflow/data"
+      ],
+      "entrypoint": [
+        "python",
+        "/opt/airflow/scripts/initialize_grafana_reader.py"
+      ],
+      "depends_on": {
+        "airflow-init": {
+          "condition": "service_completed_successfully"
+        }
+      }
+    },
+    "grafana": {
+      "image": "cartco/grafana:assessed",
+      "build": {
+        "context": "../..",
+        "dockerfile": "infra/assessed/Dockerfile.grafana"
+      },
+      "networks": [
+        "default"
+      ],
+      "restart": "unless-stopped",
+      "mem_limit": "256m",
+      "environment": {
+        "CARTCO_GRAFANA_DB_PASSWORD": "grafana-local-only",
+        "GF_SECURITY_ADMIN_USER": "cartco",
+        "GF_SECURITY_ADMIN_PASSWORD": "cartco-grafana-local-only",
+        "GF_AUTH_ANONYMOUS_ENABLED": "false",
+        "GF_ANALYTICS_REPORTING_ENABLED": "false",
+        "GF_ANALYTICS_CHECK_FOR_UPDATES": "false"
+      },
+      "ports": [
+        "127.0.0.1:13030:3000"
+      ],
+      "volumes": [
+        "grafana-data:/var/lib/grafana"
+      ],
+      "depends_on": {
+        "grafana-init": {
+          "condition": "service_completed_successfully"
+        }
+      }
+    },
+    "dashboard": {
+      "image": "cartco/dashboard:assessed",
+      "build": {
+        "context": "../..",
+        "dockerfile": "infra/assessed/Dockerfile.dashboard"
+      },
+      "networks": [
+        "default"
+      ],
+      "restart": "unless-stopped",
+      "mem_limit": "128m",
+      "ports": [
+        "127.0.0.1:18100:18100"
+      ],
+      "volumes": [
+        "assessed-runtime:/data:ro"
+      ],
+      "depends_on": {
+        "runtime-init": {
+          "condition": "service_completed_successfully"
+        }
+      }
+    }
+  },
+  "volumes": {
+    "objects-data": {},
+    "nessie-data": {},
+    "airflow-data": {},
+    "marquez-data": {},
+    "airflow-logs": {},
+    "evidence-data": {},
+    "assessed-runtime": {},
+    "kafka-data": {},
+    "grafana-data": {}
+  },
+  "networks": {
+    "default": {}
+  },
+  "x-base-build": {
+    "image": "cartco/airflow:infra-p1-base",
+    "dockerfile": "Dockerfile.airflow"
+  },
+  "x-assessed-notes": {
+    "fixture_date": "2026-11-12",
+    "synthetic": true,
+    "public_surface": "Read-only snapshot dashboard; admin/data ports remain loopback",
+    "compute": "Spark venv inside bounded Airflow task container, separate from Airflow dependencies"
+  }
+}

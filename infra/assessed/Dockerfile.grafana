@@ -1,0 +1,3 @@
+FROM grafana/grafana@sha256:0615ec4fbd4072004b7d86b46ded63013a74b7d6eb1119273dd89e8fa25c13cf
+COPY infra/assessed/grafana/provisioning /etc/grafana/provisioning
+COPY infra/assessed/grafana/dashboards /opt/cartco/dashboards

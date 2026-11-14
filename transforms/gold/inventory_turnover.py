@@ -1,6 +1,8 @@
-"""Gold mart: inventory turnover and units sold by category and channel (gold.inventory_turnover).
+"""Gold category unit sales (legacy inventory_turnover compatibility name) (gold.inventory_turnover).
 
-Reads canonical orders from ``silver.orders`` and computes:
+This is unit sales, not an inventory turnover ratio; inventory/cost inputs are absent.
+
+Reads completed canonical orders from ``silver.orders`` and computes:
     - units_sold (sum of quantity)
     - turnover_period (string date range representation, e.g. 'YYYY-MM-DD to YYYY-MM-DD')
 
@@ -18,6 +20,7 @@ from __future__ import annotations
 import logging
 import os
 import sys
+from pathlib import Path
 import time
 from datetime import datetime, timezone
 
@@ -29,11 +32,12 @@ from pyiceberg.io.pyarrow import schema_to_pyarrow
 from pyiceberg.schema import Schema
 from pyiceberg.types import IntegerType, NestedField, StringType
 
-REPO_ROOT = "/opt/airflow"
+REPO_ROOT = str(Path(__file__).resolve().parents[2])
 if REPO_ROOT not in sys.path:
     sys.path.insert(0, REPO_ROOT)
 
 from lineage import emitter as lineage  # noqa: E402
+from pipeline.commerce_metrics import completed_orders  # noqa: E402
 
 LINEAGE_JOB_NAME = "gold_marts.inventory_turnover"
 
@@ -95,8 +99,8 @@ def ensure_table(catalog):
     try:
         catalog.create_namespace(NAMESPACE)
         logger.info("Created namespace '%s'", NAMESPACE)
-    except Exception:
-        pass
+    except NamespaceAlreadyExistsError:
+        logger.info("Namespace already exists")
 
     def _get_or_create():
         try:
@@ -109,6 +113,7 @@ def ensure_table(catalog):
 
 def transform(silver_table: pa.Table) -> pa.Table:
     """Pure PyArrow transformation: aggregates silver.orders by product_category and channel."""
+    silver_table = completed_orders(silver_table)
     if silver_table.num_rows == 0:
         expected_arrow_schema = schema_to_pyarrow(TABLE_SCHEMA)
         return pa.Table.from_batches([], schema=expected_arrow_schema)

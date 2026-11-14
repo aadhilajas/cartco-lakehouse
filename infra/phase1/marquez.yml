@@ -1,0 +1,31 @@
+server:
+  applicationConnectors:
+    - type: http
+      port: ${MARQUEZ_PORT:-5000}
+      httpCompliance: RFC7230_LEGACY
+  adminConnectors:
+    - type: http
+      port: ${MARQUEZ_ADMIN_PORT:-5001}
+db:
+  driverClass: org.postgresql.Driver
+  url: jdbc:postgresql://${POSTGRES_HOST}:${POSTGRES_PORT:-5432}/${POSTGRES_DB}
+  user: ${POSTGRES_USER}
+  password: ${POSTGRES_PASSWORD}
+  minSize: 1
+  maxSize: 5
+migrateOnStartup: true
+graphql:
+  enabled: true
+logging:
+  level: INFO
+  appenders:
+    - type: console
+# Full-text search is not part of the assigned lineage backend. No unused
+# OpenSearch service is required for dataset/job/column-lineage API access.
+search:
+  enabled: false
+  scheme: http
+  host: opensearch
+  port: 9200
+  username: admin
+  password: admin

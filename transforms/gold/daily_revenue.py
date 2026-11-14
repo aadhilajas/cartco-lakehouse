@@ -1,7 +1,7 @@
 """Gold mart: daily revenue aggregated by date and channel (gold.daily_revenue).
 
 Reads canonical orders from ``silver.orders`` and computes daily metrics:
-    - total_revenue (sum of order_total)
+    - total_revenue (completed-order sales only; exact-cent sums)
     - order_count (count of order_id)
     - avg_order_value (total_revenue / order_count)
 
@@ -18,6 +18,7 @@ from __future__ import annotations
 import logging
 import os
 import sys
+from pathlib import Path
 import time
 from datetime import datetime, timezone
 
@@ -29,11 +30,12 @@ from pyiceberg.io.pyarrow import schema_to_pyarrow
 from pyiceberg.schema import Schema
 from pyiceberg.types import DateType, DoubleType, IntegerType, NestedField, StringType
 
-REPO_ROOT = "/opt/airflow"
+REPO_ROOT = str(Path(__file__).resolve().parents[2])
 if REPO_ROOT not in sys.path:
     sys.path.insert(0, REPO_ROOT)
 
 from lineage import emitter as lineage  # noqa: E402
+from pipeline.commerce_metrics import money_schema, amount, completed_orders, legacy_money  # noqa: E402
 
 LINEAGE_JOB_NAME = "gold_marts.daily_revenue"
 
@@ -96,8 +98,8 @@ def ensure_table(catalog):
     try:
         catalog.create_namespace(NAMESPACE)
         logger.info("Created namespace '%s'", NAMESPACE)
-    except Exception:
-        pass
+    except NamespaceAlreadyExistsError:
+        logger.info("Namespace already exists")
 
     def _get_or_create():
         try:
@@ -108,10 +110,12 @@ def ensure_table(catalog):
     return _retry(_get_or_create)
 
 
-def transform(silver_table: pa.Table) -> pa.Table:
+def transform(silver_table: pa.Table, *, decimal_output=False) -> pa.Table:
     """Pure PyArrow transformation: aggregates silver.orders by order_date and channel."""
+    money_values = lambda values: pa.array([amount(v) for v in values], pa.decimal128(18, 2)) if decimal_output else legacy_money(values)
+    silver_table = completed_orders(silver_table)
     if silver_table.num_rows == 0:
-        expected_arrow_schema = schema_to_pyarrow(TABLE_SCHEMA)
+        expected_arrow_schema = money_schema(schema_to_pyarrow(TABLE_SCHEMA), ('total_revenue', 'avg_order_value'), decimal_output)
         return pa.Table.from_batches([], schema=expected_arrow_schema)
 
     agg = silver_table.group_by(["order_date", "channel"]).aggregate([
@@ -119,9 +123,9 @@ def transform(silver_table: pa.Table) -> pa.Table:
         ("order_id", "count"),
     ])
 
-    total_rev = pc.cast(agg.column("order_total_sum"), pa.float64())
+    total_rev = money_values(agg.column("order_total_sum").to_pylist())
     order_cnt = pc.cast(agg.column("order_id_count"), pa.int32())
-    avg_val = pc.divide(total_rev, pc.cast(order_cnt, pa.float64()))
+    avg_val = money_values([amount(value / count) for value, count in zip(agg.column("order_total_sum").to_pylist(), order_cnt.to_pylist())])
 
     res = pa.Table.from_arrays(
         [
@@ -137,7 +141,7 @@ def transform(silver_table: pa.Table) -> pa.Table:
     sort_idx = pc.sort_indices(res, sort_keys=[("order_date", "ascending"), ("channel", "ascending")])
     res = res.take(sort_idx)
 
-    expected_arrow_schema = schema_to_pyarrow(TABLE_SCHEMA)
+    expected_arrow_schema = money_schema(schema_to_pyarrow(TABLE_SCHEMA), ('total_revenue', 'avg_order_value'), decimal_output)
     return res.cast(expected_arrow_schema)
 
 

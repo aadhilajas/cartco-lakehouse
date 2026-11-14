@@ -1,87 +1,43 @@
-# Lineage (OpenLineage + Marquez)
+# Current lineage and observability
 
-Local lineage for the working Shopify Bronze → GE → Silver path. This is a
-targeted observability add-on, not a general lineage platform — see
-"What's covered" below before assuming more than what's actually here.
+The coordinated versioned runtime emits paired START/COMPLETE/FAIL events via
+OpenLineage 1.11.3 to local Marquez. Each invocation has its own UUID; business
+batch date and orchestration run identity are separate facets. A local intended
+journal and checksum-linked client-delivery status retain what was attempted.
+Instrumentation remains fail-open and never changes business results/exceptions.
 
-## How it works
+Source events declare CSV field schemas and input row counts, raw JSON field
+preservation, source normalization and versioned merge dependencies. Silver
+fields include prior-state dependencies to represent retained rows and tombstones.
+Gold outputs declare schema, actual artifact row counts and columnLineage facets.
+Maps include grouping keys, completed-sales/status controls, exact quantity/price
+arithmetic and explicit cost/stock dependencies for turnover. Constants such as
+INR and unavailable fulfillment time are labelled; no fictitious input edge is
+invented for a constant null.
 
-- **Backend:** [Marquez](https://marquez-project.ai/) (`marquezproject/marquez:0.51.1`
-  + its own Postgres, `marquezproject/marquez-web:0.51.1` for the UI), added
-  to `docker-compose.yml` as `marquez-db` / `marquez-api` / `marquez-web`.
-  Local-only — no external network calls.
-- **Emission:** each instrumented script's `run()` calls the OpenLineage
-  Python client (`openlineage-python==1.50.0`) directly, via the small
-  wrapper in [`lineage/emitter.py`](../lineage/emitter.py). It emits a
-  `START` event before the work begins and a `COMPLETE` event after (or a
-  `FAIL` event if the script raises, followed by re-raising the original
-  exception — lineage never swallows a real failure).
-- **Why manual emission instead of `apache-airflow-providers-openlineage`:**
-  the instrumented tasks are a `BashOperator` running a standalone script
-  (`ingest_to_bronze`) and two `PythonOperator`s calling plain Python
-  functions (`run_ge_checkpoint`, `transform_to_silver`) — none of these are
-  the declarative SQL/operator-level work the provider's automatic
-  extraction is built around. Emitting explicitly from inside each script's
-  `run()` is simpler to verify and works identically whether the script is
-  invoked by Airflow or by hand.
-- **Fail-safe by design:** `lineage/emitter.py` never raises. If
-  `OPENLINEAGE_URL` is unset, or Marquez is down, or the HTTP call fails,
-  the emitter logs a warning and the pipeline continues exactly as if
-  lineage instrumentation weren't there at all.
+The five-artifact live event exposes 44 output fields. Three source-stage events
+add 57 checks across raw/Silver output fields, for 101 verified field checks. Direct dependency edges
+for every derived output were checked against Marquez's column-lineage API;
+input-free constants were checked against their event schema/declaration because
+the backend need not create a lineage node for a constant. Unit tests also cover
+POS native keys, source product/status normalization and prior state. This is
+field dependency tracing, not exhaustive per-row or historical-version provenance.
+Legacy DAG lineage remains table-level; no blanket claim is made for those paths.
 
-## Starting it locally
+Inventory input schemas must be declared as well as output schemas: without
+input field metadata, Marquez can accept an event while omitting the requested
+stock/cost edges. Live backend verification caught this and the input schemas
+were added before acceptance. Consumer checks distinguish backend indexing from
+a successful client call.
 
-```bash
-docker compose up -d --build
+```text
+python scripts/check_column_lineage.py --event <completed-event.json> --output <column-report.json>
+python scripts/check_marquez_runtime.py --expected <versioned-runtime.json> --orchestration-run-id <run-id> --output <runtime-report.json>
+python scripts/check_runtime_observability.py --help
 ```
 
-This now also brings up `marquez-db`, `marquez-api` (HTTP API on
-`localhost:5000`, admin/health on `localhost:5001`), and `marquez-web` (UI on
-`localhost:3000`). Airflow's containers get `OPENLINEAGE_URL=http://marquez-api:5000`
-and `OPENLINEAGE_NAMESPACE=cartco-lakehouse` automatically (see
-`x-airflow-common` in `docker-compose.yml`).
-
-## Running the DAG and inspecting lineage
-
-1. Trigger the DAG as usual:
-   ```bash
-   docker exec cartco-airflow-scheduler airflow dags trigger shopify_bronze_ingestion
-   ```
-2. Open the Marquez UI at [http://localhost:3000](http://localhost:3000) and
-   select the `cartco-lakehouse` namespace. You should see three jobs:
-   - `shopify_bronze_ingestion.ingest_to_bronze` → writes `bronze.shopify_orders`
-   - `shopify_bronze_ingestion.run_ge_checkpoint` → reads `bronze.shopify_orders`
-   - `shopify_bronze_ingestion.transform_to_silver` → reads `bronze.shopify_orders`, writes `silver.orders`
-3. Or query the HTTP API directly, e.g.:
-   ```bash
-   curl -s http://localhost:5000/api/v1/namespaces/cartco-lakehouse/jobs | python -m json.tool
-   ```
-
-## What's covered now
-
-- One `START` + one `COMPLETE` (or `FAIL`) OpenLineage event per run of each
-  of the three Shopify pipeline steps: Bronze write, GE checkpoint, Silver
-  write.
-- Dataset-level lineage (which job reads/writes which Iceberg table) for
-  `bronze.shopify_orders` and `silver.orders`.
-- Job namespace `cartco-lakehouse`; dataset namespace `iceberg://cartco-lakehouse`.
-- Verified locally: see `deliverables/week3/lineage_proof.txt` for the actual
-  Marquez API responses and job/dataset names from a live run.
-
-## What's intentionally not covered yet
-
-- **Column-level lineage.** Only whole-table input/output datasets are
-  emitted — no field-level facets (e.g. which Bronze column feeds which
-  Silver column).
-- **Schema facets / row-count facets on the OpenLineage events themselves.**
-  Row counts are still logged by each script (see their existing audit log
-  lines) but are not (yet) attached as OpenLineage dataset facets.
-- **Any channel other than Shopify.** Amazon, POS, distributor, and ERP
-  connectors don't exist yet, so there is nothing to instrument for them.
-- **Gold layer.** Not built yet.
-- **`generate_data`** (the synthetic-CSV-generation task) is not
-  instrumented — it doesn't read or write an Iceberg table, so there's no
-  dataset-level lineage edge for it to contribute.
-- **Automatic Airflow-level lineage** (e.g. via
-  `apache-airflow-providers-openlineage`'s listener). This project uses
-  manual, explicit emission instead — see "Why manual emission" above.
+Retry/failure callbacks write local alert records. The controlled task-kill drill
+produced one real retry_scheduled alert and no terminal alert. The incident stays
+visible as clean_history=false. No email, Slack, webhook, acknowledgement or
+external paging consumer is configured or invoked. Retention/backup covers the
+local runtime files, with their documented integrity/authenticity boundaries.

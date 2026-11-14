@@ -1,0 +1,79 @@
+name: Assessed commerce project
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - 'pipeline/**'
+      - 'ingestion/protocols/**'
+      - 'infra/assessed/**'
+      - 'infra/terraform/**'
+      - 'dashboard/**'
+      - 'requirements/**'
+      - 'scripts/*assessed*'
+      - 'scripts/*dashboard*'
+      - 'scripts/*CartcoAssessed*.ps1'
+      - 'tests/spark/**'
+      - '.github/workflows/assessed.yml'
+permissions:
+  contents: read
+concurrency:
+  group: assessed-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  dashboard:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24.22.1'
+          cache: npm
+          cache-dependency-path: dashboard/package-lock.json
+      - run: npm --prefix dashboard ci --ignore-scripts --no-audit --no-fund
+      - run: npm --prefix dashboard test
+      - run: npm --prefix dashboard run build
+  spark-reference:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      SPARK_LOCAL_IP: 127.0.0.1
+      GE_USAGE_STATS: 'false'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - name: Install locked build tools, runtime and Spark
+        run: |
+          python -m pip install --require-hashes -r infra/phase1/build-tools.txt
+          python -m pip install --require-hashes -r requirements/test.txt
+          python -m pip install --no-build-isolation --require-hashes -r infra/phase1/spark-requirements.txt
+          python -m pip check
+          echo "PYSPARK_PYTHON=$(command -v python)" >> "$GITHUB_ENV"
+      - run: python -m pytest tests/spark -q --junitxml=test-results/spark-reference.xml
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: spark-reference-evidence
+          path: test-results/
+  scheduled-stack:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Build and run actual scheduled project
+        run: python scripts/run_assessed_stack.py --result-root test-results/assessed
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: assessed-scheduled-stack-evidence
+          path: test-results/assessed/
+          if-no-files-found: warn

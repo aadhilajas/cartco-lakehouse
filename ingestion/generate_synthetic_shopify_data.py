@@ -11,12 +11,21 @@ Run inside the Airflow container (deps are pre-installed there):
 
 from __future__ import annotations
 
+import json
 import os
 import uuid
+import sys
+from pathlib import Path
 
 import numpy as np
 import pandas as pd
 from faker import Faker
+
+REPO_ROOT = str(Path(__file__).resolve().parents[1])
+if REPO_ROOT not in sys.path:
+    sys.path.insert(0, REPO_ROOT)
+from pipeline.batch import resolve_batch_date
+from pipeline.source_contracts import daily_contract
 
 N_ROWS = 50_000
 N_CUSTOMERS = 8_000
@@ -56,9 +65,9 @@ ORDER_STATUSES = ["delivered", "cancelled", "returned"]
 ORDER_STATUS_WEIGHTS = [0.82, 0.10, 0.08]
 
 
-def generate() -> pd.DataFrame:
+def generate(as_of_date=None, *, include_versions=False) -> pd.DataFrame:
     fake = Faker()
-    Faker.seed(SEED)
+    fake.seed_instance(SEED)
     rng = np.random.default_rng(SEED)
 
     customer_ids = [fake.uuid4() for _ in range(N_CUSTOMERS)]
@@ -68,7 +77,7 @@ def generate() -> pd.DataFrame:
         for pid in product_ids
     }
 
-    end = pd.Timestamp.now().normalize()
+    end = pd.Timestamp(resolve_batch_date(as_of_date))
     start = end - pd.DateOffset(years=2)
     start_epoch = int(start.timestamp())
     end_epoch = int(end.timestamp())
@@ -86,9 +95,9 @@ def generate() -> pd.DataFrame:
     quantities = rng.choice([1, 2, 3, 4, 5], size=N_ROWS, p=[0.5, 0.25, 0.13, 0.08, 0.04])
     statuses = rng.choice(ORDER_STATUSES, size=N_ROWS, p=ORDER_STATUS_WEIGHTS)
 
-    return pd.DataFrame(
+    frame = pd.DataFrame(
         {
-            "order_id": [str(uuid.uuid4()) for _ in range(N_ROWS)],
+            "order_id": [str(uuid.uuid5(uuid.NAMESPACE_URL, f"cartco/shopify/{SEED}/{end.date()}/{i}")) for i in range(N_ROWS)],
             "customer_id": rng.choice(customer_ids, size=N_ROWS),
             "channel": "shopify",
             "order_date": order_dates,
@@ -99,12 +108,21 @@ def generate() -> pd.DataFrame:
             "status": statuses,
         }
     )
+    if include_versions:
+        frame["currency"] = "INR"
+        # The synthetic source declares its snapshot version; never infer legacy versions.
+        frame["source_updated_at"] = end.isoformat() + "Z"
+        frame["is_deleted"] = "false"
+    return frame
 
 
 def main() -> None:
     os.makedirs(os.path.dirname(OUTPUT_PATH), exist_ok=True)
-    df = generate()
+    df = generate(include_versions=os.environ.get("CARTCO_SOURCE_VERSIONS", "0") == "1")
     df.to_csv(OUTPUT_PATH, index=False)
+    if os.environ.get("CARTCO_SOURCE_VERSIONS", "0") == "1":
+        contract = daily_contract("shopify", resolve_batch_date())
+        Path(OUTPUT_PATH + ".contract.json").write_text(json.dumps(contract, indent=2) + "\n", encoding="utf-8")
     print(f"Generated {len(df):,} synthetic Shopify orders -> {OUTPUT_PATH}")
     print(f"Date range: {df['order_date'].min()} .. {df['order_date'].max()}")
     print("Status distribution:")

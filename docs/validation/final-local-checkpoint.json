@@ -1,0 +1,25 @@
+{
+  "unit_suite": {
+    "tests": 299,
+    "errors": 0,
+    "failures": 0,
+    "skipped": 1
+  },
+  "unit_suite_file": "test-results/final-local/unit.xml",
+  "additional_auth_regression": "Passed real HTTP cookie/CSRF exchange with valid and expired sessions",
+  "spark_reference_tests": 3,
+  "additional_spark_inventory_rounding_regression": true,
+  "terraform_mock_plans": 3,
+  "compose_acceptance": "test-results/assessed/20261113-203545",
+  "cold_recovery": "test-results/assessed-recovery/20261113-205004",
+  "terraform_live_acceptance": "test-results/assessed/20261113-210244",
+  "browser_acceptance": "test-results/assessed/20261113-203545/ui/ui-verification.json",
+  "gif_frames": 6,
+  "source_bundle_sha256": "45f8173cfe76b962e64fc45e42ea422c7f04f771a7b079edb71bc5428048c29d",
+  "external_pending": [
+    "Manual GitHub integration and remote CI",
+    "Genuine contract owner review",
+    "Free hosting account/capacity and architecture qualification",
+    "Public HTTPS hosted backend and dashboard"
+  ]
+}

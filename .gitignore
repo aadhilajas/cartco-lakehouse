@@ -37,6 +37,7 @@ pip-log.txt
 pip-delete-this-directory.txt
 
 # Unit test / coverage reports
+/test-results/
 htmlcov/
 .tox/
 .nox/
@@ -195,9 +196,9 @@ cython_debug/
 .abstra/
 
 # Visual Studio Code
-#   Visual Studio Code specific template is maintained in a separate VisualStudioCode.gitignore 
+#   Visual Studio Code specific template is maintained in a separate VisualStudioCode.gitignore
 #   that can be found at https://github.com/github/gitignore/blob/main/Global/VisualStudioCode.gitignore
-#   and can be added to the global gitignore or merged into this file. However, if you prefer, 
+#   and can be added to the global gitignore or merged into this file. However, if you prefer,
 #   you could uncomment the following to ignore the entire vscode folder
 # .vscode/
 # Temporary file for partial code execution
@@ -226,3 +227,27 @@ compose-up.log
 
 # Airflow runtime logs (recreated automatically by docker compose volume mount)
 airflow/logs/
+
+# Local configuration and development environments
+.env
+.env.*
+!.env.example
+.venv/
+.venv-*/
+work/
+
+# Terraform providers/state/plans; commit the provider lock file.
+**/.terraform/
+*.tfstate
+*.tfstate.*
+*.tfplan
+*.tfvars
+*.tfvars.json
+crash.log
+crash.*.log
+
+# Dashboard dependencies/build output; source and lockfile are committed.
+**/node_modules/
+dashboard/dist/
+hs_err_pid*.log
+replay_pid*.log

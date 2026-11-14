@@ -1,0 +1,4 @@
+-r test.in
+apache-airflow==2.9.0
+# Explicit metadata DB driver; slim image does not bundle the Postgres provider.
+psycopg2-binary==2.9.10

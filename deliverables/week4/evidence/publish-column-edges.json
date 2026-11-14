@@ -1,0 +1,233 @@
+{
+  "column_graph_verified": true,
+  "run_id": "8c28eedb-cd8a-42dc-a371-258d302fbe1e",
+  "outputs": 5,
+  "fields": 44,
+  "checks": [
+    {
+      "dataset": "gold/releases/04aa736ebb8a34497d7472c8cedbc85bd4d94d20c1d84fdb1f8ebeb861729f50/category_unit_sales.parquet",
+      "field": "channel",
+      "verified_input_edges": 4
+    },
+    {
+      "dataset": "gold/releases/04aa736ebb8a34497d7472c8cedbc85bd4d94d20c1d84fdb1f8ebeb861729f50/category_unit_sales.parquet",
+      "field": "product_category",
+      "verified_input_edges": 4
+    },
+    {
+      "dataset": "gold/releases/04aa736ebb8a34497d7472c8cedbc85bd4d94d20c1d84fdb1f8ebeb861729f50/category_unit_sales.parquet",
+      "field": "reporting_period",
+      "verified_input_edges": 5
+    },
+    {
+      "dataset": "gold/releases/04aa736ebb8a34497d7472c8cedbc85bd4d94d20c1d84fdb1f8ebeb861729f50/category_unit_sales.parquet",
+      "field": "units_sold",
+      "verified_input_edges": 5
+    },
+    {
+      "dataset": "gold/releases/04aa736ebb8a34497d7472c8cedbc85bd4d94d20c1d84fdb1f8ebeb861729f50/channel_performance.parquet",
+      "field": "avg_fulfillment_days",
+      "verified_input_edges": 0,
+      "backend_edge_check": "not_applicable_constant"
+    },
+    {
+      "dataset": "gold/releases/04aa736ebb8a34497d7472c8cedbc85bd4d94d20c1d84fdb1f8ebeb861729f50/channel_performance.parquet",
+      "field": "cancellation_rate",
+      "verified_input_edges": 4
+    },
+    {
+      "dataset": "gold/releases/04aa736ebb8a34497d7472c8cedbc85bd4d94d20c1d84fdb1f8ebeb861729f50/channel_performance.parquet",
+      "field": "cancelled_order_value",
+      "verified_input_edges": 4
+    },
+    {
+      "dataset": "gold/releases/04aa736ebb8a34497d7472c8cedbc85bd4d94d20c1d84fdb1f8ebeb861729f50/channel_performance.parquet",
+      "field": "channel",
+      "verified_input_edges": 3
+    },
+    {
+      "dataset": "gold/releases/04aa736ebb8a34497d7472c8cedbc85bd4d94d20c1d84fdb1f8ebeb861729f50/channel_performance.parquet",
+      "field": "currency",
+      "verified_input_edges": 0,
+      "backend_edge_check": "not_applicable_constant"
+    },
+    {
+      "dataset": "gold/releases/04aa736ebb8a34497d7472c8cedbc85bd4d94d20c1d84fdb1f8ebeb861729f50/channel_performance.parquet",
+      "field": "pending_order_value",
+      "verified_input_edges": 4
+    },
+    {
+      "dataset": "gold/releases/04aa736ebb8a34497d7472c8cedbc85bd4d94d20c1d84fdb1f8ebeb861729f50/channel_performance.parquet",
+      "field": "placed_order_value",
+      "verified_input_edges": 4
+    },
+    {
+      "dataset": "gold/releases/04aa736ebb8a34497d7472c8cedbc85bd4d94d20c1d84fdb1f8ebeb861729f50/channel_performance.parquet",
+      "field": "refund_rate",
+      "verified_input_edges": 4
+    },
+    {
+      "dataset": "gold/releases/04aa736ebb8a34497d7472c8cedbc85bd4d94d20c1d84fdb1f8ebeb861729f50/channel_performance.parquet",
+      "field": "refunded_order_value",
+      "verified_input_edges": 4
+    },
+    {
+      "dataset": "gold/releases/04aa736ebb8a34497d7472c8cedbc85bd4d94d20c1d84fdb1f8ebeb861729f50/channel_performance.parquet",
+      "field": "total_orders",
+      "verified_input_edges": 4
+    },
+    {
+      "dataset": "gold/releases/04aa736ebb8a34497d7472c8cedbc85bd4d94d20c1d84fdb1f8ebeb861729f50/channel_performance.parquet",
+      "field": "total_revenue",
+      "verified_input_edges": 4
+    },
+    {
+      "dataset": "gold/releases/04aa736ebb8a34497d7472c8cedbc85bd4d94d20c1d84fdb1f8ebeb861729f50/customer_360.parquet",
+      "field": "channel",
+      "verified_input_edges": 4
+    },
+    {
+      "dataset": "gold/releases/04aa736ebb8a34497d7472c8cedbc85bd4d94d20c1d84fdb1f8ebeb861729f50/customer_360.parquet",
+      "field": "currency",
+      "verified_input_edges": 0,
+      "backend_edge_check": "not_applicable_constant"
+    },
+    {
+      "dataset": "gold/releases/04aa736ebb8a34497d7472c8cedbc85bd4d94d20c1d84fdb1f8ebeb861729f50/customer_360.parquet",
+      "field": "customer_id",
+      "verified_input_edges": 4
+    },
+    {
+      "dataset": "gold/releases/04aa736ebb8a34497d7472c8cedbc85bd4d94d20c1d84fdb1f8ebeb861729f50/customer_360.parquet",
+      "field": "favorite_category",
+      "verified_input_edges": 6
+    },
+    {
+      "dataset": "gold/releases/04aa736ebb8a34497d7472c8cedbc85bd4d94d20c1d84fdb1f8ebeb861729f50/customer_360.parquet",
+      "field": "first_order_date",
+      "verified_input_edges": 5
+    },
+    {
+      "dataset": "gold/releases/04aa736ebb8a34497d7472c8cedbc85bd4d94d20c1d84fdb1f8ebeb861729f50/customer_360.parquet",
+      "field": "last_order_date",
+      "verified_input_edges": 5
+    },
+    {
+      "dataset": "gold/releases/04aa736ebb8a34497d7472c8cedbc85bd4d94d20c1d84fdb1f8ebeb861729f50/customer_360.parquet",
+      "field": "total_orders",
+      "verified_input_edges": 5
+    },
+    {
+      "dataset": "gold/releases/04aa736ebb8a34497d7472c8cedbc85bd4d94d20c1d84fdb1f8ebeb861729f50/customer_360.parquet",
+      "field": "total_spend",
+      "verified_input_edges": 5
+    },
+    {
+      "dataset": "gold/releases/04aa736ebb8a34497d7472c8cedbc85bd4d94d20c1d84fdb1f8ebeb861729f50/daily_revenue.parquet",
+      "field": "avg_order_value",
+      "verified_input_edges": 6
+    },
+    {
+      "dataset": "gold/releases/04aa736ebb8a34497d7472c8cedbc85bd4d94d20c1d84fdb1f8ebeb861729f50/daily_revenue.parquet",
+      "field": "channel",
+      "verified_input_edges": 4
+    },
+    {
+      "dataset": "gold/releases/04aa736ebb8a34497d7472c8cedbc85bd4d94d20c1d84fdb1f8ebeb861729f50/daily_revenue.parquet",
+      "field": "currency",
+      "verified_input_edges": 0,
+      "backend_edge_check": "not_applicable_constant"
+    },
+    {
+      "dataset": "gold/releases/04aa736ebb8a34497d7472c8cedbc85bd4d94d20c1d84fdb1f8ebeb861729f50/daily_revenue.parquet",
+      "field": "order_count",
+      "verified_input_edges": 5
+    },
+    {
+      "dataset": "gold/releases/04aa736ebb8a34497d7472c8cedbc85bd4d94d20c1d84fdb1f8ebeb861729f50/daily_revenue.parquet",
+      "field": "order_date",
+      "verified_input_edges": 4
+    },
+    {
+      "dataset": "gold/releases/04aa736ebb8a34497d7472c8cedbc85bd4d94d20c1d84fdb1f8ebeb861729f50/daily_revenue.parquet",
+      "field": "total_revenue",
+      "verified_input_edges": 5
+    },
+    {
+      "dataset": "gold/releases/04aa736ebb8a34497d7472c8cedbc85bd4d94d20c1d84fdb1f8ebeb861729f50/inventory_turnover.parquet",
+      "field": "average_daily_inventory_value",
+      "verified_input_edges": 19
+    },
+    {
+      "dataset": "gold/releases/04aa736ebb8a34497d7472c8cedbc85bd4d94d20c1d84fdb1f8ebeb861729f50/inventory_turnover.parquet",
+      "field": "cogs",
+      "verified_input_edges": 19
+    },
+    {
+      "dataset": "gold/releases/04aa736ebb8a34497d7472c8cedbc85bd4d94d20c1d84fdb1f8ebeb861729f50/inventory_turnover.parquet",
+      "field": "cost_basis",
+      "verified_input_edges": 1
+    },
+    {
+      "dataset": "gold/releases/04aa736ebb8a34497d7472c8cedbc85bd4d94d20c1d84fdb1f8ebeb861729f50/inventory_turnover.parquet",
+      "field": "currency",
+      "verified_input_edges": 1
+    },
+    {
+      "dataset": "gold/releases/04aa736ebb8a34497d7472c8cedbc85bd4d94d20c1d84fdb1f8ebeb861729f50/inventory_turnover.parquet",
+      "field": "expected_days",
+      "verified_input_edges": 19
+    },
+    {
+      "dataset": "gold/releases/04aa736ebb8a34497d7472c8cedbc85bd4d94d20c1d84fdb1f8ebeb861729f50/inventory_turnover.parquet",
+      "field": "inventory_value_days",
+      "verified_input_edges": 19
+    },
+    {
+      "dataset": "gold/releases/04aa736ebb8a34497d7472c8cedbc85bd4d94d20c1d84fdb1f8ebeb861729f50/inventory_turnover.parquet",
+      "field": "is_synthetic",
+      "verified_input_edges": 1
+    },
+    {
+      "dataset": "gold/releases/04aa736ebb8a34497d7472c8cedbc85bd4d94d20c1d84fdb1f8ebeb861729f50/inventory_turnover.parquet",
+      "field": "location_id",
+      "verified_input_edges": 1
+    },
+    {
+      "dataset": "gold/releases/04aa736ebb8a34497d7472c8cedbc85bd4d94d20c1d84fdb1f8ebeb861729f50/inventory_turnover.parquet",
+      "field": "observed_days",
+      "verified_input_edges": 19
+    },
+    {
+      "dataset": "gold/releases/04aa736ebb8a34497d7472c8cedbc85bd4d94d20c1d84fdb1f8ebeb861729f50/inventory_turnover.parquet",
+      "field": "period_basis",
+      "verified_input_edges": 1
+    },
+    {
+      "dataset": "gold/releases/04aa736ebb8a34497d7472c8cedbc85bd4d94d20c1d84fdb1f8ebeb861729f50/inventory_turnover.parquet",
+      "field": "period_end",
+      "verified_input_edges": 1
+    },
+    {
+      "dataset": "gold/releases/04aa736ebb8a34497d7472c8cedbc85bd4d94d20c1d84fdb1f8ebeb861729f50/inventory_turnover.parquet",
+      "field": "period_start",
+      "verified_input_edges": 1
+    },
+    {
+      "dataset": "gold/releases/04aa736ebb8a34497d7472c8cedbc85bd4d94d20c1d84fdb1f8ebeb861729f50/inventory_turnover.parquet",
+      "field": "quality_status",
+      "verified_input_edges": 19
+    },
+    {
+      "dataset": "gold/releases/04aa736ebb8a34497d7472c8cedbc85bd4d94d20c1d84fdb1f8ebeb861729f50/inventory_turnover.parquet",
+      "field": "sku",
+      "verified_input_edges": 1
+    },
+    {
+      "dataset": "gold/releases/04aa736ebb8a34497d7472c8cedbc85bd4d94d20c1d84fdb1f8ebeb861729f50/inventory_turnover.parquet",
+      "field": "turnover",
+      "verified_input_edges": 19
+    }
+  ],
+  "scope": "Current Marquez direct field edges for the supplied event; not exhaustive row-level/version provenance"
+}

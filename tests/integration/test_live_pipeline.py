@@ -15,10 +15,18 @@ data):
 
 from __future__ import annotations
 
+import os
+
 import pytest
 from pyiceberg.exceptions import NoSuchTableError
 
 from transforms import ge_bronze_shopify_checkpoint, silver_shopify_orders
+
+
+def _unavailable(reason):
+    if os.environ.get("CARTCO_STRICT_INTEGRATION") == "1":
+        pytest.fail(reason)
+    pytest.skip(reason)
 
 
 def _bronze_table_or_skip():
@@ -26,12 +34,12 @@ def _bronze_table_or_skip():
     try:
         return catalog.load_table(silver_shopify_orders.BRONZE_TABLE_IDENTIFIER)
     except NoSuchTableError:
-        pytest.skip(
+        _unavailable(
             f"{silver_shopify_orders.BRONZE_TABLE_IDENTIFIER} does not exist yet -- "
             "run the shopify_bronze_ingestion DAG (or ingestion/shopify_bronze.py) first."
         )
     except Exception as exc:  # connection refused, DNS failure, etc.
-        pytest.skip(f"Live Iceberg REST catalog not reachable: {exc}")
+        _unavailable(f"Live Iceberg REST catalog not reachable: {exc}")
 
 
 @pytest.mark.integration
@@ -42,7 +50,7 @@ def test_ge_checkpoint_passes_against_live_bronze_data(require_live_stack):
     run_ge_checkpoint Airflow task calls, exercised against the real table.
     """
     bronze_table = _bronze_table_or_skip()
-    bronze_df = bronze_table.scan().to_arrow().to_pandas()
+    bronze_df = ge_bronze_shopify_checkpoint.load_bronze_as_dataframe()
     assert len(bronze_df) > 0, "bronze.shopify_orders exists but has 0 rows"
 
     # Should not raise -- proves the live Bronze data still satisfies the
@@ -67,7 +75,9 @@ def test_silver_transform_run_writes_to_live_silver_table(require_live_stack):
     silver_df = silver_table.scan().to_arrow().to_pandas()
 
     assert len(silver_df) > 0
-    assert set(silver_df["order_status"].unique()) <= {"completed", "cancelled", "refunded", "unknown"}
+    shopify_df = silver_df[silver_df["channel"] == "shopify"]
+    assert len(shopify_df) > 0
+    assert set(shopify_df["order_status"].unique()) <= {"completed", "cancelled", "refunded", "unknown"}
 
 
 @pytest.mark.integration
@@ -91,12 +101,12 @@ def test_silver_orders_contains_both_channels_after_both_dags_run(require_live_s
     try:
         silver_table = catalog.load_table(amazon_silver.TABLE_IDENTIFIER)
     except NoSuchTableError:
-        pytest.skip(
+        _unavailable(
             f"{amazon_silver.TABLE_IDENTIFIER} does not exist yet -- "
             "run both shopify_bronze_ingestion and amazon_bronze_ingestion DAGs first."
         )
     except Exception as exc:
-        pytest.skip(f"Live Iceberg REST catalog not reachable: {exc}")
+        _unavailable(f"Live Iceberg REST catalog not reachable: {exc}")
 
     silver_df = silver_table.scan().to_arrow().to_pandas()
     assert len(silver_df) > 0, "silver.orders exists but has 0 rows"
@@ -130,23 +140,26 @@ def test_shopify_transform_rerun_does_not_clobber_amazon_rows(require_live_stack
     try:
         silver_table = catalog.load_table(amazon_silver.TABLE_IDENTIFIER)
     except NoSuchTableError:
-        pytest.skip("silver.orders does not exist yet.")
+        _unavailable("silver.orders does not exist yet.")
     except Exception as exc:
-        pytest.skip(f"Live catalog not reachable: {exc}")
+        _unavailable(f"Live catalog not reachable: {exc}")
 
     # Scan initial Amazon rows
     amazon_before = silver_table.scan(row_filter=EqualTo("channel", "amazon")).to_arrow()
     if amazon_before.num_rows == 0:
-        pytest.skip("No Amazon rows in silver.orders to test isolation.")
+        _unavailable("No Amazon rows in silver.orders to test isolation.")
 
     # Re-run Shopify Silver transform
     silver_shopify_orders.run()
 
     # Scan Amazon rows after Shopify Silver re-run
+    silver_table = catalog.load_table(amazon_silver.TABLE_IDENTIFIER)
     amazon_after = silver_table.scan(row_filter=EqualTo("channel", "amazon")).to_arrow()
 
     assert amazon_after.num_rows == amazon_before.num_rows, (
         f"Amazon row count changed after Shopify re-run: "
         f"before={amazon_before.num_rows}, after={amazon_after.num_rows}"
     )
-    assert amazon_after.equals(amazon_before), "Amazon row content changed after Shopify re-run!"
+    assert amazon_after.sort_by([("order_id", "ascending")]).equals(
+        amazon_before.sort_by([("order_id", "ascending")])
+    ), "Amazon row content changed after Shopify re-run!"

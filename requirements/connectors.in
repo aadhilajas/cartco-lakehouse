@@ -1,0 +1,3 @@
+# Isolated transport dependencies; order validation uses the locked runtime.
+paramiko==5.1.0
+kafka-python==2.3.3

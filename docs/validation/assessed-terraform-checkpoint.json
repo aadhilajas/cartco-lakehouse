@@ -1,0 +1,94 @@
+{
+  "evidence_directory": "test-results/assessed/20261113-210244",
+  "success_marker": "Assessed scheduled ingestion, Spark medallion, GE, Marquez, Grafana, recreation, replay and dashboard acceptance passed.",
+  "accepted_release": "r88a84cc2b7aa49bc91152b0cfa16f618",
+  "source_bundle_sha256": "45f8173cfe76b962e64fc45e42ea422c7f04f771a7b079edb71bc5428048c29d",
+  "execution": {
+    "mode": "Airflow task",
+    "duration_seconds": 31.36
+  },
+  "quality": {
+    "success": true,
+    "engine": "great_expectations",
+    "engine_version": "0.18.19",
+    "suites": [
+      {
+        "name": "category_unit_sales",
+        "success": true,
+        "rows": 3,
+        "checks": 5
+      },
+      {
+        "name": "channel_performance",
+        "success": true,
+        "rows": 3,
+        "checks": 18
+      },
+      {
+        "name": "customer_360",
+        "success": true,
+        "rows": 6,
+        "checks": 9
+      },
+      {
+        "name": "daily_revenue",
+        "success": true,
+        "rows": 3,
+        "checks": 11
+      },
+      {
+        "name": "inventory_turnover",
+        "success": true,
+        "rows": 8,
+        "checks": 16
+      },
+      {
+        "name": "silver_active",
+        "success": true,
+        "rows": 7,
+        "checks": 17
+      },
+      {
+        "name": "silver_state",
+        "success": true,
+        "rows": 8,
+        "checks": 5
+      }
+    ]
+  },
+  "lineage": {
+    "status": "verified",
+    "verified_at": "2026-11-13T15:42:30.292734+00:00",
+    "fields_verified": 44
+  },
+  "dags": [
+    "assessed_commerce_release",
+    "assessed_inventory_ingestion",
+    "assessed_orders_ingestion",
+    "assessed_system_health"
+  ],
+  "grafana_role": {
+    "health_rows": 8,
+    "raw_conf_denied": true,
+    "write_denied": true
+  },
+  "exact_recreation_and_replay": true,
+  "compaction": {
+    "before": {
+      "files": 5,
+      "rows_sha256": "62ddaa137449a17283edef079a8a67b61624d41ac3fb36d6ec6571d6180a3e81"
+    },
+    "after": {
+      "files": 2,
+      "rows_sha256": "62ddaa137449a17283edef079a8a67b61624d41ac3fb36d6ec6571d6180a3e81"
+    },
+    "time_travel_rows": 120,
+    "additive_evolution": true,
+    "incompatible_evolution_refused": true,
+    "pruned_rows": 90
+  },
+  "final_plan_no_changes": true,
+  "previous_workspace_restored": "\u001b[0m\u001b[32mSwitched to workspace \"default\".\u001b[0m",
+  "original_baseline_unchanged": true,
+  "resume": "Initial four DAGs and storage recreation retained; fresh-session replay and compaction completed without repeating ingestion/recovery"
+}

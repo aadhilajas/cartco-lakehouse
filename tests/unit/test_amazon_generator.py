@@ -77,10 +77,8 @@ def test_generate_asin_format():
 def test_generate_is_deterministic_with_seed():
     """Seeded columns must be identical across two calls to generate().
 
-    ``order_id`` uses ``uuid.uuid4()`` (not seeded) and ``order_date``
-    depends on ``pd.Timestamp.now()``, so those two columns are expected
-    to differ between calls. Every other column is driven by the seeded
-    Faker / NumPy RNG and must be identical.
+    This retains the original seed-only check. Full fixed-reference-date
+    equality, including IDs and dates, is covered by test_batch_execution.
     """
     df2 = generate()
     seeded_cols = [c for c in _DF.columns if c not in ("order_id", "order_date")]

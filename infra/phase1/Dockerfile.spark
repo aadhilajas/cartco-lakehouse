@@ -1,0 +1,20 @@
+# Separate compute environment: do not mix Spark's JVM dependencies into Airflow.
+FROM python:3.11.14-slim-bookworm@sha256:65a93d69fa75478d554f4ad27c85c1e69fa184956261b4301ebaf6dbb0a3543d
+RUN apt-get update && apt-get install -y --no-install-recommends openjdk-17-jre-headless curl ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
+COPY infra/phase1/build-tools.txt /tmp/build-tools.txt
+COPY infra/phase1/spark-requirements.txt /tmp/spark-requirements.txt
+RUN pip install --no-cache-dir --require-hashes -r /tmp/build-tools.txt \
+    && pip install --no-cache-dir --no-build-isolation --require-hashes -r /tmp/spark-requirements.txt \
+    && pip check
+ENV SPARK_HOME=/usr/local/lib/python3.11/site-packages/pyspark
+ENV PATH="${SPARK_HOME}/bin:${PATH}"
+COPY infra/phase1/artifacts.json /opt/cartco/artifacts.json
+COPY infra/phase1/fetch_jars.py /opt/cartco/fetch_jars.py
+RUN python /opt/cartco/fetch_jars.py /opt/cartco/artifacts.json ${SPARK_HOME}/jars
+COPY scripts/phase1_spark_smoke.py /opt/cartco/phase1_spark_smoke.py
+RUN useradd --create-home --uid 10001 cartco && mkdir /evidence && chown cartco /evidence
+USER cartco
+WORKDIR /opt/cartco
+ENV PYTHONUNBUFFERED=1 SPARK_LOCAL_IP=127.0.0.1
+ENTRYPOINT ["python", "/opt/cartco/phase1_spark_smoke.py"]

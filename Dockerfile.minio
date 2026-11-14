@@ -1,0 +1,26 @@
+# Fixed official source commits replace unavailable upstream container images.
+FROM golang:1.24.9-bookworm@sha256:737b40b61ce956d738bed59f18ba854d8d67e7a4c4fa63f64437f4c70247ac5b AS build
+ENV CGO_ENABLED=0 GOTOOLCHAIN=local
+WORKDIR /src/minio
+RUN git init . && git remote add origin https://github.com/minio/minio.git \
+    && git fetch --depth=1 origin 7aac2a2c5b7c882e68c1ce017d8256be2feea27f \
+    && git checkout --detach FETCH_HEAD \
+    && test "$(git rev-parse HEAD)" = 7aac2a2c5b7c882e68c1ce017d8256be2feea27f
+RUN go build -mod=readonly -trimpath -buildvcs=false -o /out/minio .
+WORKDIR /src/mc
+RUN git init . && git remote add origin https://github.com/minio/mc.git \
+    && git fetch --depth=1 origin 77f82e18b5401a65958f1619df6ebb994634bd88 \
+    && git checkout --detach FETCH_HEAD \
+    && test "$(git rev-parse HEAD)" = 77f82e18b5401a65958f1619df6ebb994634bd88
+RUN go build -mod=readonly -trimpath -buildvcs=false -o /out/mc .
+
+FROM debian:bookworm-slim@sha256:734a72b3d6142a71993b4bc580ca01d8ca687f77a2c422d96a961d3376b179bc
+RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates curl \
+    && rm -rf /var/lib/apt/lists/*
+COPY --from=build /out/minio /out/mc /usr/local/bin/
+COPY --from=build /src/minio/LICENSE /usr/share/licenses/minio/LICENSE
+COPY --from=build /src/mc/LICENSE /usr/share/licenses/mc/LICENSE
+LABEL org.opencontainers.image.source="https://github.com/minio/minio" \
+      org.opencontainers.image.revision="7aac2a2c5b7c882e68c1ce017d8256be2feea27f" \
+      org.opencontainers.image.licenses="AGPL-3.0-only"
+ENTRYPOINT ["/usr/local/bin/minio"]

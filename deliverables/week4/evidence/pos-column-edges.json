@@ -1,0 +1,104 @@
+{
+  "column_graph_verified": true,
+  "run_id": "7cb4d1f0-97ee-44e7-8702-26328e236ae2",
+  "outputs": 2,
+  "fields": 19,
+  "checks": [
+    {
+      "dataset": "bronze.pos_order_events",
+      "field": "batch_id",
+      "verified_input_edges": 27
+    },
+    {
+      "dataset": "bronze.pos_order_events",
+      "field": "ingestion_date",
+      "verified_input_edges": 1
+    },
+    {
+      "dataset": "bronze.pos_order_events",
+      "field": "raw_payload",
+      "verified_input_edges": 19
+    },
+    {
+      "dataset": "bronze.pos_order_events",
+      "field": "source",
+      "verified_input_edges": 1
+    },
+    {
+      "dataset": "bronze.pos_order_events",
+      "field": "source_row_number",
+      "verified_input_edges": 19
+    },
+    {
+      "dataset": "silver.order_state_v2",
+      "field": "channel",
+      "verified_input_edges": 7
+    },
+    {
+      "dataset": "silver.order_state_v2",
+      "field": "currency",
+      "verified_input_edges": 8
+    },
+    {
+      "dataset": "silver.order_state_v2",
+      "field": "customer_id",
+      "verified_input_edges": 8
+    },
+    {
+      "dataset": "silver.order_state_v2",
+      "field": "is_deleted",
+      "verified_input_edges": 7
+    },
+    {
+      "dataset": "silver.order_state_v2",
+      "field": "order_date",
+      "verified_input_edges": 8
+    },
+    {
+      "dataset": "silver.order_state_v2",
+      "field": "order_id",
+      "verified_input_edges": 9
+    },
+    {
+      "dataset": "silver.order_state_v2",
+      "field": "order_status",
+      "verified_input_edges": 8
+    },
+    {
+      "dataset": "silver.order_state_v2",
+      "field": "order_total",
+      "verified_input_edges": 9
+    },
+    {
+      "dataset": "silver.order_state_v2",
+      "field": "product_category",
+      "verified_input_edges": 8
+    },
+    {
+      "dataset": "silver.order_state_v2",
+      "field": "product_id",
+      "verified_input_edges": 8
+    },
+    {
+      "dataset": "silver.order_state_v2",
+      "field": "quantity",
+      "verified_input_edges": 8
+    },
+    {
+      "dataset": "silver.order_state_v2",
+      "field": "source_updated_at",
+      "verified_input_edges": 6
+    },
+    {
+      "dataset": "silver.order_state_v2",
+      "field": "transform_timestamp",
+      "verified_input_edges": 7
+    },
+    {
+      "dataset": "silver.order_state_v2",
+      "field": "unit_price",
+      "verified_input_edges": 8
+    }
+  ],
+  "scope": "Current Marquez direct field edges for the supplied event; not exhaustive row-level/version provenance"
+}

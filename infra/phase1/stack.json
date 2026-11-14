@@ -1,0 +1,390 @@
+{
+  "name": "cartco-infra-p1",
+  "services": {
+    "minio": {
+      "image": "cartco/minio:infra-p1",
+      "mem_limit": "512m",
+      "restart": "unless-stopped",
+      "build": {
+        "context": "../..",
+        "dockerfile": "Dockerfile.minio"
+      },
+      "command": [
+        "server",
+        "/data",
+        "--console-address",
+        ":9001"
+      ],
+      "environment": {
+        "MINIO_ROOT_USER": "cartco-local",
+        "MINIO_ROOT_PASSWORD": "cartco-local-secret"
+      },
+      "volumes": [
+        "objects-data:/data"
+      ],
+      "ports": [
+        "127.0.0.1:19000:9000",
+        "127.0.0.1:19001:9001"
+      ],
+      "healthcheck": {
+        "test": [
+          "CMD",
+          "curl",
+          "--fail",
+          "http://localhost:9000/minio/health/ready"
+        ],
+        "interval": "10s",
+        "timeout": "5s",
+        "retries": 18,
+        "start_period": "20s"
+      }
+    },
+    "bucket-init": {
+      "image": "cartco/minio:infra-p1",
+      "mem_limit": "128m",
+      "restart": "on-failure",
+      "entrypoint": [
+        "/bin/sh",
+        "-ec"
+      ],
+      "command": [
+        "until mc alias set p1 http://minio:9000 cartco-local cartco-local-secret && mc mb --ignore-existing p1/cartco-phase1; do sleep 2; done"
+      ],
+      "depends_on": {
+        "minio": {
+          "condition": "service_healthy"
+        }
+      }
+    },
+    "catalog-db": {
+      "image": "library/postgres@sha256:834a046089d76edd1d2e81c4741f3ad5d1853646ededc86c2708936aad31c1ed",
+      "mem_limit": "384m",
+      "restart": "unless-stopped",
+      "environment": {
+        "POSTGRES_USER": "nessie",
+        "POSTGRES_PASSWORD": "nessie-local-only",
+        "POSTGRES_DB": "nessie"
+      },
+      "volumes": [
+        "nessie-data:/var/lib/postgresql/data"
+      ],
+      "healthcheck": {
+        "test": [
+          "CMD",
+          "pg_isready",
+          "-U",
+          "nessie"
+        ],
+        "interval": "10s",
+        "timeout": "5s",
+        "retries": 18,
+        "start_period": "20s"
+      },
+      "command": [
+        "postgres",
+        "-c",
+        "shared_buffers=64MB",
+        "-c",
+        "max_connections=40"
+      ]
+    },
+    "nessie": {
+      "image": "ghcr.io/projectnessie/nessie:0.110.0@sha256:d3e30c5dda5c57df198f1093f7fe7ef0266f4972a18cf097f447745fcba632f5",
+      "mem_limit": "1024m",
+      "restart": "unless-stopped",
+      "environment": {
+        "NESSIE_VERSION_STORE_TYPE": "JDBC2",
+        "NESSIE_VERSION_STORE_PERSIST_JDBC_DATASOURCE": "postgresql",
+        "QUARKUS_DATASOURCE_POSTGRESQL_JDBC_URL": "jdbc:postgresql://catalog-db:5432/nessie",
+        "QUARKUS_DATASOURCE_POSTGRESQL_USERNAME": "nessie",
+        "QUARKUS_DATASOURCE_POSTGRESQL_PASSWORD": "nessie-local-only",
+        "QUARKUS_HTTP_PORT": "19120",
+        "NESSIE_SERVER_AUTHENTICATION_ENABLED": "false",
+        "JAVA_OPTS_APPEND": "-Xms128m -Xmx640m",
+        "NESSIE_VERSION_STORE_PERSIST_CACHE_CAPACITY_MB": "64"
+      },
+      "ports": [
+        "127.0.0.1:19120:19120"
+      ],
+      "depends_on": {
+        "catalog-db": {
+          "condition": "service_healthy"
+        }
+      }
+    },
+    "airflow-db": {
+      "image": "library/postgres@sha256:834a046089d76edd1d2e81c4741f3ad5d1853646ededc86c2708936aad31c1ed",
+      "mem_limit": "384m",
+      "restart": "unless-stopped",
+      "environment": {
+        "POSTGRES_USER": "airflow",
+        "POSTGRES_PASSWORD": "airflow-local-only",
+        "POSTGRES_DB": "airflow"
+      },
+      "volumes": [
+        "airflow-data:/var/lib/postgresql/data"
+      ],
+      "healthcheck": {
+        "test": [
+          "CMD",
+          "pg_isready",
+          "-U",
+          "airflow"
+        ],
+        "interval": "10s",
+        "timeout": "5s",
+        "retries": 18,
+        "start_period": "20s"
+      },
+      "command": [
+        "postgres",
+        "-c",
+        "shared_buffers=64MB",
+        "-c",
+        "max_connections=40"
+      ]
+    },
+    "airflow-init": {
+      "image": "cartco/airflow:infra-p1",
+      "mem_limit": "768m",
+      "restart": "on-failure",
+      "build": {
+        "context": "../..",
+        "dockerfile": "infra/phase1/Dockerfile.airflow"
+      },
+      "environment": {
+        "AIRFLOW__CORE__EXECUTOR": "LocalExecutor",
+        "AIRFLOW__DATABASE__SQL_ALCHEMY_CONN": "postgresql+psycopg2://airflow:airflow-local-only@airflow-db/airflow",
+        "AIRFLOW__CORE__LOAD_EXAMPLES": "false",
+        "AIRFLOW__CORE__DAGS_ARE_PAUSED_AT_CREATION": "true",
+        "AIRFLOW__CORE__PARALLELISM": "2",
+        "AIRFLOW__CORE__MAX_ACTIVE_TASKS_PER_DAG": "2",
+        "AIRFLOW__WEBSERVER__WORKERS": "1",
+        "AIRFLOW__WEBSERVER__EXPOSE_CONFIG": "false",
+        "AIRFLOW__SCHEDULER__ENABLE_HEALTH_CHECK": "true",
+        "AIRFLOW__OPENLINEAGE__DISABLED": "true"
+      },
+      "command": [
+        "python",
+        "/opt/airflow/scripts/initialize_airflow.py"
+      ],
+      "depends_on": {
+        "airflow-db": {
+          "condition": "service_healthy"
+        }
+      }
+    },
+    "airflow-web": {
+      "image": "cartco/airflow:infra-p1",
+      "mem_limit": "1024m",
+      "restart": "unless-stopped",
+      "environment": {
+        "AIRFLOW__CORE__EXECUTOR": "LocalExecutor",
+        "AIRFLOW__DATABASE__SQL_ALCHEMY_CONN": "postgresql+psycopg2://airflow:airflow-local-only@airflow-db/airflow",
+        "AIRFLOW__CORE__LOAD_EXAMPLES": "false",
+        "AIRFLOW__CORE__DAGS_ARE_PAUSED_AT_CREATION": "true",
+        "AIRFLOW__CORE__PARALLELISM": "2",
+        "AIRFLOW__CORE__MAX_ACTIVE_TASKS_PER_DAG": "2",
+        "AIRFLOW__WEBSERVER__WORKERS": "1",
+        "AIRFLOW__WEBSERVER__EXPOSE_CONFIG": "false",
+        "AIRFLOW__SCHEDULER__ENABLE_HEALTH_CHECK": "true",
+        "AIRFLOW__OPENLINEAGE__DISABLED": "true"
+      },
+      "command": [
+        "bash",
+        "-ec",
+        "airflow db check-migrations --migration-wait-timeout 180; exec airflow webserver"
+      ],
+      "volumes": [
+        "airflow-logs:/opt/airflow/logs"
+      ],
+      "depends_on": {
+        "airflow-init": {
+          "condition": "service_completed_successfully"
+        }
+      },
+      "ports": [
+        "127.0.0.1:18080:8080"
+      ],
+      "healthcheck": {
+        "test": [
+          "CMD",
+          "curl",
+          "--fail",
+          "http://localhost:8080/health"
+        ],
+        "interval": "10s",
+        "timeout": "5s",
+        "retries": 18,
+        "start_period": "20s"
+      }
+    },
+    "airflow-scheduler": {
+      "image": "cartco/airflow:infra-p1",
+      "mem_limit": "1024m",
+      "restart": "unless-stopped",
+      "environment": {
+        "AIRFLOW__CORE__EXECUTOR": "LocalExecutor",
+        "AIRFLOW__DATABASE__SQL_ALCHEMY_CONN": "postgresql+psycopg2://airflow:airflow-local-only@airflow-db/airflow",
+        "AIRFLOW__CORE__LOAD_EXAMPLES": "false",
+        "AIRFLOW__CORE__DAGS_ARE_PAUSED_AT_CREATION": "true",
+        "AIRFLOW__CORE__PARALLELISM": "2",
+        "AIRFLOW__CORE__MAX_ACTIVE_TASKS_PER_DAG": "2",
+        "AIRFLOW__WEBSERVER__WORKERS": "1",
+        "AIRFLOW__WEBSERVER__EXPOSE_CONFIG": "false",
+        "AIRFLOW__SCHEDULER__ENABLE_HEALTH_CHECK": "true",
+        "AIRFLOW__OPENLINEAGE__DISABLED": "true"
+      },
+      "command": [
+        "bash",
+        "-ec",
+        "airflow db check-migrations --migration-wait-timeout 180; exec airflow scheduler"
+      ],
+      "volumes": [
+        "airflow-logs:/opt/airflow/logs"
+      ],
+      "depends_on": {
+        "airflow-init": {
+          "condition": "service_completed_successfully"
+        }
+      },
+      "healthcheck": {
+        "test": [
+          "CMD",
+          "curl",
+          "--fail",
+          "http://localhost:8974/health"
+        ],
+        "interval": "10s",
+        "timeout": "5s",
+        "retries": 18,
+        "start_period": "20s"
+      }
+    },
+    "marquez-db": {
+      "image": "library/postgres@sha256:834a046089d76edd1d2e81c4741f3ad5d1853646ededc86c2708936aad31c1ed",
+      "mem_limit": "384m",
+      "restart": "unless-stopped",
+      "environment": {
+        "POSTGRES_USER": "marquez",
+        "POSTGRES_PASSWORD": "marquez-local-only",
+        "POSTGRES_DB": "marquez"
+      },
+      "volumes": [
+        "marquez-data:/var/lib/postgresql/data"
+      ],
+      "healthcheck": {
+        "test": [
+          "CMD",
+          "pg_isready",
+          "-U",
+          "marquez"
+        ],
+        "interval": "10s",
+        "timeout": "5s",
+        "retries": 18,
+        "start_period": "20s"
+      },
+      "command": [
+        "postgres",
+        "-c",
+        "shared_buffers=64MB",
+        "-c",
+        "max_connections=40"
+      ]
+    },
+    "marquez-api": {
+      "image": "cartco/marquez:infra-p1",
+      "mem_limit": "1024m",
+      "restart": "unless-stopped",
+      "environment": {
+        "MARQUEZ_PORT": "5000",
+        "MARQUEZ_ADMIN_PORT": "5001",
+        "POSTGRES_HOST": "marquez-db",
+        "POSTGRES_PORT": "5432",
+        "POSTGRES_DB": "marquez",
+        "POSTGRES_USER": "marquez",
+        "POSTGRES_PASSWORD": "marquez-local-only",
+        "JAVA_TOOL_OPTIONS": "-Xms128m -Xmx640m"
+      },
+      "ports": [
+        "127.0.0.1:15000:5000"
+      ],
+      "depends_on": {
+        "marquez-db": {
+          "condition": "service_healthy"
+        }
+      },
+      "build": {
+        "context": "../..",
+        "dockerfile": "infra/phase1/Dockerfile.marquez"
+      }
+    },
+    "marquez-web": {
+      "image": "marquezproject/marquez-web@sha256:7312112ca0e611b0a37b00d3da6a677485ae4a97622b23d3ae24d849a927868b",
+      "mem_limit": "256m",
+      "restart": "unless-stopped",
+      "environment": {
+        "MARQUEZ_HOST": "marquez-api",
+        "MARQUEZ_PORT": "5000",
+        "WEB_PORT": "3000"
+      },
+      "ports": [
+        "127.0.0.1:13000:3000"
+      ],
+      "depends_on": {
+        "marquez-api": {
+          "condition": "service_started"
+        }
+      }
+    },
+    "spark-smoke": {
+      "image": "cartco/spark:infra-p1",
+      "build": {
+        "context": "../..",
+        "dockerfile": "infra/phase1/Dockerfile.spark"
+      },
+      "mem_limit": "2560m",
+      "restart": "no",
+      "profiles": [
+        "acceptance"
+      ],
+      "environment": {
+        "AWS_ACCESS_KEY_ID": "cartco-local",
+        "AWS_SECRET_ACCESS_KEY": "cartco-local-secret",
+        "AWS_REGION": "us-east-1",
+        "AWS_EC2_METADATA_DISABLED": "true",
+        "NESSIE_URI": "http://nessie:19120/api/v2",
+        "S3_ENDPOINT": "http://minio:9000",
+        "ICEBERG_WAREHOUSE": "s3://cartco-phase1/warehouse",
+        "PYSPARK_SUBMIT_ARGS": "--driver-memory 1g pyspark-shell"
+      },
+      "volumes": [
+        "evidence-data:/evidence"
+      ],
+      "depends_on": {
+        "bucket-init": {
+          "condition": "service_completed_successfully"
+        },
+        "nessie": {
+          "condition": "service_started"
+        }
+      }
+    }
+  },
+  "volumes": {
+    "objects-data": {},
+    "nessie-data": {},
+    "airflow-data": {},
+    "marquez-data": {},
+    "airflow-logs": {},
+    "evidence-data": {}
+  },
+  "networks": {
+    "default": {}
+  },
+  "x-base-build": {
+    "image": "cartco/airflow:infra-p1-base",
+    "dockerfile": "Dockerfile.airflow"
+  }
+}

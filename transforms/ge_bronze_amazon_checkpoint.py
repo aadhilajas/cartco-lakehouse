@@ -71,20 +71,23 @@ from __future__ import annotations
 import logging
 import os
 import sys
+from pathlib import Path
 from datetime import datetime, timezone
 from typing import Any
 
 import great_expectations as gx
 import pandas as pd
 from pyiceberg.catalog import load_catalog
+from pyiceberg.expressions import EqualTo
 
 # repo root is volume-mounted at /opt/airflow but isn't guaranteed to be on
 # sys.path for every process that runs this script directly.
-REPO_ROOT = "/opt/airflow"
+REPO_ROOT = str(Path(__file__).resolve().parents[1])
 if REPO_ROOT not in sys.path:
     sys.path.insert(0, REPO_ROOT)
 
 from lineage import emitter as lineage  # noqa: E402
+from pipeline.batch import resolve_batch_date  # noqa: E402
 
 LINEAGE_JOB_NAME = "amazon_bronze_ingestion.run_ge_checkpoint"
 
@@ -144,16 +147,18 @@ def get_catalog():
     )
 
 
-def load_bronze_as_dataframe() -> pd.DataFrame:
+def load_bronze_as_dataframe(batch_date=None) -> pd.DataFrame:
     """Read ``bronze.amazon_orders`` via PyIceberg and return it as a pandas DataFrame.
 
+    Only the selected load-date partition is read, matching the Silver input.
     This is the only I/O in this module (Iceberg catalog load + table scan).
     Kept separate from ``run_checkpoint()`` so the checkpoint logic itself
     can be unit tested against any DataFrame without a live catalog.
     """
     catalog = get_catalog()
     table = catalog.load_table(BRONZE_TABLE_IDENTIFIER)
-    arrow_table = table.scan().to_arrow()
+    day = resolve_batch_date(batch_date)
+    arrow_table = table.scan(row_filter=EqualTo("ingestion_date", day.isoformat())).to_arrow()
     return arrow_table.to_pandas()
 
 
@@ -288,9 +293,10 @@ def run_checkpoint(bronze_df: pd.DataFrame) -> None:
     )
 
 
-def run() -> None:
+def run(batch_date=None) -> None:
     """Load Bronze data and run the pre-Silver quality gate; logs start/end and duration."""
     start_time = datetime.now(timezone.utc)
+    day = resolve_batch_date(batch_date)
     logger.info("=== Amazon Bronze quality gate START at %s ===", start_time.isoformat())
     logger.info(
         "Bronze table: %s | Iceberg REST catalog: %s | S3 endpoint: %s",
@@ -303,10 +309,9 @@ def run() -> None:
     run_id = lineage.new_run_id()
     lineage.emit_start(LINEAGE_JOB_NAME, run_id, inputs=[bronze_dataset])
 
-    bronze_df = load_bronze_as_dataframe()
-    logger.info("Rows loaded from Bronze for validation: %d", len(bronze_df))
-
     try:
+        bronze_df = load_bronze_as_dataframe(day)
+        logger.info("Rows loaded from Bronze for batch %s: %d", day, len(bronze_df))
         run_checkpoint(bronze_df)
     except Exception:
         lineage.emit_fail(LINEAGE_JOB_NAME, run_id, inputs=[bronze_dataset])

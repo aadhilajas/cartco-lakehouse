@@ -1,0 +1,15 @@
+{
+  "release_id": "rd78890a225a54207a0acc01638ae7f67",
+  "snapshot_sha256": "a69fcb5d6a9a8a0138f834814843b1f795f59791002b2530d2b91948d2eb4e64",
+  "states": [
+    "Business: complete accepted synthetic release",
+    "Business: actual Shopify filter",
+    "Business: daily/channel charts and declared inventory scope",
+    "Engineering: real quality suites and Airflow provenance",
+    "Engineering: actual catalog identity and schema",
+    "Lineage: verified output field derivations"
+  ],
+  "frames": 6,
+  "frame_delay_ms": 2500,
+  "kind": "Actual browser states; no audio or narrated recording"
+}

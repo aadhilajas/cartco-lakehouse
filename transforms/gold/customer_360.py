@@ -2,7 +2,7 @@
 
 Reads canonical orders from ``silver.orders`` and computes customer metrics:
     - total_orders (count of order_id)
-    - total_spend (sum of order_total)
+    - total_spend (completed-order spend only)
     - first_order_date (min order_date)
     - last_order_date (max order_date)
     - favorite_category (product_category with highest total quantity purchased)
@@ -26,6 +26,7 @@ from __future__ import annotations
 import logging
 import os
 import sys
+from pathlib import Path
 import time
 from datetime import datetime, timezone
 
@@ -37,11 +38,12 @@ from pyiceberg.io.pyarrow import schema_to_pyarrow
 from pyiceberg.schema import Schema
 from pyiceberg.types import DateType, DoubleType, IntegerType, NestedField, StringType
 
-REPO_ROOT = "/opt/airflow"
+REPO_ROOT = str(Path(__file__).resolve().parents[2])
 if REPO_ROOT not in sys.path:
     sys.path.insert(0, REPO_ROOT)
 
 from lineage import emitter as lineage  # noqa: E402
+from pipeline.commerce_metrics import money_schema, amount, completed_orders, legacy_money  # noqa: E402
 
 LINEAGE_JOB_NAME = "gold_marts.customer_360"
 
@@ -106,8 +108,8 @@ def ensure_table(catalog):
     try:
         catalog.create_namespace(NAMESPACE)
         logger.info("Created namespace '%s'", NAMESPACE)
-    except Exception:
-        pass
+    except NamespaceAlreadyExistsError:
+        logger.info("Namespace already exists")
 
     def _get_or_create():
         try:
@@ -118,10 +120,12 @@ def ensure_table(catalog):
     return _retry(_get_or_create)
 
 
-def transform(silver_table: pa.Table) -> pa.Table:
+def transform(silver_table: pa.Table, *, decimal_output=False) -> pa.Table:
     """Pure PyArrow transformation: aggregates silver.orders by customer_id and channel."""
+    money_values = lambda values: pa.array([amount(v) for v in values], pa.decimal128(18, 2)) if decimal_output else legacy_money(values)
+    silver_table = completed_orders(silver_table)
     if silver_table.num_rows == 0:
-        expected_arrow_schema = schema_to_pyarrow(TABLE_SCHEMA)
+        expected_arrow_schema = money_schema(schema_to_pyarrow(TABLE_SCHEMA), ('total_spend',), decimal_output)
         return pa.Table.from_batches([], schema=expected_arrow_schema)
 
     # 1. Compute customer lifetime order counts, total spend, min date, max date
@@ -142,6 +146,7 @@ def transform(silver_table: pa.Table) -> pa.Table:
             ("customer_id", "ascending"),
             ("channel", "ascending"),
             ("quantity_sum", "descending"),
+            ("product_category", "ascending"),
         ],
     )
     sorted_cat = cat_agg.take(sort_idx)
@@ -168,7 +173,7 @@ def transform(silver_table: pa.Table) -> pa.Table:
     sorted_fav_cat = fav_cat_table.take(sort_fav)
 
     total_orders = pc.cast(sorted_cust_agg.column("order_id_count"), pa.int32())
-    total_spend = pc.cast(sorted_cust_agg.column("order_total_sum"), pa.float64())
+    total_spend = money_values(sorted_cust_agg.column("order_total_sum").to_pylist())
 
     res = pa.Table.from_arrays(
         [
@@ -191,7 +196,7 @@ def transform(silver_table: pa.Table) -> pa.Table:
         ],
     )
 
-    expected_arrow_schema = schema_to_pyarrow(TABLE_SCHEMA)
+    expected_arrow_schema = money_schema(schema_to_pyarrow(TABLE_SCHEMA), ('total_spend',), decimal_output)
     return res.cast(expected_arrow_schema)
 
 

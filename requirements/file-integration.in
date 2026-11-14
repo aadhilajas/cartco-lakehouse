@@ -1,0 +1,3 @@
+-r test.in
+# Isolated local-file Iceberg tests only; Airflow 2.9 uses SQLAlchemy 1.4.
+SQLAlchemy==2.0.36

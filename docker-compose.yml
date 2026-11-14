@@ -1,10 +1,8 @@
 # CartCo lakehouse — local data-platform stack.
 #
 # Scope note (deliberate, deadline-driven):
-#   * PySpark runs in LOCAL mode inside the Airflow image (see Dockerfile.airflow)
-#     rather than a separate Spark cluster — fewer moving parts / less failure surface.
-#   * Lineage (OpenLineage + Marquez) covers only the working Shopify Bronze/GE/Silver
-#     path (see lineage/emitter.py and docs/lineage.md) — not a general lineage platform.
+#   * Implemented jobs use PyArrow/PyIceberg inside the Python 3.11 Airflow image.
+#   * Shopify, Amazon and Gold emit table-level lineage; live verification is required.
 #
 # Services: minio, mc (bucket init), iceberg-rest, postgres, airflow-init,
 #           airflow-webserver, airflow-scheduler (LocalExecutor, no Celery/Redis),
@@ -24,7 +22,16 @@ x-airflow-common: &airflow-common
     AIRFLOW__WEBSERVER__EXPOSE_CONFIG: "true"
     # Expose the scheduler's HTTP health endpoint on :8974 for the container healthcheck.
     AIRFLOW__SCHEDULER__ENABLE_HEALTH_CHECK: "true"
-    # S3 / MinIO credentials so PySpark & PyIceberg can reach object storage.
+    # New DAG is paused/manual; fixture generation and empty initialization are opt-in.
+    CARTCO_RUNTIME_MODE: "${CARTCO_RUNTIME_MODE:-delivered}"
+    CARTCO_RUNTIME_INVENTORY_MODE: "${CARTCO_RUNTIME_INVENTORY_MODE:-none}"
+    CARTCO_RUNTIME_ALLOW_EMPTY_INIT: "${CARTCO_RUNTIME_ALLOW_EMPTY_INIT:-false}"
+    CARTCO_RUNTIME_ROWS_PER_SOURCE: "${CARTCO_RUNTIME_ROWS_PER_SOURCE:-}"
+    CARTCO_RUNTIME_WORK_ROOT: "${CARTCO_RUNTIME_WORK_ROOT:-/opt/airflow/data/versioned}"
+    CARTCO_RUNTIME_INPUT_ROOT: "${CARTCO_RUNTIME_INPUT_ROOT:-/opt/airflow/data/deliveries}"
+    ICEBERG_CATALOG_URI: http://iceberg-rest:8181
+    S3_ENDPOINT: http://minio:9000
+    # S3 / MinIO credentials for PyIceberg object storage.
     AWS_ACCESS_KEY_ID: minioadmin
     AWS_SECRET_ACCESS_KEY: minioadmin
     AWS_REGION: us-east-1
@@ -34,21 +41,23 @@ x-airflow-common: &airflow-common
     # failing the task -- see lineage/emitter.py's module docstring.
     OPENLINEAGE_URL: http://marquez-api:5000
     OPENLINEAGE_NAMESPACE: cartco-lakehouse
-    # apache/airflow:2.9.0 bundles apache-airflow-providers-openlineage,
+    # The full upstream image bundled apache-airflow-providers-openlineage,
     # which auto-emits its own (dataset-less) run events for every task via
     # an Airflow listener. Verified live: it produced empty
     # inputDatasetVersions/outputDatasetVersions for these BashOperator/
     # PythonOperator tasks (it has no generic extractor for arbitrary
     # scripts), duplicating the job/run rows this project's manual
     # lineage/emitter.py already emits with real dataset lineage attached.
-    # Disabled here so cartco-lakehouse has exactly one lineage source of
-    # truth instead of two overlapping, differently-populated ones.
+    # Keep disabled defensively if that provider is added to the slim image;
+    # the versioned runtime supplies the dataset-aware lineage events.
     AIRFLOW__OPENLINEAGE__DISABLED: "true"
   volumes:
     - ./dags:/opt/airflow/dags
     - ./ingestion:/opt/airflow/ingestion
     - ./transforms:/opt/airflow/transforms
     - ./lineage:/opt/airflow/lineage
+    - ./docs/schemas:/opt/airflow/docs/schemas:ro
+    - ./pipeline:/opt/airflow/pipeline
     - ./scripts:/opt/airflow/scripts
     - ./tests:/opt/airflow/tests
     - ./pytest.ini:/opt/airflow/pytest.ini
@@ -62,7 +71,10 @@ x-airflow-common: &airflow-common
 
 services:
   minio:
-    image: minio/minio:latest
+    build:
+      context: .
+      dockerfile: Dockerfile.minio
+    image: cartco/minio:source-7aac2a2c
     container_name: cartco-minio
     command: server /data --console-address ":9001"
     environment:
@@ -74,7 +86,7 @@ services:
     volumes:
       - minio-data:/data
     healthcheck:
-      test: ["CMD", "mc", "ready", "local"]
+      test: ["CMD", "curl", "--fail", "http://localhost:9000/minio/health/live"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -82,7 +94,7 @@ services:
 
   # One-shot: create the cartco-lakehouse bucket, then exit.
   mc:
-    image: minio/mc:latest
+    image: cartco/minio:source-7aac2a2c
     container_name: cartco-mc
     depends_on:
       minio:
@@ -97,11 +109,13 @@ services:
     restart: "no"
 
   iceberg-rest:
-    image: tabulario/iceberg-rest:latest
+    image: tabulario/iceberg-rest@sha256:3b7d31bdfec626b68e97531c9778a1b9119659e456fe28545a49f6aa6a9ce472
     container_name: cartco-iceberg-rest
     depends_on:
       minio:
         condition: service_healthy
+      mc:
+        condition: service_completed_successfully
     ports:
       - "8181:8181"
     environment:
@@ -109,12 +123,16 @@ services:
       AWS_SECRET_ACCESS_KEY: minioadmin
       AWS_REGION: us-east-1
       CATALOG_WAREHOUSE: s3://cartco-lakehouse
+      # Persist JDBC catalog pointers independently of the container layer.
+      CATALOG_URI: jdbc:sqlite:/home/iceberg/catalog.db
       CATALOG_IO__IMPL: org.apache.iceberg.aws.s3.S3FileIO
       CATALOG_S3_ENDPOINT: http://minio:9000
       CATALOG_S3_PATH__STYLE__ACCESS: "true"
+    volumes:
+      - iceberg-catalog-data:/home/iceberg
 
   postgres:
-    image: postgres:14
+    image: library/postgres@sha256:834a046089d76edd1d2e81c4741f3ad5d1853646ededc86c2708936aad31c1ed
     container_name: cartco-postgres
     environment:
       POSTGRES_USER: airflow
@@ -133,15 +151,7 @@ services:
   airflow-init:
     <<: *airflow-common
     container_name: cartco-airflow-init
-    entrypoint: >
-      /bin/bash -c "
-      airflow db init &&
-      airflow users create
-      --username airflow --password airflow
-      --firstname CartCo --lastname Admin
-      --role Admin --email admin@cartco.local
-      || true
-      "
+    command: ["python", "/opt/airflow/scripts/initialize_airflow.py"]
     restart: "no"
 
   airflow-webserver:
@@ -183,7 +193,7 @@ services:
   # and reusing Airflow's metadata DB would couple two unrelated schemas.
   # Not exposed to the host: only marquez-api talks to it.
   marquez-db:
-    image: postgres:14
+    image: library/postgres@sha256:834a046089d76edd1d2e81c4741f3ad5d1853646ededc86c2708936aad31c1ed
     container_name: cartco-marquez-db
     environment:
       POSTGRES_USER: marquez
@@ -201,7 +211,7 @@ services:
   # Local-only OpenLineage backend: receives the events emitted by
   # lineage/emitter.py and stores the job/dataset/run graph.
   marquez-api:
-    image: marquezproject/marquez:0.51.1
+    image: marquezproject/marquez@sha256:0721c976cff17d8b14f7949d85d6dac9c7ea37cb9fe857caa19833730fcb1a50
     container_name: cartco-marquez-api
     environment:
       MARQUEZ_PORT: "5000"
@@ -224,7 +234,7 @@ services:
 
   # Web UI for browsing the lineage graph at http://localhost:3000.
   marquez-web:
-    image: marquezproject/marquez-web:0.51.1
+    image: marquezproject/marquez-web@sha256:7312112ca0e611b0a37b00d3da6a677485ae4a97622b23d3ae24d849a927868b
     container_name: cartco-marquez-web
     environment:
       MARQUEZ_HOST: marquez-api
@@ -237,5 +247,6 @@ services:
 
 volumes:
   minio-data:
+  iceberg-catalog-data:
   postgres-data:
   marquez-db-data:

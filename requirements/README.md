@@ -50,7 +50,8 @@ Container manifests were read from Docker Registry on 2026-11-09 for Airflow,
 Postgres, Iceberg REST and Marquez. MinIO/mc registry requests were unauthorized;
 Dockerfile.minio now builds fixed official source commits with digest-pinned
 Go/Debian base images. See docs/phase1/minio-source-build.md for provenance.
-Its container build and live behavior still require a successful CI run.
+Its container build and live behavior have since passed remote CI and current
+publication acceptance; see the [verification report](../docs/test_report.md).
 
 ## Optional local-file transaction checks
 

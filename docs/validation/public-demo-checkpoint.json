@@ -1,0 +1,40 @@
+{
+  "reviewed_date": "2026-11-14",
+  "scope": "Public saved-snapshot demo with on-demand temporary GitHub Actions processing",
+  "site_url": "https://cartco-lakehouse.vercel.app/",
+  "first_successful_run": "https://github.com/aadhilajas/cartco-lakehouse/actions/runs/43552077988",
+  "verified_update_run": "https://github.com/aadhilajas/cartco-lakehouse/actions/runs/43554685157",
+  "run_id": "43554685157",
+  "computed_source_commit": "93e0a7ceee0fd60072124cef1a123f46452ebdfd",
+  "release_id": "r1ab299249be745a89f6df52a221dd90f",
+  "source_bundle_sha256": "45f8173cfe76b962e64fc45e42ea422c7f04f771a7b079edb71bc5428048c29d",
+  "published_at": "2026-11-14T04:12:57.697Z",
+  "checks": {
+    "pipeline_acceptance": "passed",
+    "hosted_build": "passed",
+    "browser_acceptance_on_runner": "passed",
+    "public_snapshot_commit": "passed",
+    "site_http_status": 200,
+    "publication_http_status": 200,
+    "snapshot_http_status": 200,
+    "publication_run_matches_update": true,
+    "snapshot_release_and_source_match_publication": true,
+    "quality_suites_passed": 7,
+    "lineage_transport": "verified",
+    "completed_orders": 7,
+    "completed_sales_inr": "921.75",
+    "user_confirmed_views_and_filters": true
+  },
+  "not_claimed": [
+    "Persistent hosted lakehouse backend",
+    "Continuous public Airflow/MinIO/Marquez/Grafana services",
+    "Durable GitHub runner storage",
+    "Independent offsite backup",
+    "Production merchant data or performance SLA"
+  ],
+  "pending_submission": [
+    "Genuine contract owner review",
+    "Final narrated walkthrough if required",
+    "Confirm rubric acceptance of chosen hosting model"
+  ]
+}

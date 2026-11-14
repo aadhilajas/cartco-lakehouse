@@ -41,12 +41,20 @@ metadata. The React Business, Engineering and Lineage views consume only a safe
 snapshot served by a read-only API. Exact decimal strings, absent values and
 distinct source/compute/export timestamps prevent invented precision or freshness.
 
-The container view is a deployment specification; native acceptance and expanded
-scheduled-container acceptance are separate evidence. Hosted operation still
-requires a real free account/capacity, compatible architecture, protected admin
-access, HTTPS and persistence/recovery checks. In particular, amd64-only Marquez
-images cannot be treated as qualified ARM images merely because other bases are
-multi-architecture. The project introduces neither Kubernetes nor a paid service.
+## Public deployment versus local services
+
+The public demonstration uses Vercel to serve a validated snapshot and GitHub
+Actions for real on-demand scheduled processing. The runner stack stops after
+acceptance/publication; Vercel does not host the data/admin services continuously.
+Two successful publication runs and the public release match are recorded in the
+[deployment checkpoint](../validation/public-demo-checkpoint.json). See
+[ADR-016](../adr/ADR-016-public-snapshot-demo.md) for the decision and boundaries.
+
+Native, scheduled-container, local cold recovery and public deployment checks are
+separate evidence. A persistent server would require its own storage/recovery,
+capacity and security qualification. Pinned amd64-only Marquez images are not
+qualified for ARM merely because other bases are multi-architecture. The project
+introduces neither Kubernetes nor a paid service.
 
 Diagram sources are `assessed-containers.dot` and `assessed-components.dot`.
 Generate SVG/PNG with Graphviz (`dot -Tsvg`, `dot -Tpng`) and inspect the outputs

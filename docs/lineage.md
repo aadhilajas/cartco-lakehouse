@@ -1,43 +1,43 @@
-# Current lineage and observability
+# Lineage and operational evidence
 
-The coordinated versioned runtime emits paired START/COMPLETE/FAIL events via
-OpenLineage 1.11.3 to local Marquez. Each invocation has its own UUID; business
-batch date and orchestration run identity are separate facets. A local intended
-journal and checksum-linked client-delivery status retain what was attempted.
-Instrumentation remains fail-open and never changes business results/exceptions.
+## Current Spark application
 
-Source events declare CSV field schemas and input row counts, raw JSON field
-preservation, source normalization and versioned merge dependencies. Silver
-fields include prior-state dependencies to represent retained rows and tombstones.
-Gold outputs declare schema, actual artifact row counts and columnLineage facets.
-Maps include grouping keys, completed-sales/status controls, exact quantity/price
-arithmetic and explicit cost/stock dependencies for turnover. Constants such as
-INR and unavailable fulfillment time are labelled; no fictitious input edge is
-invented for a constant null.
+The current implementation builds column mappings in
+[pipeline/assessed_lineage.py](../pipeline/assessed_lineage.py), emits OpenLineage
+information to Marquez, and checks the backend schema/graph rather than treating
+a successful HTTP emission as complete verification.
 
-The five-artifact live event exposes 44 output fields. Three source-stage events
-add 57 checks across raw/Silver output fields, for 101 verified field checks. Direct dependency edges
-for every derived output were checked against Marquez's column-lineage API;
-input-free constants were checked against their event schema/declaration because
-the backend need not create a lineage node for a constant. Unit tests also cover
-POS native keys, source product/status normalization and prior state. This is
-field dependency tracing, not exhaustive per-row or historical-version provenance.
-Legacy DAG lineage remains table-level; no blanket claim is made for those paths.
+Current acceptance distinguishes **44 output schema fields** from **34
+nonconstant derivations**. Constants do not receive invented input edges. These
+are field-dependency checks, not exhaustive per-row or historical-version lineage.
 
-Inventory input schemas must be declared as well as output schemas: without
-input field metadata, Marquez can accept an event while omitting the requested
-stock/cost edges. Live backend verification caught this and the input schemas
-were added before acceptance. Consumer checks distinguish backend indexing from
-a successful client call.
+The dashboard's Lineage view displays the declared mappings from the same
+published release. Its verified transport status refers to the backend check
+performed during that run; the static website is not a continuously queried
+Marquez service. The public Marquez admin/API endpoints are not exposed.
 
-```text
-python scripts/check_column_lineage.py --event <completed-event.json> --output <column-report.json>
-python scripts/check_marquez_runtime.py --expected <versioned-runtime.json> --orchestration-run-id <run-id> --output <runtime-report.json>
-python scripts/check_runtime_observability.py --help
-```
+## Airflow and Grafana
 
-Retry/failure callbacks write local alert records. The controlled task-kill drill
-produced one real retry_scheduled alert and no terminal alert. The incident stays
-visible as clean_history=false. No email, Slack, webhook, acknowledgement or
-external paging consumer is configured or invoked. Retention/backup covers the
-local runtime files, with their documented integrity/authenticity boundaries.
+The current four DAGs cover order ingestion, inventory ingestion, commerce
+release and system health. Grafana reads actual Airflow task/run metadata through
+a restricted PostgreSQL role and health view. The role is checked for read scope
+and refusal of configuration access/writes. Its five panels do not fabricate
+success counts, durations or missing history.
+
+Local operator URLs and fixture credentials are documented in the
+[runbook](assessed-runbook.md). In GitHub Actions the stack is temporary, and the
+public website retains only the approved result snapshot. Local cold recovery
+is separate from remote publication.
+
+## Earlier instrumentation
+
+The earlier versioned application has its own intended-event/delivery journals,
+retry alerts and a larger source/state field-check total. Those measurements
+belong to that implementation; they must not be combined with the current 44/34
+counts. Its legacy DAGs are not all column-instrumented.
+
+See the [preserved baseline lineage guide](history/baseline-lineage.md) for those
+commands, callback checks and local alert boundaries. External email/Slack/paging
+has not been configured as part of this project.
+
+[Verification report](test_report.md) · [Architecture](architecture/assessed-narrative.md)

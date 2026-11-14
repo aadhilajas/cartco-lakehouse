@@ -1,3 +1,8 @@
+> Historical planning/handoff document. These dated decisions and pending items
+> record an earlier project stage. For current implementation and the selected
+> public demo hosting model, use the [documentation index](../README.md) and
+> [status ledger](../local-completion-checklist.md).
+
 # B1 assignment and delivery gap review
 
 Reviewed 2026-11-11 against the B1 text supplied by the user and the attached

@@ -1,39 +1,58 @@
-# CartCo verification report
+# Verification report
 
-Updated 2026-11-11. This replaces the historical Shopify-only Week 3 report.
+Updated **14 November 2026**. Evidence below is scoped to the implementation and
+run that produced it. Historical test counts are retained as dated measurements,
+not combined into a single project score.
 
-| Evidence | Result | Boundary |
+## Current acceptance and deployment
+
+| Area | Verified result | Evidence |
 |---|---|---|
-| Unit suite | 278 passed, 1 POSIX-only FIFO skip on Windows | Actual pinned Python dependencies |
-| Real-file suite | 99 passed | Separate SQLAlchemy 2 / SQLite catalog environment |
-| Strict live integration | 4 passed, no skips | Actual REST/MinIO/Airflow container stack |
-| DAG imports | Four normal DAGs imported and serialized | Legacy source/Gold and versioned six-task DAG |
-| Scheduler | Shopify dispatch and six-stage versioned replay succeeded | Replay retained original data/Gold bytes |
-| GE output suites | Seven live suites passed | Exact retained Silver snapshot + five Gold artifacts; isolated new release persisted results |
-| Lineage | Typed column facets serialized and live graph queried | 101 source/state/Gold output-field checks, schemas and row counts |
-| REST persistence | 11 exact checkpoints survived container replacement | Container ID changed, volumes preserved |
-| Volume restore | Five archives / 20,288 inventory entries matched | Checksums, ownership/modes and file contents |
-| Restored application | 11 tables, five artifacts, six task records and persisted graph passed | Isolated restored services |
-| Fresh/crash drill | 75 new synthetic records; six tasks succeeded after POS kill/retry | Post-commit SIGKILL only; exact catalog unchanged by retry |
+| Current PR checks | Dashboard, Spark reference, scheduled stack, Python units, real-file transactions and baseline integration all passed | [PR #5](https://github.com/aadhilajas/cartco-lakehouse/pull/5) |
+| First public publication | Full pipeline, hosted build, real browser acceptance, public files and cleanup passed | [Run 43552077988](https://github.com/aadhilajas/cartco-lakehouse/actions/runs/43552077988) |
+| Repeat publication | Same acceptance path passed; a new snapshot and provenance were published | [Run 43554685157](https://github.com/aadhilajas/cartco-lakehouse/actions/runs/43554685157) |
+| Live HTTPS result | Website and JSON returned successfully; run/release/source matched the repeat run | [Deployment checkpoint](validation/public-demo-checkpoint.json) |
+| Quality | Seven persisted GE suites and independent exact reconciliation passed | Successful current stack/publication runs |
+| Column lineage | 44 output schema fields and 34 nonconstant derivations checked against Marquez | [Compose checkpoint](validation/assessed-compose-checkpoint.json) |
+| Local cold restore | Eight active volumes backed up and restored into an isolated project | [Recovery checkpoint](validation/assessed-recovery-checkpoint.json) |
+| Local Terraform | Apply, recreation, replay and final no-change plan passed | [Terraform checkpoint](validation/assessed-terraform-checkpoint.json) |
 
-GE 0.18.19 validates state keys/source versions/deletion flags, active business
-keys/status/currency/ranges, Gold grouping uniqueness, nonnegative counts/money,
-rates and explicit inventory coverage states. GE never converts persisted money
-to float. Custom exact decimal, source-receipt, snapshot and inventory
-reconciliation checks remain mandatory. A negative/duplicate Gold candidate
-regression proves GE rejection retains the old CURRENT pointer and failure report.
+Publication tests exercise refusal of incomplete acceptance, failed quality,
+unverified lineage and rounded numeric snapshot IDs. Dashboard tests also cover
+exact-cent arithmetic, unavailable/zero values and freshness. Five Node tests
+passed in the hosting preparation and successful publication workflows.
 
-Column-lineage tests cover native POS identity, source normalization, prior-state
-merges, completed-sales filters, aggregation keys and inventory costs/stocks.
-Lineage/instrumentation remains fail-open; business/DQ publication remains
-fail-closed. A client emit returning is distinguished from backend indexing.
+Browser acceptance checks INR 921.75 total, the INR 301.50 Shopify filter, seven
+quality suites, 44 lineage rows, mobile overflow and invalid-refresh retention.
+Public deployment also received user checks in a browser and on the requested
+views/filters. Server-side endpoint verification separately matched publication
+metadata with the producing run; it is not a substitute for browser execution.
 
-Historical evidence also includes a retained 120,000-row local-file run with
-Shopify 50,000 / Amazon 40,000 / POS 30,000. It is a separate fixture from the
-150-row live versioned demo and 225-row isolated recovery/crash drill. These
-counts are not combined into a throughput benchmark.
+## Table and failure behavior
 
-Evidence summaries are packaged in `deliverables/week4/evidence/acceptance.json`.
-Raw host logs/JUnit/checkpoints/archives are retained in the local review outputs.
-No final remote GitHub Actions result, cloud deployment, independent/offsite
-backup, arbitrary mid-commit crash or whole-scheduler failure is claimed.
+Controlled checks cover source-version replay, retained tombstones, bad candidates
+leaving the previous published pointer intact, catalog/storage recreation,
+time travel, additive evolution, incompatible-change refusal, partition pruning
+and compaction with unchanged row hashes. The compaction fixture retained 120
+rows while reducing five files to two; it is not a production throughput test.
+
+The baseline application remains regression-tested in its own CI path. Its
+REST catalog and older recovery/crash-drill results describe that application;
+see the [preserved report](history/baseline-test-report.md).
+
+## Reproduction and retention
+
+[Test setup](../tests/README.md) separates unit, real-file, Spark and live
+requirements. Full host outputs live under ignored `test-results/`. Committed
+checkpoint summaries retain identities and result boundaries. GitHub artifacts
+expire according to each workflow; publication evidence uses three-day retention.
+Download needed viva evidence promptly. Workflow URLs remain useful even after
+artifact expiration.
+
+## Limits and pending items
+
+No continuous production backend, distributed Spark performance SLA, independent
+offsite backup or arbitrary whole-system failure recovery is claimed. The website
+serves saved synthetic results; runner storage is temporary. Genuine contract
+owner review and a final narrated presentation remain separate submission tasks.
+See the [status ledger](local-completion-checklist.md).

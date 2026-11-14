@@ -1,7 +1,7 @@
 # Assessed project: local runbook
 
 This is the synthetic protocol/Spark implementation. It uses an isolated
-`cartco-assessed` project and its own nine named volumes. The original Compose
+`cartco-assessed` project with nine declared named volumes, eight active in the default stack. The original Compose
 application and the earlier Phase 1 Compose/Terraform stores remain preserved.
 The assessed specification is `infra/assessed/stack.json`; do not replace the
 original `docker-compose.yml` or reuse its volumes.
@@ -9,6 +9,9 @@ original `docker-compose.yml` or reuse its volumes.
 The current fixture is explicitly dated **12 November 2026**. It is not a claim
 of live merchant connectivity or current-day business data. Shopify and Amazon
 exercise local API shapes; Kafka and SFTP use real local protocols.
+
+For the public saved-snapshot demonstration, use the [Vercel guide](vercel-demo-guide.md).
+The local services below are private; the website does not host them continuously.
 
 ## Prerequisites
 

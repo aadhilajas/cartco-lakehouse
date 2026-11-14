@@ -1,55 +1,59 @@
-# Local project completion ledger
+# Project completion ledger
 
-Updated 13 November 2026. Scope: finish the project locally, then guide manual
-integration into the existing GitHub repo and hosting. No automatic publication,
-paid resources or personal resume/interview work.
+Updated **14 November 2026**. Current implementation is the bounded
+protocol/Spark/Nessie application. Earlier applications and dated evidence remain
+preserved; see the [documentation index](README.md).
 
-- [x] Four real local protocols, immutable evidence and replay/failure checks.
-- [x] Actual Spark Bronze/Silver/Gold through Iceberg/Nessie/MinIO and catalog metadata.
-- [x] Independent exact reconciliation, seven GE suites and safe publication.
-- [x] Marquez backend verification: 44 output fields, 34 nonconstant derivations.
-- [x] Four real Airflow DAGs and Grafana with a restricted database role.
-- [x] Read-only dashboard, browser tests, screenshots and genuine interface GIF.
+## Completed implementation and verification
+
+- [x] Four real synthetic protocol paths, durable raw evidence and replay/failure checks.
+- [x] Spark Bronze/Silver/Gold through Iceberg/Nessie/MinIO with exact decimal state.
+- [x] Independent reconciliation, seven GE suites and coherent publication.
+- [x] Backend Marquez verification: 44 output fields and 34 nonconstant derivations.
+- [x] Four meaningful Airflow DAGs and Grafana with a restricted database role.
+- [x] Dashboard tests/browser checks, actual screenshots and a genuine interface GIF.
 - [x] Compose recreation/replay, time travel, evolution, compaction and pruning.
-- [x] Coordinated cold backup and exact restore into a separate project.
-- [x] Real expanded Terraform apply/recreation/replay and final no-change plan.
-- [x] README, C4 diagrams, ADRs, contracts, runbook and walkthrough/postmortem.
-- [x] Manual integration/hosting guides and verified Git bundle handoff.
+- [x] Cold backup and exact restore of eight active volumes into a separate project.
+- [x] Expanded local Terraform apply/recreation/replay and final no-change plan.
+- [x] GitHub integration: PR #4 and hosting PR #5 merged; remote checks passed.
+- [x] Public Vercel dashboard and real on-demand GitHub Actions processing.
+- [x] Two successful publication runs; website metadata matched the second run.
 
-## Retained successful evidence
+## Evidence
 
-| Check | Evidence |
+| Check | Location |
 |---|---|
-| Compose | `test-results/assessed/20261113-203545/SUCCESS.txt` |
-| Cold recovery, eight active volumes | `test-results/assessed-recovery/20261113-205004/SUCCESS.txt` |
-| Terraform, including successful resume | `test-results/assessed/20261113-210244/SUCCESS.txt` |
-| No-change plan | Same directory, `resume-terraform-convergence.log` |
-| Full unit suite | `test-results/final-local/unit.xml`: 298 passed, one Windows FIFO skip |
-| Additional auth regression | `tests/unit/test_assessed_auth.py`: real valid/expired-cookie HTTP exchange passed |
-| Spark reference | Three real tests plus the repeating-ratio regression passed |
-| Browser | Compose directory, `ui/ui-verification.json` |
+| Local Compose | `test-results/assessed/20261113-203545/SUCCESS.txt` |
+| Local cold restore | `test-results/assessed-recovery/20261113-205004/SUCCESS.txt` |
+| Local Terraform, successful resume | `test-results/assessed/20261113-210244/SUCCESS.txt` |
+| Final no-change plan | Same Terraform directory, `resume-terraform-convergence.log` |
+| Remote checks and publication | [Verification report](test_report.md) |
+| Public deployment | [Checkpoint](validation/public-demo-checkpoint.json) |
 
-Machine-readable summaries are in `docs/validation/`. Original CartCo baseline
-container IDs were unchanged. Old Phase 1/Compose volumes, recovery archives and
-restored copies are retained. The active assessed stack is now the isolated
-Terraform project `cartco-infra-p1-tf-assessed`; prior new Compose services are
-stopped. The previous Terraform workspace selection was restored.
+Local log paths are retained on the development machine and are not promised to
+exist in a fresh clone. Small committed summaries are indexed in
+[validation/README.md](validation/README.md). The accepted fixture contains seven
+completed orders and INR 921.75. Existing local volumes were retained.
 
-The tiny synthetic fixture has seven completed orders and INR 921.75 completed
-sales. Compaction reduced five files to two with unchanged row hashes. This is
-neither merchant onboarding nor a production throughput benchmark. The GIF and
-written demo plan do not claim a narrated recording.
+## Remaining review and submission tasks
 
-## Manual and external steps
+- [ ] Genuine owner review of `cartco.commerce.v1`; approval must be recorded by
+  the appropriate reviewer, not inferred from tests or generated documentation.
+- [ ] Final narrated project walkthrough if required by the submission rubric.
+  The existing interface GIF and written plan are not a narrated recording.
+- [ ] Confirm whether the rubric accepts the chosen public snapshot/on-demand
+  processing model or separately requires a persistent hosted backend.
 
-- Integrate the existing feature branch into GitHub and run actual remote CI.
-- Record genuine owner review of `cartco.commerce.v1` in the PR or a dated record.
-- Qualify available free hosting and runtime architecture. Pinned amd64-only
-  Marquez images are not already qualified for ARM.
-- Deploy/verify public HTTPS backend/dashboard and hosted persistence/recovery.
-- Record the narrated project presentation with the final real system if required.
+## Deployment boundary
 
-Follow `manual-github-integration.md`, then `manual-hosting.md`. No public URL,
-remote CI success, owner signature or guaranteed free capacity is invented.
-Failed runs remain in the postmortem and original evidence folders; they do not
-receive success markers.
+The public dashboard stays available between runs. Processing services run on a
+temporary GitHub runner and stop afterward; local named-volume persistence and
+cold restore do not establish durable cloud backend storage. A continuously
+running cloud stack, ARM qualification and production merchant integration are
+not completed capabilities. See [ADR-016](adr/ADR-016-public-snapshot-demo.md).
+
+## Repository cleanup
+
+This documentation pass adds current navigation and preserves earlier guides
+under `history/`. Dashboard refactoring, script grouping and infrastructure path
+moves remain separate maintenance changes; they do not block the working demo.

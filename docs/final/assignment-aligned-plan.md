@@ -1,3 +1,8 @@
+> Historical planning/handoff document. These dated decisions and pending items
+> record an earlier project stage. For current implementation and the selected
+> public demo hosting model, use the [documentation index](../README.md) and
+> [status ledger](../local-completion-checklist.md).
+
 # CartCo revised assignment-aligned completion plan
 
 Original review: 2026-11-11; scope/status reconciliation: 2026-11-13

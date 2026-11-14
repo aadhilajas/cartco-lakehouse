@@ -3,7 +3,7 @@
 This is the synthetic protocol/Spark implementation. It uses an isolated
 `cartco-assessed` project with nine declared named volumes, eight active in the default stack. The original Compose
 application and the earlier Phase 1 Compose/Terraform stores remain preserved.
-The assessed specification is `infra/assessed/stack.json`; do not replace the
+The assessed specification is `infra/local/stack.json`; do not replace the
 original `docker-compose.yml` or reuse its volumes.
 
 The current fixture is explicitly dated **12 November 2026**. It is not a claim
@@ -109,8 +109,8 @@ Public exports omit raw payloads, customer IDs, credentials and local file paths
 ## Reuse and preserve
 
 ```bash
-docker compose -p cartco-assessed -f infra/assessed/stack.json stop
-docker compose -p cartco-assessed -f infra/assessed/stack.json up -d
+docker compose -p cartco-assessed -f infra/local/stack.json stop
+docker compose -p cartco-assessed -f infra/local/stack.json up -d
 ```
 
 Do not use `down -v`, prune, delete metadata, reset offsets or clear the state
@@ -127,7 +127,7 @@ state separate from the accepted foundation state. With Terraform 1.13.5:
 ```bash
 terraform -chdir=infra/terraform init -backend=false
 terraform -chdir=infra/terraform workspace select -or-create assessed
-terraform -chdir=infra/terraform plan -var='stack_spec=../assessed/stack.json' -var='project_name=cartco-infra-p1-tf-assessed' -out=assessed.tfplan
+terraform -chdir=infra/terraform plan -var='stack_spec=../local/stack.json' -var='project_name=cartco-infra-p1-tf-assessed' -out=assessed.tfplan
 ```
 
 Review the actual plan before applying. On Windows add

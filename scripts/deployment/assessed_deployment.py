@@ -23,7 +23,7 @@ class Deployment:
         self.repo, self.evidence, self.docker = repo, evidence, docker
         self.terraform, self.run = terraform, run
         self.previous_workspace = None
-        self.compose = [docker, "compose", "-p", "cartco-assessed", "-f", str(repo / "infra/assessed/stack.json")]
+        self.compose = [docker, "compose", "-p", "cartco-assessed", "-f", str(repo / "infra/local/stack.json")]
         self.project = "cartco-infra-p1-tf-assessed" if terraform else "cartco-assessed"
 
     def execute(self, service, *command):
@@ -35,7 +35,7 @@ class Deployment:
         return [self.terraform, "-chdir=" + str(self.repo / "infra/terraform"), *command]
 
     def variables(self):
-        result = ["-var=stack_spec=../assessed/stack.json", "-var=project_name=" + self.project]
+        result = ["-var=stack_spec=../local/stack.json", "-var=project_name=" + self.project]
         if os.name == "nt":
             result += ["-var=docker_host=npipe:////./pipe/dockerDesktopLinuxEngine", "-var=buildx_builder=default"]
         return result

@@ -23,7 +23,7 @@ jobs:
       - run: terraform -chdir=infra/terraform init -backend=false -input=false
       - run: terraform -chdir=infra/terraform validate
       - run: terraform -chdir=infra/terraform test
-      - run: docker compose -f infra/phase1/stack.json config --quiet
+      - run: docker compose -f infra/compatibility/stack.json config --quiet
   compatibility:
     runs-on: ubuntu-latest
     timeout-minutes: 45

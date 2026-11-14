@@ -7,7 +7,7 @@
       "restart": "unless-stopped",
       "build": {
         "context": "../..",
-        "dockerfile": "Dockerfile.minio"
+        "dockerfile": "infra/shared/Dockerfile.minio"
       },
       "command": [
         "server",
@@ -150,7 +150,7 @@
       "restart": "on-failure",
       "build": {
         "context": "../..",
-        "dockerfile": "infra/assessed/Dockerfile.airflow"
+        "dockerfile": "infra/local/Dockerfile.airflow"
       },
       "environment": {
         "AIRFLOW__CORE__EXECUTOR": "LocalExecutor",
@@ -376,7 +376,7 @@
       },
       "build": {
         "context": "../..",
-        "dockerfile": "infra/phase1/Dockerfile.marquez"
+        "dockerfile": "infra/shared/marquez/Dockerfile.marquez"
       }
     },
     "marquez-web": {
@@ -401,7 +401,7 @@
       "image": "cartco/spark:infra-p1",
       "build": {
         "context": "../..",
-        "dockerfile": "infra/phase1/Dockerfile.spark"
+        "dockerfile": "infra/compatibility/Dockerfile.spark"
       },
       "mem_limit": "2560m",
       "restart": "no",
@@ -603,7 +603,7 @@
       "image": "cartco/grafana:assessed",
       "build": {
         "context": "../..",
-        "dockerfile": "infra/assessed/Dockerfile.grafana"
+        "dockerfile": "infra/local/Dockerfile.grafana"
       },
       "networks": [
         "default"
@@ -634,7 +634,7 @@
       "image": "cartco/dashboard:assessed",
       "build": {
         "context": "../..",
-        "dockerfile": "infra/assessed/Dockerfile.dashboard"
+        "dockerfile": "infra/local/Dockerfile.dashboard"
       },
       "networks": [
         "default"
@@ -670,7 +670,7 @@
   },
   "x-base-build": {
     "image": "cartco/airflow:infra-p1-base",
-    "dockerfile": "Dockerfile.airflow"
+    "dockerfile": "infra/shared/Dockerfile.airflow-base"
   },
   "x-assessed-notes": {
     "fixture_date": "2026-11-12",

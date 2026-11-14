@@ -11,7 +11,7 @@
 x-airflow-common: &airflow-common
   build:
     context: .
-    dockerfile: Dockerfile.airflow
+    dockerfile: infra/shared/Dockerfile.airflow-base
   image: cartco/airflow:2.9.0
   environment: &airflow-common-env
     AIRFLOW__CORE__EXECUTOR: LocalExecutor
@@ -73,7 +73,7 @@ services:
   minio:
     build:
       context: .
-      dockerfile: Dockerfile.minio
+      dockerfile: infra/shared/Dockerfile.minio
     image: cartco/minio:source-7aac2a2c
     container_name: cartco-minio
     command: server /data --console-address ":9001"

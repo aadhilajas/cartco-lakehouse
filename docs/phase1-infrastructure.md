@@ -12,11 +12,11 @@ volumes. It is not a claim that the new commerce models/connectors are complete.
 
 ## What is implemented
 
-- [Shared stack specification](../infra/phase1/stack.json): MinIO, persistent
+- [Shared stack specification](../infra/compatibility/stack.json): MinIO, persistent
   Nessie/PostgreSQL, Airflow/PostgreSQL, Marquez/PostgreSQL/UI, plus an opt-in Spark
   acceptance job. All published ports bind loopback. No Docker socket is mounted
   into Airflow. Memory caps bound the containers; they are not measured usage.
-- [Spark image](../infra/phase1/Dockerfile.spark): Python 3.11.14, Java 17,
+- [Spark image](../infra/compatibility/Dockerfile.spark): Python 3.11.14, Java 17,
   Spark 3.5.6/Scala 2.12, checksum-locked Iceberg 1.12.0 jars. Image digests and
   Python package hashes are pinned. Debian security packages are installed from
   the distribution repositories at build time; the Java patch level is recorded
@@ -62,7 +62,7 @@ any public deployment. Airflow's local administrator is airflow/airflow.
 To stop only the new Compose stack and retain its containers/volumes:
 
 ```powershell
-docker compose -p cartco-infra-p1 -f infra/phase1/stack.json stop
+docker compose -p cartco-infra-p1 -f infra/compatibility/stack.json stop
 ```
 
 ## Terraform alternative
@@ -124,7 +124,7 @@ named volumes. The workflow has not run remotely yet.
   restored. Evidence: outputs/cartco-phase1-diagnostic-dag.json outside the repo.
 - PowerShell host runner parsed successfully.
 - Image registry digests/platform manifests audited in
-  [image-platforms.json](../infra/phase1/image-platforms.json).
+  [image-platforms.json](../infra/compatibility/image-platforms.json).
 - Compose run `test-results/infrastructure/20261112-191429`: nine Spark checks
   passed, followed by exact checkpoint preservation across MinIO, catalog DB and
   Nessie recreation. Final collection and DAG imports passed; SUCCESS.txt retained.

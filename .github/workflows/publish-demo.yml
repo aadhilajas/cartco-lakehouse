@@ -58,4 +58,4 @@ jobs:
           git push origin HEAD:main
       - name: Stop temporary demo services
         if: always()
-        run: docker compose -p cartco-assessed -f infra/assessed/stack.json down
+        run: docker compose -p cartco-assessed -f infra/local/stack.json down

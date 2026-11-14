@@ -26,7 +26,7 @@ def test_real_apply_commands_use_separate_workspace_saved_plan_and_restore_selec
     value.start()
     value.finish()
     plan = next(command for command, name in commands if name == "terraform-plan.log")
-    assert "-var=stack_spec=../assessed/stack.json" in plan
+    assert "-var=stack_spec=../local/stack.json" in plan
     assert "-var=project_name=cartco-infra-p1-tf-assessed" in plan
     applied = next(command for command, name in commands if name == "terraform-apply.log")
     assert applied[-1] == str(tmp_path / "assessed.tfplan")

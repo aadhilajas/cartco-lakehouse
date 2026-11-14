@@ -18,7 +18,7 @@ New-Item -ItemType Directory -Force -Path $ResultRoot | Out-Null
 $docker = Resolve-CartcoDocker -ExplicitPath $DockerPath
 $oldPath = $env:PATH
 $env:PATH = (Split-Path -Parent $docker) + [IO.Path]::PathSeparator + $env:PATH
-$compose = @('compose', '-p', 'cartco-infra-p1', '-f', (Join-Path $repoRoot 'infra\phase1\stack.json'))
+$compose = @('compose', '-p', 'cartco-infra-p1', '-f', (Join-Path $repoRoot 'infra\compatibility\stack.json'))
 $statsJob = $null
 
 function Invoke-Docker([string]$LogName, [string[]]$DockerArgs) {
@@ -106,7 +106,7 @@ try {
         Invoke-Docker 'marquez-config-build.log' ($compose + @('build', 'marquez-api'))
     }
     if (-not $SkipBuild) {
-        Invoke-Docker 'airflow-base-build.log' @('build', '-t', 'cartco/airflow:infra-p1-base', '-f', (Join-Path $repoRoot 'Dockerfile.airflow'), $repoRoot)
+        Invoke-Docker 'airflow-base-build.log' @('build', '-t', 'cartco/airflow:infra-p1-base', '-f', (Join-Path $repoRoot 'infra/shared/Dockerfile.airflow-base'), $repoRoot)
         Invoke-Docker 'build.log' ($compose + @('--profile', 'acceptance', 'build'))
     }
     if (-not $CollectOnly) { Invoke-Docker 'up.log' ($compose + @('up', '-d')) }

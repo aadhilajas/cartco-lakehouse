@@ -36,7 +36,7 @@ def main():
     repo = _REPOSITORY_ROOT
     output = args.output.resolve()
     output.mkdir(parents=True, exist_ok=False)
-    spec = repo / "infra/assessed/stack.json"
+    spec = repo / "infra/local/stack.json"
     source = [args.docker, "compose", "-p", "cartco-assessed", "-f", str(spec)]
     project = "cartco-assessed-recovery-" + datetime.now(timezone.utc).strftime("%Y%m%d%H%M%S")
     restored = [args.docker, "compose", "-p", project, "-f", str(spec)]

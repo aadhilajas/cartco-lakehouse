@@ -5,8 +5,7 @@ on:
     paths:
       - 'pipeline/**'
       - 'ingestion/protocols/**'
-      - 'infra/assessed/**'
-      - 'infra/terraform/**'
+      - 'infra/**'
       - 'dashboard/**'
       - 'requirements/**'
       - 'scripts/**'
@@ -49,6 +48,27 @@ jobs:
           name: dashboard-browser-evidence
           path: test-results/dashboard-ui/
           retention-days: 3
+  current-terraform:
+    name: Current Terraform apply recreation and convergence
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.13.5
+          terraform_wrapper: false
+      - name: Run current application through isolated Terraform
+        run: python scripts/acceptance/run_assessed_stack.py --terraform "$(command -v terraform)" --result-root test-results/current-terraform
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: current-terraform-evidence
+          path: test-results/current-terraform/
+          retention-days: 3
   spark-reference:
     runs-on: ubuntu-latest
     timeout-minutes: 20
@@ -66,9 +86,9 @@ jobs:
           java-version: '17'
       - name: Install locked build tools, runtime and Spark
         run: |
-          python -m pip install --require-hashes -r infra/phase1/build-tools.txt
+          python -m pip install --require-hashes -r infra/shared/spark/build-tools.txt
           python -m pip install --require-hashes -r requirements/test.txt
-          python -m pip install --no-build-isolation --require-hashes -r infra/phase1/spark-requirements.txt
+          python -m pip install --no-build-isolation --require-hashes -r infra/shared/spark/spark-requirements.txt
           python -m pip check
           echo "PYSPARK_PYTHON=$(command -v python)" >> "$GITHUB_ENV"
       - run: python -m pytest tests/spark -q --junitxml=test-results/spark-reference.xml

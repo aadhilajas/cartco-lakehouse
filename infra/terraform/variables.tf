@@ -7,10 +7,10 @@ variable "docker_host" {
 variable "stack_spec" {
   description = "Shared isolated foundation or assessed-stack specification, relative to this module. Use a fresh project/state when selecting the assessed stack."
   type        = string
-  default     = "../phase1/stack.json"
+  default     = "../compatibility/stack.json"
   validation {
-    condition     = contains(["../phase1/stack.json", "../assessed/stack.json"], var.stack_spec)
-    error_message = "Select one of the reviewed isolated stack specifications."
+    condition     = contains(["../compatibility/stack.json", "../local/stack.json", "../phase1/stack.json", "../assessed/stack.json"], var.stack_spec)
+    error_message = "Select a reviewed compatibility/local specification or its supported legacy alias."
   }
 }
 

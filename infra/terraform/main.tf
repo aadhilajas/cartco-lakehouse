@@ -1,10 +1,16 @@
 # One shared specification drives Compose and Terraform. This provisions Docker
 # resources on an existing host; it does not provision a cloud VM/account.
 locals {
-  spec      = jsondecode(file("${path.module}/${var.stack_spec}"))
-  repo_root = abspath("${path.module}/../..")
+  # Old saved variable selections resolve to the same canonical specification.
+  stack_aliases = {
+    "../phase1/stack.json"   = "../compatibility/stack.json"
+    "../assessed/stack.json" = "../local/stack.json"
+  }
+  stack_path = lookup(local.stack_aliases, var.stack_spec, var.stack_spec)
+  spec       = jsondecode(file("${path.module}/${local.stack_path}"))
+  repo_root  = abspath("${path.module}/../..")
   assessed_sources = flatten([
-    for folder in ["pipeline", "ingestion", "transforms", "lineage", "scripts", "infra/assessed", "dashboard/src"] : [
+    for folder in ["pipeline", "ingestion", "transforms", "lineage", "scripts", "infra/local", "dashboard/src"] : [
       for name in sort(tolist(fileset("${path.module}/../../${folder}", "**"))) : "${folder}/${name}"
       if !strcontains(name, "__pycache__/") && !endswith(name, ".pyc")
     ]
@@ -43,7 +49,7 @@ resource "docker_image" "airflow_base" {
   name         = local.spec["x-base-build"].image
   keep_locally = true
   triggers = {
-    source = sha256(join("", [filesha256("${local.repo_root}/Dockerfile.airflow"), filesha256("${local.repo_root}/requirements/airflow.txt")]))
+    source = sha256(join("", [filesha256("${local.repo_root}/infra/shared/Dockerfile.airflow-base"), filesha256("${local.repo_root}/requirements/airflow.txt")]))
   }
   build {
     context    = local.repo_root
@@ -60,8 +66,8 @@ resource "docker_image" "built" {
   triggers = {
     source = sha256(join("", concat(
       [filesha256("${local.repo_root}/${each.value.dockerfile}"), filesha256("${local.repo_root}/scripts/acceptance/phase1_spark_smoke.py"), filesha256("${local.repo_root}/scripts/deployment/initialize_airflow.py")],
-      [for name in sort(tolist(fileset("${local.repo_root}/infra/phase1", "**"))) : filesha256("${local.repo_root}/infra/phase1/${name}") if !strcontains(name, "__pycache__/") && !endswith(name, ".pyc")],
-      var.stack_spec == "../assessed/stack.json" ? [for name in concat(local.assessed_sources, ["dashboard/package.json", "dashboard/package-lock.json", "dashboard/index.html", "dashboard/vite.config.js", "requirements/connectors.txt"]) : filesha256("${local.repo_root}/${name}")] : []
+      flatten([for folder in ["infra/compatibility", "infra/shared"] : [for name in sort(tolist(fileset("${local.repo_root}/${folder}", "**"))) : filesha256("${local.repo_root}/${folder}/${name}") if !strcontains(name, "__pycache__/") && !endswith(name, ".pyc")]]),
+      local.stack_path == "../local/stack.json" ? [for name in concat(local.assessed_sources, ["dashboard/package.json", "dashboard/package-lock.json", "dashboard/index.html", "dashboard/vite.config.js", "requirements/connectors.txt"]) : filesha256("${local.repo_root}/${name}")] : []
     )))
   }
   build {

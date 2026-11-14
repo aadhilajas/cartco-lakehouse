@@ -103,3 +103,22 @@ The next run exposed the valid-session case: an authenticated login route
 redirects home without a CSRF form. Clearing the cookie jar before login fixed
 both cases; a real HTTP regression covers valid and expired sessions. The final
 resumed Terraform run passed exact replay, compaction and a no-change plan.
+
+## Concurrent first mounts during foundation Terraform apply
+
+PR #9's [foundation live job](https://github.com/aadhilajas/cartco-lakehouse/actions/runs/43573653523/job/132383143661)
+built its images but failed creating `airflow-web`: Docker could not create
+`scheduler/latest` in the shared log volume because the symlink already existed.
+The log shows concurrent Airflow container creation. The failure is consistent
+with concurrent population of an initially empty named volume from image files;
+Docker documents that first-mount copy behavior. The separate Compose foundation,
+current Terraform, browser, recovery and baseline checks passed on that commit.
+
+The apply entrypoints now pass `-parallelism=1` for initial and recreation applies.
+This prevents simultaneous Terraform container-creation operations without
+disabling Docker's initial volume population or changing ownership/data/resource
+identities. Container processes still initialize asynchronously; explicit
+initializer/health checks remain required. Regression assertions cover serial
+apply commands and retention of the storage-only recreation scope. The failed
+job remains recorded; only the successful follow-up runtime check can qualify
+the remediation.

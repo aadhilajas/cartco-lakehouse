@@ -1,5 +1,5 @@
 FROM marquezproject/marquez@sha256:0721c976cff17d8b14f7949d85d6dac9c7ea37cb9fe857caa19833730fcb1a50
 # The upstream development config hard-codes user/password=marquez. Supply our
 # own config rather than changing an already-initialized PostgreSQL volume.
-COPY infra/phase1/marquez.yml /usr/src/app/cartco.yml
+COPY infra/shared/marquez/marquez.yml /usr/src/app/cartco.yml
 ENV MARQUEZ_CONFIG=cartco.yml

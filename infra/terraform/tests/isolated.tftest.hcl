@@ -43,7 +43,7 @@ run "acceptance_plan" {
 run "assessed_plan" {
   command = plan
   variables {
-    stack_spec   = "../assessed/stack.json"
+    stack_spec   = "../local/stack.json"
     project_name = "cartco-infra-p1-tf-assessed"
   }
   assert {
@@ -57,5 +57,28 @@ run "assessed_plan" {
   assert {
     condition     = docker_container.service["runtime-init"].user == "0" && docker_container.service["airflow-scheduler"].memory == 3072
     error_message = "Volume initialization and the bounded Spark task budget must be preserved."
+  }
+}
+
+run "legacy_foundation_selection" {
+  command = plan
+  variables {
+    stack_spec = "../phase1/stack.json"
+  }
+  assert {
+    condition     = local.stack_path == "../compatibility/stack.json" && length(docker_container.service) == 11 && docker_volume.persistent["objects-data"].name == "cartco-infra-p1-tf-objects-data"
+    error_message = "Legacy foundation selection must preserve its canonical stack and volume identity."
+  }
+}
+
+run "legacy_assessed_selection" {
+  command = plan
+  variables {
+    stack_spec   = "../assessed/stack.json"
+    project_name = "cartco-infra-p1-tf-assessed"
+  }
+  assert {
+    condition     = local.stack_path == "../local/stack.json" && length(docker_container.service) == 19 && docker_volume.persistent["objects-data"].name == "cartco-infra-p1-tf-assessed-objects-data"
+    error_message = "Legacy assessed selection must preserve its canonical stack and volume identity."
   }
 }

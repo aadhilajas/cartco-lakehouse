@@ -23,7 +23,7 @@ jobs:
       - run: terraform -chdir=infra/terraform init -backend=false -input=false
       - run: terraform -chdir=infra/terraform validate
       - run: terraform -chdir=infra/terraform test
-      - run: docker compose -f infra/phase1/stack.json config --quiet
+      - run: docker compose -f infra/compatibility/stack.json config --quiet
   compatibility:
     runs-on: ubuntu-latest
     timeout-minutes: 45
@@ -52,7 +52,9 @@ jobs:
         run: |
           mkdir -p test-results/terraform-live
           set -o pipefail
-          terraform -chdir=infra/terraform apply -input=false -auto-approve 2>&1 | tee test-results/terraform-live/initial-apply.log
+          # Serialize first mounts so Docker cannot copy image log symlinks into
+          # the same new named volume from two container creates concurrently.
+          terraform -chdir=infra/terraform apply -parallelism=1 -input=false -auto-approve 2>&1 | tee test-results/terraform-live/initial-apply.log
       - name: Verify actual Spark writes and Terraform-controlled recreation
         run: python scripts/acceptance/phase1_terraform_acceptance.py
       - uses: actions/upload-artifact@v4

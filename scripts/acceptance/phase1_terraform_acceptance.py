@@ -42,7 +42,7 @@ def main():
     args.evidence = (repo / args.evidence).resolve()
     args.evidence.mkdir(parents=True, exist_ok=True)
     (args.evidence / "SUCCESS.txt").unlink(missing_ok=True)
-    spec = json.loads((repo / "infra/phase1/stack.json").read_text(encoding="utf-8"))
+    spec = json.loads((repo / "infra/compatibility/stack.json").read_text(encoding="utf-8"))
 
     def run(command, name):
         result = subprocess.run(command, cwd=repo, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, check=False)

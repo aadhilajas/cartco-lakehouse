@@ -56,5 +56,5 @@ not completed capabilities. See [ADR-016](adr/ADR-016-public-snapshot-demo.md).
 
 This documentation pass adds current navigation and preserves earlier guides
 under `history/`. Dashboard refactoring merged in PR #7 and its public build was verified. Script
-grouping is prepared as a separate follow-up; infrastructure path moves remain
-later maintenance changes; they do not block the working demo.
+grouping merged in PR #8 after runtime and recovery checks. Infrastructure path
+separation is prepared as the next independently qualified change; they do not block the working demo.

@@ -4,7 +4,7 @@
 
 Read the [repository overview](README.md), [infrastructure map](infra/README.md)
 and [script guide](scripts/README.md). The current Spark application uses
-`infra/assessed/stack.json`; root Compose and `scripts/development/dev.py` refer to the earlier
+`infra/local/stack.json`; root Compose and `scripts/development/dev.py` refer to the earlier
 application. Shared reference modules remain in active use.
 
 Create a focused branch from up-to-date main. Keep documentation-only changes

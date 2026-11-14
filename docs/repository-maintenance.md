@@ -32,8 +32,8 @@ and hosted builds, model/publication tests, mobile UI and real hosted publicatio
 Prepared on `refactor/script-layout`: canonical purpose-based directories, a
 reviewable compatibility map, old CLI/import/PowerShell forwarders, updated active
 callers and standalone Docker COPY/hash paths. Executable discovery prefers normal
-clone tools while retaining optional workspace fallbacks. Remote full-stack,
-foundation and cold recovery qualification must pass before this refactor merges.
+clone tools while retaining optional workspace fallbacks. PR #8 passed remote baseline/current Docker, foundation, browser and cold
+recovery checks and was merged.
 
 Group scripts into development, acceptance, recovery, deployment, diagnostics,
 fixtures and Windows launchers. First enumerate callers from workflows, Docker
@@ -43,6 +43,14 @@ Python selection or a documented project environment to a neighbouring Codex
 workspace environment. Validate CLI paths and current/baseline acceptance.
 
 ## 4. Infrastructure separation
+
+Prepared on `refactor/infrastructure-layout`: current stack in `infra/local`,
+foundation in `infra/compatibility`, extracted common build assets in `infra/shared`
+and a baseline navigation guide for the intentionally preserved root Compose
+entrypoints. Terraform stays in place with legacy stack-selection aliases; no
+resource/state address is renamed. Five rendered Compose models match their
+pre-move versions except reviewed Dockerfile paths. Remote qualification remains
+required before merge.
 
 A possible target is `infra/local/`, `infra/baseline/`, `infra/compatibility/`,
 `infra/shared/`, `infra/terraform/` and `infra/hosting/`. Extract shared Spark locks,

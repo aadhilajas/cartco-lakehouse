@@ -1,31 +1,57 @@
 # Infrastructure map
 
-Three separate configurations coexist. Choose the current application explicitly;
-plain `docker compose up` at repository root selects the preserved baseline.
+```text
+infra/
+  local/          Current protocol/Spark/Nessie application
+  compatibility/ Smaller Spark/catalog acceptance foundation
+  shared/         Airflow base, MinIO, Spark locks/JARs and Marquez build inputs
+  baseline/       Guide to the preserved root Compose entrypoints
+  terraform/      Stable Docker provider module and state/resource addresses
+  hosting/        Alternative persistent-server HTTPS example
+  phase1/         Legacy Python fetch-helper import only; not a stack directory
+```
 
-| Configuration | Purpose | Entrypoint |
+| Goal | Configuration | Operator entrypoint |
 |---|---|---|
-| `assessed/stack.json` | Current protocol/Spark/Nessie application | `python scripts/acceptance/run_assessed_stack.py` from repository root |
-| `phase1/stack.json` | Smaller Spark/catalog compatibility foundation | `scripts/windows/Start-CartcoInfrastructure.ps1` |
-| Root `docker-compose.yml` | Earlier REST-catalog/PyArrow application | Root Compose commands; baseline CI |
-| `terraform/` | Docker resources on an existing host | Current application's Terraform wrapper or explicit reviewed variables |
-| `hosting/Caddyfile.example` | Alternative persistent-server HTTPS example | Not used by the Vercel demonstration |
+| Current application | [local/stack.json](local/stack.json) | `python scripts/acceptance/run_assessed_stack.py` from repository root |
+| Compatibility foundation | [compatibility/stack.json](compatibility/stack.json) | `scripts/windows/Start-CartcoInfrastructure.ps1` |
+| Earlier application | Root [docker-compose.yml](../docker-compose.yml) | Existing root Compose commands; [baseline guide](baseline/README.md) |
+| Local Docker IaC | [terraform/](terraform/) | `scripts/windows/Start-CartcoAssessedTerraformValidation.ps1` for current application |
+| Public demo | [dashboard/vercel.json](../dashboard/vercel.json) | Manually requested GitHub Actions publication, then Vercel |
 
-## Ownership and dependencies
+Plain `docker compose up` at repository root still selects the **baseline**.
+It does not silently start or migrate the current Spark application.
 
-- Current Compose uses project `cartco-assessed`; current Terraform uses an
-  isolated workspace/project ending in `assessed`. They must not own the same
-  resources concurrently. The [runbook](../docs/assessed-runbook.md) gives details.
-- Terraform defaults select the **foundation**, not the current application.
-  Use `Start-CartcoAssessedTerraformValidation.ps1` for the current path.
-- `phase1/` is not disposable legacy material: current Docker builds use its
-  Spark locks, JAR manifest, fetch helper and Marquez configuration layer.
-- Root Dockerfiles are shared build inputs. Moving them requires updating
-  specifications, build contexts and Terraform source triggers together.
-- Keep Docker project/volume names, Terraform addresses and Airflow DAG IDs
-  stable. A folder rename does not authorize a data migration or new resource set.
+## Compatibility and ownership
 
-The public site uses [dashboard/vercel.json](../dashboard/vercel.json), not Caddy
-or a persistent cloud VM. GitHub Actions starts a temporary stack per publication.
-Local cold restore and storage recreation do not establish persistent cloud
-storage. See [deployment guide](../docs/vercel-demo-guide.md).
+File paths changed; resource identities did not. Current Compose remains
+`cartco-assessed`, foundation Compose remains `cartco-infra-p1`, and Terraform's
+project/workspace/resource names are preserved. DAG IDs and volume names are not
+renamed. Do not attach an earlier stack's data volumes to a different application.
+
+Terraform stays in `infra/terraform`; no state move or `terraform state mv` is
+needed for this layout change. Its default specification is now
+`../compatibility/stack.json`. Select `../local/stack.json` for the current stack.
+Old variable values `../phase1/stack.json` and `../assessed/stack.json` remain
+supported aliases inside Terraform, resolving to the canonical files. Old direct
+Compose `-f infra/phase1/stack.json` or `-f infra/assessed/stack.json` commands must
+use the new paths; this alias is for Terraform selection, not duplicate JSON files.
+
+Builds use [shared inputs](shared/README.md). Shared changes trigger the current
+and foundation CI paths. Keep dependency locks, image pins and JAR checksums;
+source-trigger hashes cover both compatibility and shared build inputs.
+
+[Current runbook](../docs/assessed-runbook.md) ·
+[Hosting boundaries](../docs/vercel-demo-guide.md)
+
+## Apply concurrency
+
+Repository launchers and CI use `terraform apply -parallelism=1`. Keep that flag
+for direct applies too: concurrent container creation against a new shared Airflow
+log volume produced a Docker `scheduler/latest` symlink-already-exists error.
+Serialization limits Terraform operations; running containers and their finite
+initializers still initialize asynchronously and require readiness checks.
+Existing volume contents, ownership and names remain intact.
+
+See [Terraform apply options](https://developer.hashicorp.com/terraform/cli/commands/apply)
+and [Docker volume population](https://docs.docker.com/engine/storage/volumes/).

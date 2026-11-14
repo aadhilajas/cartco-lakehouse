@@ -20,7 +20,7 @@ SQLAlchemy 2 and must not upgrade Airflow's SQLAlchemy 1 environment.
 
 For Spark, follow the exact installation order and Java setup in
 [assessed.yml](../.github/workflows/assessed.yml). The Spark dependency lock lives
-in `infra/phase1/spark-requirements.txt`; it is not part of the normal unit lock.
+in `infra/shared/spark/spark-requirements.txt`; it is not part of the normal unit lock.
 Tests intentionally use an independent reference computation for comparison.
 
 `tests/integration/` covers the **baseline**; current full application acceptance

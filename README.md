@@ -103,7 +103,7 @@ startup or reset source state. A cold clone-to-run time under 15 minutes is a
 target, not a measured guarantee.
 
 **Entrypoint distinction:** root `docker-compose.yml` starts the preserved earlier
-application. The current Spark application uses `infra/assessed/stack.json` and
+application. The current Spark application uses `infra/local/stack.json` and
 the runner above. [Infrastructure guide](infra/README.md) explains all three stacks.
 
 ## Test and verify

@@ -40,8 +40,8 @@ try {
     Invoke-Logged $TerraformPath (@("-chdir=$tfRoot", 'plan', '-input=false', '-no-color', "-out=$planPath") + $tfArgs) 'plan.log'
     # The real plan is retained before any running service is stopped. Only the
     # new Compose project is stopped; all volumes and baseline containers remain.
-    Invoke-Logged $docker @('compose', '-p', 'cartco-infra-p1', '-f', (Join-Path $repoRoot 'infra\phase1\stack.json'), 'stop') 'stop-new-compose.log'
-    Invoke-Logged $TerraformPath @("-chdir=$tfRoot", 'apply', '-input=false', '-no-color', $planPath) 'initial-apply.log'
+    Invoke-Logged $docker @('compose', '-p', 'cartco-infra-p1', '-f', (Join-Path $repoRoot 'infra\compatibility\stack.json'), 'stop') 'stop-new-compose.log'
+    Invoke-Logged $TerraformPath @("-chdir=$tfRoot", 'apply', '-parallelism=1', '-input=false', '-no-color', $planPath) 'initial-apply.log'
     Invoke-Logged $PythonPath @('-X', 'utf8', (Join-Path $repoRoot 'scripts\acceptance\phase1_terraform_acceptance.py'),
         '--docker', $docker, '--terraform', $TerraformPath, '--docker-host', 'npipe:////./pipe/dockerDesktopLinuxEngine',
         '--buildx-builder', 'default', '--evidence', $resultRoot) 'live-acceptance.log'

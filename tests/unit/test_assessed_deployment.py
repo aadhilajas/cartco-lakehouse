@@ -26,13 +26,28 @@ def test_real_apply_commands_use_separate_workspace_saved_plan_and_restore_selec
     value.start()
     value.finish()
     plan = next(command for command, name in commands if name == "terraform-plan.log")
-    assert "-var=stack_spec=../assessed/stack.json" in plan
+    assert "-var=stack_spec=../local/stack.json" in plan
     assert "-var=project_name=cartco-infra-p1-tf-assessed" in plan
     applied = next(command for command, name in commands if name == "terraform-apply.log")
+    assert "-parallelism=1" in applied
     assert applied[-1] == str(tmp_path / "assessed.tfplan")
     assert commands[-1][0][-3:] == ["workspace", "select", "default"]
     states = json.loads((tmp_path / "terraform-initializer-states.json").read_text())
     assert set(states) == {"runtime-init", "fixture-seed", "airflow-init", "grafana-init"}
+
+
+def test_recreation_serializes_apply_and_preserves_storage_replacement_scope(tmp_path, monkeypatch):
+    value, commands = deployment(tmp_path, monkeypatch, {"Status": "exited", "ExitCode": 0})
+    value.recreate()
+    plan = next(command for command, name in commands if name == "terraform-recreation-plan.log")
+    assert {arg for arg in plan if arg.startswith("-replace=")} == {
+        '-replace=docker_container.service["catalog-db"]',
+        '-replace=docker_container.service["minio"]',
+        '-replace=docker_container.service["nessie"]',
+    }
+    applied = next(command for command, name in commands if name == "terraform-recreation-apply.log")
+    assert "-parallelism=1" in applied
+    assert applied[-1] == str(tmp_path / "recreation.tfplan")
 
 
 def test_failed_initializers_cannot_count_as_ready(tmp_path, monkeypatch):

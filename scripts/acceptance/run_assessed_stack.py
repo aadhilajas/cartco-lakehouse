@@ -68,7 +68,7 @@ def main():
     if args.resume_after_recreation and (not args.terraform or not args.result_root or (evidence / "SUCCESS.txt").exists()):
         raise ValueError("Resume requires an unfinished explicit Terraform result directory")
     (evidence / "SUCCESS.txt").unlink(missing_ok=True)
-    compose = [args.docker, "compose", "-p", "cartco-assessed", "-f", str(repo / "infra/assessed/stack.json")]
+    compose = [args.docker, "compose", "-p", "cartco-assessed", "-f", str(repo / "infra/local/stack.json")]
 
     def run(command, name):
         if args.resume_after_recreation and name.startswith("terraform-"): name = "resume-" + name
@@ -160,7 +160,7 @@ def main():
             before = baseline(rows)
             run(compose + ["config", "--quiet"], "compose-config.log")
             if not args.skip_build and not args.terraform:
-                run([args.docker, "build", "-t", "cartco/airflow:infra-p1-base", "-f", str(repo / "Dockerfile.airflow"), str(repo)], "base-build.log")
+                run([args.docker, "build", "-t", "cartco/airflow:infra-p1-base", "-f", str(repo / "infra/shared/Dockerfile.airflow-base"), str(repo)], "base-build.log")
                 run(compose + ["build"], "assessed-build.log")
             earlier = [row["ID"] for row in rows if row["Names"].startswith(("cartco-infra-p1-", "cartco-assessed-")) and not row["Names"].startswith(deployment.project + "-") and row.get("State") != "exited"]
             if earlier: run([args.docker, "stop", *earlier], "stop-earlier-phase1.log")
